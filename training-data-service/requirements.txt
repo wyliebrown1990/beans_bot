@@ -1,0 +1,12 @@
+Flask
+flask_sqlalchemy
+psycopg2-binary
+python-dotenv
+werkzeug
+numpy
+openai
+google-api-python-client
+yt-dlp
+openai-whisper
+gunicorn
+langchain

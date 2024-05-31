@@ -1,0 +1,10 @@
+Flask
+Flask-Login
+gunicorn
+psycopg2-binary
+SQLAlchemy
+langchain_openai
+langchain_community
+numpy
+python-docx
+PyMuPDF

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Welcome, {{ current_user.username }}!</h1>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
+    <div style="text-align: center; margin-top: 50px;">
+        <a href="http://localhost:5011/" class="button">Let's Get Started!</a>
+    </div>
+</body>
+</html>

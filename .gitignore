@@ -1,0 +1,9 @@
+# Ignore all .env files
+*.env
+.env
+
+# Other patterns to ignore
+__pycache__/
+*.pyc
+.DS_Store
+venv
