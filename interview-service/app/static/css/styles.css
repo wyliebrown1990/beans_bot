@@ -1,0 +1,164 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #FBF3D5;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    color: #7a918d;
+    text-align: center;
+    margin-top: -5px;
+}
+
+header {
+    background-color: #EFBC9B;
+    color: #333;
+    padding: 10px 20px;
+    text-align: center;
+}
+
+form {
+    background-color: #D6DAC8;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 8px;
+    text-align: center;
+    width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+input[type="text"],
+input[type="submit"] {
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #9CAFAA;
+    border-radius: 4px;
+    display: block;
+    width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+input[type="submit"] {
+    background-color: #9CAFAA;
+    color: white;
+    cursor: pointer;
+    width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+input[type="submit"]:hover {
+    background-color: #7a918d;
+}
+
+a {
+    color: #333;
+}
+
+footer {
+    font-size: 14px;
+    text-align: center;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background-color: #333;
+    margin: 20px 0;
+}
+
+/* Chat block specific CSS */
+.chat-block {
+    background-color: #7a918d;
+    padding: 20px;
+    margin: 10px auto;
+    border-radius: 8px;
+    width: 500px;
+    color: white; /* Ensures text is readable on dark background */
+}
+
+p {
+    text-align: left;
+    padding: 0 20px;
+}
+
+button {
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #D6DAC8;
+    border-radius: 4px;
+    display: block;
+    width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #7a918d;
+    color: white;
+    cursor: pointer;
+}
+
+/* Image block specific CSS */
+.image-block {
+    background-color: #D6DAC8;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 8px;
+    text-align: center;
+    width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.image-block img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Page Spacing */
+#page-container {
+    position: relative;
+    min-height: 100vh;
+}
+
+#content-wrap {
+    padding-bottom: 2.5rem;    /* Footer height */
+}
+
+#footers {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 2.5rem;            /* Footer height */
+}
+
+#user_response {
+    width: 100%;
+    box-sizing: border-box;
+    resize: none; /* Disable manual resizing to ensure the auto-resize works properly */
+    overflow: hidden; /* Hide the scroll bar */
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+    form, .chat-block, .image-block {
+        width: 100%; /* Makes the form, chat blocks, and image block full width */
+        padding: 10px; /* Reduces padding */
+    }
+
+    input[type="text"], input[type="submit"] {
+        width: 90%; /* Makes input fields take up most of the form width */
+    }
+}
+
+@media (max-width: 480px) {
+    body, header, footer {
+        padding: 10px; /* Reduces padding for smaller screens */
+    }
+
+    h1 {
+        font-size: 24px; /* Adjusts the size of the heading */
+    }
+}

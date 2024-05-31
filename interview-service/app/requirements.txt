@@ -1,0 +1,20 @@
+Flask==3.0.3
+SQLAlchemy==1.4.31
+gunicorn==22.0.0
+psycopg2-binary==2.9.9
+python-dotenv
+langchain_openai==0.1.7
+langchain_community==0.2.0
+langchain_core==0.2.1
+numpy==1.26.4
+faiss-cpu==1.8.0
+watchdog==2.1.6
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-psycopg2
+#audio transcription
+pydub==0.25.1
+openai-whisper
