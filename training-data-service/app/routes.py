@@ -1,5 +1,6 @@
-from flask import render_template, request, redirect, jsonify, url_for, session
-from app import app, db
+from flask import render_template, request, redirect, jsonify, url_for
+from app import app
+from app.database import get_db
 from app.models import TrainingData
 from app.utils import secure_filename, load_training_data, create_chunks_and_embeddings_from_file, create_chunks_and_embeddings
 import os
@@ -30,7 +31,7 @@ os.makedirs(transcription_dir, exist_ok=True)
 # Initialize YouTube API client
 youtube = build('youtube', 'v3', developerKey=youtube_api_key)
 
-# Function to delete files from uploads folder after processing
+# Function to delete files from uploads folder after processed
 def cleanup_uploads_folder():
     txt_files = glob.glob(os.path.join(save_dir, '*.txt'))
     for txt_file in txt_files:
@@ -128,6 +129,7 @@ def download_and_transcribe(video):
     status.append(f"Embedding {video_title}")
 
     with app.app_context():
+        db = next(get_db())
         new_training_data = TrainingData(
             job_title='unknown',  # Set appropriate values if available
             company_name='unknown',  # Set appropriate values if available
@@ -135,8 +137,8 @@ def download_and_transcribe(video):
             embeddings=embedding_array.tobytes(),
             processed_files=transcription_file_path
         )
-        db.session.add(new_training_data)
-        db.session.commit()
+        db.add(new_training_data)
+        db.commit()
 
     status.append(f"{video_title} complete")
 
@@ -152,31 +154,6 @@ def transcribe_videos(channel_id, num_videos):
     except Exception as e:
         status.append(f"Error: {str(e)}")
 
-def process_raw_text(job_title, company_name, raw_text):
-    global status
-    status.append(f"Processing raw text for {job_title} at {company_name}")
-    chunks, embedding_array = create_chunks_and_embeddings(raw_text)
-    with app.app_context():
-        training_data = load_training_data(job_title, company_name)
-        if training_data:
-            training_data.data += '\n' + '\n'.join(chunks)
-            existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
-            if embedding_array.size > 0:
-                if len(embedding_array.shape) == 1:
-                    embedding_array = embedding_array.reshape(1, -1)
-                training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
-        else:
-            new_training_data = TrainingData(
-                job_title=job_title,
-                company_name=company_name,
-                data='\n'.join(chunks),
-                embeddings=embedding_array.tobytes(),
-            )
-            db.session.add(new_training_data)
-        db.session.commit()
-    status.append(f"Raw text for {job_title} at {company_name} processed successfully")
-    cleanup_uploads_folder()
-
 def process_file(file, job_title, company_name):
     global status
     filename = secure_filename(file.filename)
@@ -188,7 +165,8 @@ def process_file(file, job_title, company_name):
     
     chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
     with app.app_context():
-        training_data = load_training_data(job_title, company_name)
+        db = next(get_db())
+        training_data = load_training_data(db, job_title, company_name)
         existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
         
         if filename not in existing_files:
@@ -208,39 +186,62 @@ def process_file(file, job_title, company_name):
                     embeddings=embedding_array.tobytes(),
                     processed_files=filename
                 )
-                db.session.add(new_training_data)
+                db.add(new_training_data)
                 training_data = new_training_data
-        db.session.commit()
+        db.commit()
     
     status.append(f"{filename} uploaded")
+
+def process_raw_text(job_title, company_name, raw_text):
+    global status
+    status.append(f"Processing raw text for {job_title} at {company_name}")
+    chunks, embedding_array = create_chunks_and_embeddings(raw_text)
+    with app.app_context():
+        db = next(get_db())
+        training_data = load_training_data(db, job_title, company_name)
+        if training_data:
+            training_data.data += '\n' + '\n'.join(chunks)
+            existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
+            if embedding_array.size > 0:
+                if len(embedding_array.shape) == 1:
+                    embedding_array = embedding_array.reshape(1, -1)
+                training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
+        else:
+            new_training_data = TrainingData(
+                job_title=job_title,
+                company_name=company_name,
+                data='\n'.join(chunks),
+                embeddings=embedding_array.tobytes(),
+            )
+            db.add(new_training_data)
+        db.commit()
+    status.append(f"Raw text for {job_title} at {company_name} processed successfully")
+    cleanup_uploads_folder()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     username = request.args.get('username')
-    if username:
-        session['username'] = username
-    
     if request.method == 'POST':
         job_title = request.form['job_title']
         company_name = request.form['company_name']
         industry = request.form['industry']
+        username = request.form['username']
 
         # Perform the lookup in the TrainingData table
-        training_data_exists = db.session.query(
-            db.exists().where(
-                TrainingData.job_title == job_title,
-                TrainingData.company_name == company_name
-            )
-        ).scalar()
+        with app.app_context():
+            db = next(get_db())
+            training_data_exists = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first() is not None
 
         if training_data_exists:
             message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
         else:
             message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-        return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, message=message, username=session.get('username'))
+        return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username))
 
-    return render_template('index.html', username=session.get('username'))
+    return render_template('index.html', username=username)
+
+
 
 @app.route('/youtube_transcription', methods=['POST'])
 def youtube_transcription():
@@ -275,7 +276,8 @@ def file_upload():
             chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
             
             with app.app_context():
-                training_data = load_training_data(job_title, company_name)
+                db = next(get_db())
+                training_data = load_training_data(db, job_title, company_name)
                 if training_data:
                     existing_files = training_data.processed_files.split(',') if training_data.processed_files else []
                     if filename not in existing_files:
@@ -294,14 +296,15 @@ def file_upload():
                         embeddings=embedding_array.tobytes(),
                         processed_files=filename
                     )
-                    db.session.add(new_training_data)
-                db.session.commit()
+                    db.add(new_training_data)
+                db.commit()
             
             status.append(f"{filename} uploaded")
     
     status.append("All files processed successfully")
     cleanup_uploads_folder()
     return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+
 
 @app.route('/raw_text_submission', methods=['POST'])
 def raw_text_submission():
@@ -337,16 +340,13 @@ def upload_options():
     username = request.args.get('username')
 
     # Perform the lookup in the TrainingData table
-    training_data_exists = db.session.query(
-        db.exists().where(
-            TrainingData.job_title == job_title,
-            TrainingData.company_name == company_name
-        )
-    ).scalar()
+    with app.app_context():
+        db = next(get_db())
+        training_data_exists = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first() is not None
 
     if training_data_exists:
         message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
     else:
         message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-    return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, message=message, username=username)
+    return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, message=message)

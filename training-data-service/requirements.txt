@@ -1,5 +1,4 @@
 Flask
-flask_sqlalchemy
 psycopg2-binary
 python-dotenv
 werkzeug
@@ -10,3 +9,4 @@ yt-dlp
 openai-whisper
 gunicorn
 langchain
+sqlalchemy

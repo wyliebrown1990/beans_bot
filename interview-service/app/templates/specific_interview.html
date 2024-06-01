@@ -1,124 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Interview Bot Has Entered The Chatroom...Let's Go!</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>The Interview Bot Has Entered The Chatroom...Let's Go!</title>
+   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+   <script>
+       let mediaRecorder;
+       let audioChunks = [];
 
-        async function startRecording() {
-            document.getElementById('status').textContent = "Starting recording...";
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                document.getElementById('status').textContent = "Recording...";
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.start();
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-                mediaRecorder.onstop = () => {
-                    document.getElementById('status').textContent = "Processing your audio...this can take up to a few minutes. If I encounter an error I'll notify you, otherwise wait until I respond with some feedback.";
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const formData = new FormData();
-                    formData.append('audio_data', audioBlob, 'audio.webm');
-                    formData.append('job_title', document.getElementById('job_title').value);
-                    formData.append('company_name', document.getElementById('company_name').value);
-                    formData.append('industry', document.getElementById('industry').value);
-                    formData.append('interview_question', document.getElementById('interview_question').value);
+       async function startRecording() {
+           document.getElementById('status').textContent = "Starting recording...";
+           try {
+               const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+               document.getElementById('status').textContent = "Recording...";
+               mediaRecorder = new MediaRecorder(stream);
+               mediaRecorder.start();
+               mediaRecorder.ondataavailable = (event) => {
+                   audioChunks.push(event.data);
+               };
+               mediaRecorder.onstop = () => {
+                   document.getElementById('status').textContent = "Processing your audio...this can take up to a few minutes. If I encounter an error I'll notify you, otherwise wait until I respond with some feedback.";
+                   const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                   const formData = new FormData();
+                   formData.append('audio_data', audioBlob, 'audio.webm');
+                   formData.append('job_title', document.getElementById('job_title').value);
+                   formData.append('company_name', document.getElementById('company_name').value);
+                   formData.append('industry', document.getElementById('industry').value);
+                   formData.append('interview_question', document.getElementById('interview_question').value);
 
-                    fetch('/upload_audio', {
-                        method: 'POST',
-                        body: formData
-                    }).then(response => response.json()).then(data => {
-                        if (data.error) {
-                            document.getElementById('status').textContent = `Error: ${data.error}`;
-                        } else {
-                            document.getElementById('user_response').value = data.transcription;
-                            document.getElementById('status').textContent = "Transcription complete. Review and edit if necessary, then hit Send.";
-                        }
-                    }).catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('status').textContent = "Error processing audio. Please try again.";
-                    });
-                };
-            } catch (err) {
-                console.error('Error:', err);
-                document.getElementById('status').textContent = "Permission denied or error occurred. Please allow microphone access and try again.";
-            }
-        }
+                   fetch('/upload_audio', {
+                       method: 'POST',
+                       body: formData
+                   }).then(response => response.json()).then(data => {
+                       if (data.error) {
+                           document.getElementById('status').textContent = `Error: ${data.error}`;
+                       } else {
+                           document.getElementById('user_response').value = data.transcription;
+                           document.getElementById('status').textContent = "Transcription complete. Review and edit if necessary, then hit Send.";
+                       }
+                   }).catch(error => {
+                       console.error('Error:', error);
+                       document.getElementById('status').textContent = "Error processing audio. Please try again.";
+                   });
+               };
+           } catch (err) {
+               console.error('Error:', err);
+               document.getElementById('status').textContent = "Permission denied or error occurred. Please allow microphone access and try again.";
+           }
+       }
 
-        async function stopRecording() {
-            mediaRecorder.stop();
-        }
+       async function stopRecording() {
+           mediaRecorder.stop();
+       }
 
-        async function fetchNextQuestion(event) {
-            event.preventDefault();  // Prevent form submission
-            const userResponse = document.getElementById('user_response').value;
-            const sessionId = document.getElementById('session_id').value;
-            const jobTitle = document.getElementById('job_title').value;
-            const companyName = document.getElementById('company_name').value;
-            const industry = document.getElementById('industry').value;
-            document.getElementById('status').textContent = "Sending your response...";
+       async function fetchNextQuestion(event) {
+           event.preventDefault();  // Prevent form submission
+           const userResponse = document.getElementById('user_response').value;
+           const sessionId = document.getElementById('session_id').value;
+           const jobTitle = document.getElementById('job_title').value;
+           const companyName = document.getElementById('company_name').value;
+           const industry = document.getElementById('industry').value;
+           document.getElementById('status').textContent = "Sending your response...";
 
-            const response = await fetch('/continue_interview', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_response: userResponse,
-                    session_id: sessionId,
-                    job_title: jobTitle,
-                    company_name: companyName,
-                    industry: industry
-                }),
-            });
-            const data = await response.json();
-            document.getElementById('chat').innerHTML += `
-                <div class="chat-block">
-                    <p>User: ${userResponse}</p>
-                    <p>Bot Feedback: ${data.fact_check_feedback}</p>
-                    <p>Bot Score: ${data.score}</p>
-                    <p>Bot: ${data.next_question}</p>
-                    <hr>
-                </div>
-            `;
-            document.getElementById('user_response').value = '';  // Clear the input field
-            document.getElementById('user_response').style.height = 'auto';  // Reset height
-            document.getElementById('status').textContent = "Ready for your next response.";
-        }
+           const response = await fetch('/continue_interview', {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({
+                   user_response: userResponse,
+                   session_id: sessionId,
+                   job_title: jobTitle,
+                   company_name: companyName,
+                   industry: industry
+               }),
+           });
+           const data = await response.json();
+           document.getElementById('chat').innerHTML += `
+               <div class="chat-block">
+                   <p>User: ${userResponse}</p>
+                   <p>Bot Feedback: ${data.fact_check_feedback}</p>
+                   <p>Bot Score: ${data.score}</p>
+                   <p>Bot: ${data.next_question}</p>
+                   <hr>
+               </div>
+           `;
+           document.getElementById('user_response').value = '';  // Clear the input field
+           document.getElementById('user_response').style.height = 'auto';  // Reset height
+           document.getElementById('status').textContent = "Ready for your next response.";
+       }
 
-        function adjustTextareaHeight(element) {
-            element.style.height = 'auto';
-            element.style.height = (element.scrollHeight) + 'px';
-        }
-    </script>
+       function adjustTextareaHeight(element) {
+           element.style.height = 'auto';
+           element.style.height = (element.scrollHeight) + 'px';
+       }
+   </script>
 </head>
 <body>
-    <header>
-        <h1>Interview Chat</h1>
-    </header>
-    <div id="chat">
-        <div class="chat-block">
-            <p>Bot: {{ first_question }}</p>
-            <hr>
-        </div>
-    </div>
-    <form onsubmit="fetchNextQuestion(event);">
-        <input type="hidden" id="session_id" value="{{ session_id }}">
-        <input type="hidden" id="job_title" value="{{ job_title }}">
-        <input type="hidden" id="company_name" value="{{ company_name }}">
-        <input type="hidden" id="industry" value="{{ industry }}">
-        <input type="hidden" id="interview_question" value="{{ first_question }}">
-        <label for="user_response">Your Response:</label>
-        <textarea id="user_response" name="user_response" rows="5" style="width: 100%;" required oninput="adjustTextareaHeight(this)"></textarea>
-        <button type="submit">Send</button>
-        <button type="button" onclick="startRecording()">Start Recording</button>
-        <button type="button" onclick="stopRecording()">Stop Recording</button>
-        <p id="status"></p>
-    </form>
+   <header>
+       <h1>Interview Chat for {{ username }}</h1>
+   </header>
+   <div id="chat">
+       <div class="chat-block">
+           <p>Bot: {{ first_question }}</p>
+           <hr>
+       </div>
+   </div>
+   <form onsubmit="fetchNextQuestion(event);">
+       <input type="hidden" id="session_id" value="{{ session_id }}">
+       <input type="hidden" id="job_title" value="{{ job_title }}">
+       <input type="hidden" id="company_name" value="{{ company_name }}">
+       <input type="hidden" id="industry" value="{{ industry }}">
+       <input type="hidden" id="interview_question" value="{{ first_question }}">
+       <label for="user_response">Your Response:</label>
+       <textarea id="user_response" name="user_response" rows="5" style="width: 100%;" required oninput="adjustTextareaHeight(this)"></textarea>
+       <button type="submit">Send</button>
+       <button type="button" onclick="startRecording()">Start Recording</button>
+       <button type="button" onclick="stopRecording()">Stop Recording</button>
+       <p id="status"></p>
+   </form>
 </body>
 </html>
+

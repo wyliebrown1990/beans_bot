@@ -10,12 +10,12 @@
             const data = await response.json();
             const progressElement = document.getElementById('progress');
             progressElement.innerHTML = data.map(status => `<p>${status}</p>`).join('');
-            if (data.length > 0 && (data[data.length - 1].includes('complete') || data[data.length - 1].includes('successfully'))) {
+            if (data[data.length - 1].includes('successfully')) {
                 if (!document.getElementById('add-more-button')) {
-                    const addMoreButton = document.createElement('button');
-                    addMoreButton.id = 'add-more-button';
-                    addMoreButton.innerText = 'Add More Training Data';
-                    addMoreButton.onclick = () => {
+                    const button = document.createElement('button');
+                    button.id = 'add-more-button';
+                    button.innerText = 'Add More Training Data';
+                    button.onclick = () => {
                         const params = new URLSearchParams({
                             job_title: "{{ job_title }}",
                             company_name: "{{ company_name }}",
@@ -24,22 +24,22 @@
                         });
                         window.location.href = '/upload_options?' + params.toString();
                     };
-                    progressElement.appendChild(addMoreButton);
+                    progressElement.appendChild(button);
                 }
                 if (!document.getElementById('start-interview-button')) {
-                    const startInterviewButton = document.createElement('button');
-                    startInterviewButton.id = 'start-interview-button';
-                    startInterviewButton.innerText = 'Start Interview!';
-                    startInterviewButton.onclick = () => {
+                    const button = document.createElement('button');
+                    button.id = 'start-interview-button';
+                    button.innerText = 'Start Interview!';
+                    button.onclick = () => {
                         const params = new URLSearchParams({
                             job_title: "{{ job_title }}",
                             company_name: "{{ company_name }}",
                             industry: "{{ industry }}",
                             username: "{{ username }}"
                         });
-                        window.location.href = 'http://localhost:5012/?' + params.toString();
+                        window.location.href = 'http://localhost:5013/?' + params.toString();
                     };
-                    progressElement.appendChild(startInterviewButton);
+                    progressElement.appendChild(button);
                 }
             } else {
                 setTimeout(fetchProgress, 1000);
