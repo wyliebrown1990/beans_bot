@@ -19,7 +19,8 @@
                         const params = new URLSearchParams({
                             job_title: "{{ job_title }}",
                             company_name: "{{ company_name }}",
-                            industry: "{{ industry }}"
+                            industry: "{{ industry }}",
+                            username: "{{ username }}"
                         });
                         window.location.href = '/upload_options?' + params.toString();
                     };
@@ -33,7 +34,8 @@
                         const params = new URLSearchParams({
                             job_title: "{{ job_title }}",
                             company_name: "{{ company_name }}",
-                            industry: "{{ industry }}"
+                            industry: "{{ industry }}",
+                            username: "{{ username }}"
                         });
                         window.location.href = 'http://localhost:5012/?' + params.toString();
                     };
