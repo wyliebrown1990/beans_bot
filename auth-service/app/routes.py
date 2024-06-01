@@ -58,7 +58,7 @@ def signup():
             
             user = User(username=username, email=email)
             user.set_password(password)
-            user.resume_embeddings = embeddings.tobytes()
+            user.resume_embeddings = embeddings.tobytes()  # Ensure embeddings are correctly shaped
             session.add(user)
             session.commit()
             flash('User registered successfully')

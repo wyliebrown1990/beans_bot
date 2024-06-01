@@ -9,7 +9,6 @@ from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
 from .models import TrainingData  # Ensure TrainingData is imported
 
-
 def setup_routes(app, session):
 
     @app.route('/', methods=['GET'])
@@ -55,20 +54,38 @@ def setup_routes(app, session):
             company_name = request.form['company_name']
             username = request.form['username']
 
-            # FAISS index query for first question
-            index = get_faiss_index(session)
+            # Rebuild FAISS index for each session to ensure it's up-to-date
+            index, id_map = get_faiss_index(session)
             query_text = "Return recent and relevant work experience"
             query_embedding = embedder.embed_query(query_text)
+            query_embedding = np.array(query_embedding)  # Convert to NumPy array
+            
+            # Ensure the query embedding has the correct shape
+            if query_embedding.ndim == 1:
+                query_embedding = query_embedding.reshape(1, -1)
             
             # Debugging prints
             print(f"Query embedding shape: {query_embedding.shape}")
             print(f"FAISS index dimension: {index.d}")
 
-            if query_embedding.shape[0] != index.d:
-                raise ValueError(f"Query embedding dimension {query_embedding.shape[0]} does not match FAISS index dimension {index.d}")
+            if query_embedding.shape[1] != index.d:
+                raise ValueError(f"Query embedding dimension {query_embedding.shape[1]} does not match FAISS index dimension {index.d}")
             
-            D, I = index.search(np.array([query_embedding]), 5)
-            faiss_index_first_question = session.query(TrainingData).filter_by(id=I[0][0]).first().data
+            D, I = index.search(query_embedding, 5)
+            print(f"FAISS search result IDs: {I[0]}")
+            print(f"ID Map: {id_map}")
+            result_id = id_map.get(int(I[0][0]), None)  # Map FAISS index ID to database ID
+            print(f"FAISS result ID: {result_id}")
+            
+            if result_id is None:
+                raise ValueError(f"No training data found for FAISS result ID {I[0][0]} in the ID map.")
+            
+            training_data = session.query(TrainingData).filter_by(id=result_id).first()
+            if training_data is None:
+                all_ids = [data.id for data in session.query(TrainingData).all()]
+                raise ValueError(f"No training data found for ID {result_id}. Available IDs in the TrainingData table: {all_ids}")
+            
+            faiss_index_first_question = training_data.data
 
             # Chat model prompt for feedback
             prompt_1 = f"Compare my answer: {answer_1} with my recent work experience {faiss_index_first_question}. Respond with critical feedback about how well I answered the question: tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company. Specifically check that in my answer I showed you why I’m the best candidate for this job, in terms of hard skills and experience as well as soft skills. Did I clearly provide an overview of my professional history, current role, and where I would like to go in the future? Did I prove that I’ve done my research and know how {job_title} and {company_name} company would be a logical next step in my career? Did I demonstrate that I can communicate clearly and effectively, connect with and react to other humans, and present myself professionally?"
@@ -81,15 +98,32 @@ def setup_routes(app, session):
             # FAISS index query for second question
             query_text_2 = f"Return a summary of the most important information about {company_name}"
             query_embedding_2 = embedder.embed_query(query_text_2)
+            query_embedding_2 = np.array(query_embedding_2)  # Convert to NumPy array
+            
+            # Ensure the query embedding has the correct shape
+            if query_embedding_2.ndim == 1:
+                query_embedding_2 = query_embedding_2.reshape(1, -1)
             
             # Debugging prints
             print(f"Second query embedding shape: {query_embedding_2.shape}")
 
-            if query_embedding_2.shape[0] != index.d:
-                raise ValueError(f"Second query embedding dimension {query_embedding_2.shape[0]} does not match FAISS index dimension {index.d}")
+            if query_embedding_2.shape[1] != index.d:
+                raise ValueError(f"Second query embedding dimension {query_embedding_2.shape[1]} does not match FAISS index dimension {index.d}")
 
-            D, I = index.search(np.array([query_embedding_2]), 5)
-            faiss_index_second_question = session.query(TrainingData).filter_by(id=I[0][0]).first().data
+            D, I = index.search(query_embedding_2, 5)
+            print(f"FAISS second search result IDs: {I[0]}")
+            result_id_2 = id_map.get(int(I[0][0]), None)  # Map FAISS index ID to database ID
+            print(f"FAISS second result ID: {result_id_2}")
+            
+            if result_id_2 is None:
+                raise ValueError(f"No training data found for FAISS result ID {I[0][0]} in the ID map.")
+            
+            training_data_2 = session.query(TrainingData).filter_by(id=result_id_2).first()
+            if training_data_2 is None:
+                all_ids = [data.id for data in session.query(TrainingData).all()]
+                raise ValueError(f"No training data found for ID {result_id_2}. Available IDs in the TrainingData table: {all_ids}")
+            
+            faiss_index_second_question = training_data_2.data
 
             # Chat model prompt for next question
             prompt_3 = f"Ask me a new interview question but do not ask any questions you’ve asked me already in this interview. Your question should be very specific to what you would ask a {job_title} at {company_name} company. You can reference this information about {company_name} company: {faiss_index_second_question}"
@@ -101,28 +135,26 @@ def setup_routes(app, session):
 def get_faiss_index(session):
     training_data = session.query(TrainingData).all()
     embeddings = []
-    for data in training_data:
-        embedding = np.frombuffer(data.embeddings, dtype='float32')
-        print(f"Original embedding shape: {embedding.shape}")
-        if embedding.ndim == 1:
-            embedding = embedding.reshape(1, -1)
-        if embedding.ndim == 2:
+    id_map = {}
+    for i, data in enumerate(training_data):
+        embedding = np.frombuffer(data.embeddings, dtype='float32').reshape(-1, 1536)  # Reshape embeddings
+        print(f"Adding embedding for training data ID {data.id} with shape {embedding.shape}")
+        if embedding.shape[1] == 1536:  # Ensure the embedding has the correct shape
             embeddings.append(embedding)
+            id_map[i] = data.id  # Map FAISS index ID to database ID
         else:
-            print(f"Skipping embedding with shape {embedding.shape}")
-    
+            print(f"Skipping embedding with incorrect shape: {embedding.shape}")
+
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings found.")
     
-    embeddings = np.vstack(embeddings)  # Use vstack to ensure proper shape
-    print(f"Final embeddings shape: {embeddings.shape}")
-    
-    if embeddings.ndim != 2:
-        raise ValueError(f"Expected 2D array for embeddings but got shape {embeddings.shape}")
-    
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(embeddings)
-    return index
+    embedding_array = np.vstack(embeddings).astype('float32')
+    print(f"Final embeddings array shape: {embedding_array.shape}")
+
+    dimension = embedding_array.shape[1]  # Dynamically determine dimension
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embedding_array)
+    return index, id_map
 
 # OpenAI chat model setup
 api_key = os.getenv('OPENAI_API_KEY')

@@ -46,14 +46,26 @@ def extract_text_from_file(file_path):
         raise ValueError("Unsupported file format")
 
 def create_chunks_and_embeddings_from_file(file_path, api_key):
-    model = ChatOpenAI(model="gpt-3.5-turbo", api_key=api_key, temperature=0.5)
     embedder = OpenAIEmbeddings(openai_api_key=api_key)
     
     data = extract_text_from_file(file_path)
     
     chunk_size = 1000
     chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
-    embeddings = embedder.embed_documents(chunks)
-    embedding_array = np.array(embeddings).astype('float32')
+    embeddings = []
+    for chunk in chunks:
+        embedding = embedder.embed_documents([chunk])
+        if isinstance(embedding, list) and len(embedding) == 1:
+            embedding = np.array(embedding[0])  # Convert to NumPy array
+        if embedding.shape[0] == 1536:  # Ensure embedding has correct dimensions
+            embeddings.append(embedding)
+        else:
+            print(f"Skipping chunk with incorrect embedding shape: {embedding.shape}")
+
+    if len(embeddings) == 0:
+        raise ValueError("No valid embeddings generated.")
     
+    embedding_array = np.vstack(embeddings).astype('float32')
+    print(f"Final embedding array shape: {embedding_array.shape}")
+
     return chunks, embedding_array
