@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 from docx import Document
 import fitz  # PyMuPDF
 
-from .models import User, SessionLocal
+from .models import User, SessionLocal, EmbeddingIDMapping
 
 def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx'}
@@ -47,9 +47,7 @@ def extract_text_from_file(file_path):
 
 def create_chunks_and_embeddings_from_file(file_path, api_key):
     embedder = OpenAIEmbeddings(openai_api_key=api_key)
-    
     data = extract_text_from_file(file_path)
-    
     chunk_size = 1000
     chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
     embeddings = []
@@ -61,11 +59,17 @@ def create_chunks_and_embeddings_from_file(file_path, api_key):
             embeddings.append(embedding)
         else:
             print(f"Skipping chunk with incorrect embedding shape: {embedding.shape}")
-
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings generated.")
-    
     embedding_array = np.vstack(embeddings).astype('float32')
     print(f"Final embedding array shape: {embedding_array.shape}")
-
     return chunks, embedding_array
+
+def store_embeddings_and_mappings(db_session, user, embeddings, table_name):
+    db_session.add(user)
+    db_session.commit()
+    for i, _ in enumerate(embeddings):
+        mapping = EmbeddingIDMapping(db_id=user.id, faiss_id=i, table_name=table_name, username=user.username)
+        db_session.add(mapping)
+    db_session.commit()
+

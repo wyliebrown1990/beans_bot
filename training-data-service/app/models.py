@@ -9,3 +9,11 @@ class TrainingData(Base):
     data = Column(String)
     embeddings = Column(LargeBinary)
     processed_files = Column(String)
+
+class EmbeddingIDMapping(Base):
+    __tablename__ = 'embedding_id_mapping'
+    id = Column(Integer, primary_key=True)
+    db_id = Column(Integer, nullable=False)
+    faiss_id = Column(Integer, nullable=False)
+    table_name = Column(String(255), nullable=False)
+    username = Column(String(150))  # Optional, if you want to store the username

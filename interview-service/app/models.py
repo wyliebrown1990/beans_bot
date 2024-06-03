@@ -33,3 +33,11 @@ class User(Base):
     email = Column(String(150), unique=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
     resume_embeddings = Column(LargeBinary, nullable=True)
+
+class EmbeddingIDMapping(Base):
+    __tablename__ = 'embedding_id_mapping'
+    id = Column(Integer, primary_key=True)
+    db_id = Column(Integer, nullable=False)
+    faiss_id = Column(Integer, nullable=False)
+    table_name = Column(String(255), nullable=False)
+    username = Column(String(150), nullable=False)

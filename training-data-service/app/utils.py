@@ -2,7 +2,7 @@ import os
 from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 import numpy as np
-from app.models import TrainingData
+from app.models import TrainingData, EmbeddingIDMapping
 from langchain_community.embeddings import OpenAIEmbeddings
 import logging
 
@@ -50,3 +50,42 @@ def create_chunks_and_embeddings(data: str):
     embedding_array = np.vstack(embeddings).astype('float32')
     logging.debug(f"Created {len(chunks)} chunks and embeddings for raw text")
     return chunks, embedding_array
+
+def store_training_data_and_mappings(db_session, training_data, embeddings):
+    db_session.add(training_data)
+    db_session.commit()
+    for i, _ in enumerate(embeddings):
+        mapping = EmbeddingIDMapping(db_id=training_data.id, faiss_id=i, table_name='training_data')
+        db_session.add(mapping)
+    db_session.commit()
+
+def process_file(file, job_title, company_name):
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(file_path)
+    chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
+    with app.app_context():
+        db = next(get_db())
+        training_data = load_training_data(db, job_title, company_name)
+        existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
+        if filename not in existing_files:
+            if training_data:
+                training_data.data += '\n' + '\n'.join(chunks)
+                existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
+                if embedding_array.size > 0:
+                    if len(embedding_array.shape) == 1:
+                        embedding_array = embedding_array.reshape(1, -1)
+                    training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
+                training_data.processed_files += ',' + filename
+            else:
+                new_training_data = TrainingData(
+                    job_title=job_title,
+                    company_name=company_name,
+                    data='\n'.join(chunks),
+                    embeddings=embedding_array.tobytes(),
+                    processed_files=filename
+                )
+                db.add(new_training_data)
+                training_data = new_training_data
+            store_training_data_and_mappings(db, training_data, embedding_array)
+        db.commit()

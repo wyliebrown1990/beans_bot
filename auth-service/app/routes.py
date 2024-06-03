@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import os
 from .models import User, SessionLocal
-from .utils import get_user_by_username, get_user_by_email, allowed_file, create_chunks_and_embeddings_from_file
+from .utils import get_user_by_username, get_user_by_email, allowed_file, create_chunks_and_embeddings_from_file, store_embeddings_and_mappings
 from . import login_manager  # Import login_manager
 
 auth_bp = Blueprint('auth', __name__)
@@ -36,31 +36,24 @@ def signup():
         email = request.form['email']
         password = request.form['password']
         file = request.files['resume']
-        
         session = SessionLocal()
         existing_user_by_username = get_user_by_username(username)
         existing_user_by_email = get_user_by_email(email)
-        
         if existing_user_by_email:
             flash('That email is already registered. Would you like to login?')
             return redirect(url_for('auth.signup'))
-        
         if existing_user_by_username:
             flash('That username is already registered. Please try something new.')
             return redirect(url_for('auth.signup'))
-        
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
-            
             chunks, embeddings = create_chunks_and_embeddings_from_file(file_path, current_app.config['OPENAI_API_KEY'])
-            
             user = User(username=username, email=email)
             user.set_password(password)
-            user.resume_embeddings = embeddings.tobytes()  # Ensure embeddings are correctly shaped
-            session.add(user)
-            session.commit()
+            user.resume_embeddings = embeddings.tobytes()
+            store_embeddings_and_mappings(session, user, embeddings, 'users')
             flash('User registered successfully')
             return redirect(url_for('auth.login'))
         else:

@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, jsonify, url_for
 from app import app
 from app.database import get_db
 from app.models import TrainingData
-from app.utils import secure_filename, load_training_data, create_chunks_and_embeddings_from_file, create_chunks_and_embeddings
+from app.utils import secure_filename, load_training_data, create_chunks_and_embeddings_from_file, create_chunks_and_embeddings, store_training_data_and_mappings
 import os
 import threading
 import logging
@@ -139,6 +139,7 @@ def download_and_transcribe(video):
         )
         db.add(new_training_data)
         db.commit()
+        store_training_data_and_mappings(db, new_training_data, embedding_array)
 
     status.append(f"{video_title} complete")
 
@@ -188,6 +189,7 @@ def process_file(file, job_title, company_name):
                 )
                 db.add(new_training_data)
                 training_data = new_training_data
+            store_training_data_and_mappings(db, training_data, embedding_array)
         db.commit()
     
     status.append(f"{filename} uploaded")
@@ -214,6 +216,8 @@ def process_raw_text(job_title, company_name, raw_text):
                 embeddings=embedding_array.tobytes(),
             )
             db.add(new_training_data)
+            training_data = new_training_data
+        store_training_data_and_mappings(db, training_data, embedding_array)
         db.commit()
     status.append(f"Raw text for {job_title} at {company_name} processed successfully")
     cleanup_uploads_folder()
@@ -240,8 +244,6 @@ def index():
         return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username))
 
     return render_template('index.html', username=username)
-
-
 
 @app.route('/youtube_transcription', methods=['POST'])
 def youtube_transcription():
@@ -297,6 +299,8 @@ def file_upload():
                         processed_files=filename
                     )
                     db.add(new_training_data)
+                    training_data = new_training_data
+                store_training_data_and_mappings(db, training_data, embedding_array)
                 db.commit()
             
             status.append(f"{filename} uploaded")
@@ -304,7 +308,6 @@ def file_upload():
     status.append("All files processed successfully")
     cleanup_uploads_folder()
     return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
-
 
 @app.route('/raw_text_submission', methods=['POST'])
 def raw_text_submission():

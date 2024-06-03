@@ -80,30 +80,39 @@ def setup_routes(app, session):
             print(f"ID Map: {id_map}")
             
             if result_id is None:
-                all_ids = [data.id for data in session.query(TrainingData).all()]
-                raise ValueError(f"No training data found for FAISS result ID {result_id}. Available IDs in the TrainingData table: {all_ids}")
+                raise ValueError(f"No data found for FAISS result ID {result_id}")
 
-            training_data_entry = session.query(TrainingData).filter_by(id=result_id).first()
-            
-            if training_data_entry is None:
-                all_ids = [data.id for data in session.query(TrainingData).all()]
-                raise ValueError(f"No training data found for FAISS result ID {result_id}. Available IDs in the TrainingData table: {all_ids}")
+            if result_id["table"] == "training_data":
+                training_data_entry = session.query(TrainingData).filter_by(id=result_id["id"]).first()
+                if training_data_entry is None:
+                    raise ValueError(f"No training data found for ID {result_id['id']} in table training_data")
+                faiss_index_first_question = training_data_entry.data
+            elif result_id["table"] == "users":
+                user_entry = session.query(User).filter_by(id=result_id["id"]).first()
+                if user_entry is None:
+                    raise ValueError(f"No user found for ID {result_id['id']} in table users")
+                faiss_index_first_question = "User resume and experience data available."
+            else:
+                raise ValueError(f"Unknown table {result_id['table']}")
 
-            faiss_index_first_question = training_data_entry.data
+            # Truncate faiss_index_first_question if it exceeds a certain length
+            max_length = 2000  # Adjust based on the acceptable limit
+            if len(faiss_index_first_question) > max_length:
+                faiss_index_first_question = faiss_index_first_question[:max_length]
 
             # Chat model prompt for feedback
             messages_1 = [
                 SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
                 HumanMessage(content=f"Compare my answer: {answer_1} with my recent work experience {faiss_index_first_question}. Respond with critical feedback about how well I answered the question: tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company. Specifically check that in my answer I showed you why I’m the best candidate for this job, in terms of hard skills and experience as well as soft skills. Did I clearly provide an overview of my professional history, current role, and where I would like to go in the future? Did I prove that I’ve done my research and know how {job_title} and {company_name} company would be a logical next step in my career? Did I demonstrate that I can communicate clearly and effectively, connect with and react to other humans, and present myself professionally?")
             ]
-            feedback_response = model.invoke(messages_1)
+            feedback_response = model.invoke(messages_1)[0]
 
             # Chat model prompt for score
             messages_2 = [
                 SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
                 HumanMessage(content=f"I want you to only respond to me with a score of one number between 0 and 10 where 0 is awful and 10 is the best. Be critical and harsh and only give the very best answers a 9 or a 10. You are scoring based on my answer to the question: tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company. Here is my answer: {answer_1}. Here is additional information about my resume: {faiss_index_first_question}.")
             ]
-            score_response = model.invoke(messages_2)
+            score_response = model.invoke(messages_2)[0]
 
             # FAISS index query for second question
             query_text_2 = f"Return a summary of the most important information about {company_name}"
@@ -126,48 +135,62 @@ def setup_routes(app, session):
             print(f"ID Map: {id_map}")
 
             if result_id_2 is None:
-                all_ids = [data.id for data in session.query(TrainingData).all()]
-                raise ValueError(f"No training data found for FAISS result ID {result_id_2}. Available IDs in the TrainingData table: {all_ids}")
+                raise ValueError(f"No data found for FAISS result ID {result_id_2}")
 
-            training_data_entry_2 = session.query(TrainingData).filter_by(id=result_id_2).first()
-            
-            if training_data_entry_2 is None:
-                all_ids = [data.id for data in session.query(TrainingData).all()]
-                raise ValueError(f"No training data found for FAISS result ID {result_id_2}. Available IDs in the TrainingData table: {all_ids}")
+            if result_id_2["table"] == "training_data":
+                training_data_entry_2 = session.query(TrainingData).filter_by(id=result_id_2["id"]).first()
+                if training_data_entry_2 is None:
+                    raise ValueError(f"No training data found for ID {result_id_2['id']} in table training_data")
+                faiss_index_second_question = training_data_entry_2.data
+            elif result_id_2["table"] == "users":
+                user_entry_2 = session.query(User).filter_by(id=result_id_2["id"]).first()
+                if user_entry_2 is None:
+                    raise ValueError(f"No user found for ID {result_id_2['id']} in table users")
+                faiss_index_second_question = "User resume and experience data available."
+            else:
+                raise ValueError(f"Unknown table {result_id_2['table']}")
 
-            faiss_index_second_question = training_data_entry_2.data
+            # Truncate faiss_index_second_question if it exceeds a certain length
+            if len(faiss_index_second_question) > max_length:
+                faiss_index_second_question = faiss_index_second_question[:max_length]
 
             # Chat model prompt for next question
             messages_3 = [
                 SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
                 HumanMessage(content=f"Ask me a new interview question but do not ask any questions you’ve asked me already in this interview. Your question should be very specific to what you would ask a {job_title} at {company_name} company. You can reference this information about {company_name} company: {faiss_index_second_question}")
             ]
-            next_question_response = model.invoke(messages_3)
+            next_question_response = model.invoke(messages_3)[0]
 
-            return render_template('specific_interview.html', first_question=answer_1, feedback_response=feedback_response['text'], score_response=score_response['text'], next_question_response=next_question_response['text'], job_title=job_title, company_name=company_name, industry=industry, username=username)
+            return render_template('specific_interview.html', first_question=answer_1, feedback_response=feedback_response.content, score_response=score_response.content, next_question_response=next_question_response.content, job_title=job_title, company_name=company_name, industry=industry, username=username)
 
 # Ensure FAISS index and chat model setup are included
 def get_faiss_index(session):
     training_data = session.query(TrainingData).all()
+    user_data = session.query(User).all()
     embeddings = []
     id_map = {}
     index = 0
+
+    # TrainingData embeddings
     for data in training_data:
-        embedding = np.frombuffer(data.embeddings, dtype='float32').reshape(-1, 1536)  # Reshape embeddings
-        if embedding.shape[1] == 1536:  # Ensure the embedding has the correct shape
-            embeddings.append(embedding)
-            id_map[index] = data.id
+        embedding = np.frombuffer(data.embeddings, dtype='float32').reshape(-1, 1536)
+        for i in range(embedding.shape[0]):
+            embeddings.append(embedding[i])
+            id_map[index] = {"id": data.id, "table": "training_data"}
             index += 1
-        else:
-            print(f"Skipping embedding with incorrect shape: {embedding.shape}")
+
+    # User resume embeddings
+    for user in user_data:
+        embedding = np.frombuffer(user.resume_embeddings, dtype='float32').reshape(-1, 1536)
+        for i in range(embedding.shape[0]):
+            embeddings.append(embedding[i])
+            id_map[index] = {"id": user.id, "table": "users"}
+            index += 1
 
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings found.")
-    
     embedding_array = np.vstack(embeddings).astype('float32')
-    print(f"Final embeddings array shape: {embedding_array.shape}")
-
-    dimension = embedding_array.shape[1]  # Dynamically determine dimension
+    dimension = embedding_array.shape[1]
     index = faiss.IndexFlatL2(dimension)
     index.add(embedding_array)
     return index, id_map

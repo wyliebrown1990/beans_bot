@@ -21,7 +21,7 @@ class User(UserMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(150), unique=True, nullable=False)
     email = Column(String(150), unique=True, nullable=False)
-    password_hash = Column(String(256), nullable=False)  # Increased length
+    password_hash = Column(String(256), nullable=False)
     resume_embeddings = Column(LargeBinary, nullable=True)
 
     def set_password(self, password):
@@ -29,3 +29,11 @@ class User(UserMixin, Base):
     
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+class EmbeddingIDMapping(Base):
+    __tablename__ = 'embedding_id_mapping'
+    id = Column(Integer, primary_key=True)
+    db_id = Column(Integer, nullable=False)
+    faiss_id = Column(Integer, nullable=False)
+    table_name = Column(String(255), nullable=False)
+    username = Column(String(150), nullable=False)  # Ensure this field is included
