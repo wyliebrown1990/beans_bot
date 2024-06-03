@@ -1,201 +1,188 @@
-import os
-import re
-from flask import render_template, request, redirect, url_for
-from sqlalchemy.orm import sessionmaker
-import numpy as np
+from flask import render_template, request, jsonify, redirect, url_for
+from sqlalchemy.orm import Session
 import faiss
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from .models import TrainingData, User  # Ensure TrainingData and User are imported
+from .models import TrainingData, InterviewAnswer, User
+import numpy as np
+import os
+import re
+import logging
 
-def setup_routes(app, session):
+# Initialize the OpenAI chat model and embeddings model
+openai_api_key = os.getenv("OPENAI_API_KEY")
+model = ChatOpenAI(model="gpt-3.5-turbo", api_key=openai_api_key, temperature=0.5)
+embedder = OpenAIEmbeddings(api_key=openai_api_key)
 
-    @app.route('/', methods=['GET'])
-    def index():
-        job_title = request.args.get('job_title')
-        company_name = request.args.get('company_name')
-        industry = request.args.get('industry')
-        username = request.args.get('username')
+# In-memory store for chat histories
+chat_histories = {}
 
-        print(f"Received parameters: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}")
+# Helper functions
+def get_session_history(session_id: str) -> ChatMessageHistory:
+    if session_id not in chat_histories:
+        chat_histories[session_id] = ChatMessageHistory()
+    return chat_histories[session_id]
 
-        if not username:
-            return "Username is missing", 400
+def load_training_data(session: Session, job_title, company_name):
+    logging.debug(f"Querying for job_title: '{job_title}', company_name: '{company_name}'")
+    training_data = session.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first()
+    if training_data:
+        logging.debug(f"Found training data: {training_data}")
+    else:
+        logging.debug("No training data found")
+    return training_data
 
-        if job_title == 'generic':
-            print("Redirecting to generic_interview")
-            return redirect(url_for('generic_interview', username=username))
-        elif job_title and company_name and industry:
-            print("Redirecting to specific_interview")
-            return redirect(url_for('specific_interview', job_title=job_title, company_name=company_name, industry=industry, username=username))
-        else:
-            return render_template('index.html')  # Render index.html if no parameters or invalid parameters
 
-    @app.route('/generic_interview')
-    def generic_interview():
-        username = request.args.get('username')
-        first_question = "I'm all ears and whiskers! Tell me about your purr-sonal work experience and background. Can you share the tail of your career so far? I'd love to hear about the pawsitive impact you've made in your previous jobs."
-        return render_template('generic_interview.html', first_question=first_question, username=username)
+def query_faiss_index(index, embedding_array, query_embedding, k=5):
+    D, I = index.search(np.array([query_embedding]), k)
+    return [embedding_array[i] for i in I[0]]
 
-    @app.route('/specific_interview', methods=['GET', 'POST'])
-    def specific_interview():
+def get_initial_question(training_data, industry, job_title, company_name):
+   print("Entering get_initial_question function")
+   chunks = training_data.data.split('\n')
+   print(f"Chunks: {chunks[:5]}")  # Print first 5 chunks for debug
+   embedding_array = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
+   print(f"Embedding array shape: {embedding_array.shape}")
+   dimension = embedding_array.shape[1]
+   index = faiss.IndexFlatL2(dimension)
+   index.add(embedding_array)
+
+   query_text = f"How would a {job_title} demonstrate knowledge of {company_name} in the {industry} industry?"
+   example_query_embedding = embedder.embed_query(query_text)
+   print(f"Example query embedding: {example_query_embedding[:5]}")  # Print first 5 values
+   relevant_embeddings = query_faiss_index(index, embedding_array, example_query_embedding)
+   print(f"Relevant embeddings: {relevant_embeddings}")
+   relevant_chunks = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings]
+   print(f"Relevant chunks: {relevant_chunks}")
+   relevant_context = " ".join(relevant_chunks)
+   print(f"Relevant context: {relevant_context}")
+
+   prompt = ChatPromptTemplate.from_messages([
+       ("system", f"You are helping me land a new job by conducting a mock interview with me. You should ask me a new question each time that is related to {job_title} job role at {company_name} company in the {industry} industry. Your questions should test my knowledge of the {job_title} job role and {company_name} company. You should challenge me to give concise and relevant answers. Here is some context about {company_name}: {relevant_context}"),
+       MessagesPlaceholder(variable_name="messages"),
+   ])
+
+   chain = prompt | model
+   initial_prompt = "Ask a challenging interview question."
+   response = chain.invoke({"messages": [HumanMessage(content=initial_prompt)]})
+   print("Leaving get_initial_question function")
+
+   return response.content
+
+def get_next_question(session, session_id, user_response, job_title, company_name, industry):
+   session_history = get_session_history(session_id)
+   session_history.add_message(HumanMessage(content=user_response))
+
+   training_data = load_training_data(session, job_title, company_name)
+   chunks = training_data.data.split('\n')
+   embedding_array = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
+   dimension = embedding_array.shape[1]
+   index = faiss.IndexFlatL2(dimension)
+   index.add(embedding_array)
+
+   response_embedding = embedder.embed_query(user_response)
+   relevant_embeddings_for_fact_checking = query_faiss_index(index, embedding_array, response_embedding)
+   relevant_chunks_for_fact_checking = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings_for_fact_checking]
+   relevant_context_for_fact_checking = " ".join(relevant_chunks_for_fact_checking)
+
+   fact_check_prompt = ChatPromptTemplate.from_messages([
+       ("system", f"Give me critical feedback on how well I answered your last question. Specifically call out the following: Was my answer concise? Did I provide a STAR (Situation, Task, Action, and Result) formatted answer? Did I use too many filler words? Did I provide an answer that was specific to being a {job_title} at {company_name}? Finally, you must always score my answer from between 0 being the worst answer and 10 being the best. Always return a score out of 10. Once you complete giving feedback, move on to ask me a new question you haven’t asked before in this interview. If you need additional context about being a {job_title} at {company_name}, use this: {relevant_context_for_fact_checking}"),
+       ("user", user_response),
+       MessagesPlaceholder(variable_name="messages"),
+   ])
+
+   fact_check_chain = fact_check_prompt | model
+   fact_check_response = fact_check_chain.invoke({"messages": session_history.messages})
+   fact_check_feedback = fact_check_response.content
+
+   score = extract_score(fact_check_feedback)
+
+   relevant_embeddings_for_next_question = query_faiss_index(index, embedding_array, response_embedding)
+   relevant_chunks_for_next_question = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings_for_next_question]
+   relevant_context_for_next_question = " ".join(relevant_chunks_for_next_question)
+
+   next_question_prompt = ChatPromptTemplate.from_messages([
+       ("system", f"You are helping me land a new job by conducting a mock interview with me. You should ask me a new question each time that is related to {job_title} job role at {company_name} company. You should reference this Context: {relevant_context_for_next_question}"),
+       MessagesPlaceholder(variable_name="messages"),
+   ])
+
+   next_question_chain = next_question_prompt | model
+   next_question_response = next_question_chain.invoke({"messages": session_history.messages})
+   next_question = next_question_response.content
+   session_history.add_message(AIMessage(content=next_question))
+
+   new_answer = InterviewAnswer(
+       job_title=job_title,
+       company_name=company_name,
+       industry=industry,
+       question=session_history.messages[-2].content,
+       answer=user_response,
+       critique=fact_check_feedback,
+       score=score
+   )
+   session.add(new_answer)
+   session.commit()
+
+   return {
+       "next_question": next_question,
+       "fact_check_feedback": fact_check_feedback,
+       "score": score
+   }
+
+
+def extract_score(feedback):
+    match = re.search(r"\b(\d{1,2})\b", feedback)
+    if match:
+        return match.group(1)
+    else:
+        return "Score not found"
+
+def setup_routes(app_instance, session_instance):
+    global session
+    session = session_instance
+
+    @app_instance.route('/start_interview', methods=['GET', 'POST'])
+    def start_interview():
         if request.method == 'GET':
-            job_title = request.args.get('job_title')
-            company_name = request.args.get('company_name')
-            industry = request.args.get('industry')
+            print("GET request received at /start_interview")
+            job_title = request.args.get('job_title').strip().lower()
+            company_name = request.args.get('company_name').strip().lower()
+            industry = request.args.get('industry').strip().lower()
             username = request.args.get('username')
-            first_question = f"Tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company."
-            return render_template('specific_interview.html', first_question=first_question, job_title=job_title, company_name=company_name, industry=industry, username=username)
+
+            print(f"Parameters received: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}")
+
+            training_data = load_training_data(session, job_title, company_name)
+            if training_data:
+                print("Training data found")
+                initial_question = get_initial_question(training_data, industry, job_title, company_name)
+                session_id = os.urandom(24).hex()
+                session_history = get_session_history(session_id)
+                session_history.add_message(AIMessage(content=initial_question))
+                return render_template('start_interview.html', question=initial_question, session_id=session_id, job_title=job_title, company_name=company_name, industry=industry, username=username)
+            else:
+                print("No training data found")
+                return render_template('index.html', message="No training data found. To improve results please provide a file path to training data:", job_title=job_title, company_name=company_name, industry=industry)
         
-        elif request.method == 'POST':
-            answer_1 = request.form['answer_1']
+        if request.method == 'POST':
+            print("POST request received at /start_interview")
             job_title = request.form['job_title']
             company_name = request.form['company_name']
+            industry = request.form['industry']
             username = request.form['username']
+            session_id = request.form['session_id']
+            user_response = request.form['answer_1']
 
-            # FAISS index query for first question
-            index, id_map = get_faiss_index(session)
-            query_text = "Return recent and relevant work experience"
-            query_embedding = embedder.embed_query(query_text)
-            query_embedding = np.array(query_embedding)  # Convert to NumPy array
-            
-            # Ensure the query embedding has the correct shape
-            if query_embedding.ndim == 1:
-                query_embedding = query_embedding.reshape(1, -1)
-            
-            # Debugging prints
-            print(f"Query embedding shape: {query_embedding.shape}")
-            print(f"FAISS index dimension: {index.d}")
+            print(f"Form data received: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, session_id={session_id}")
 
-            if query_embedding.shape[1] != index.d:
-                raise ValueError(f"Query embedding dimension {query_embedding.shape[1]} does not match FAISS index dimension {index.d}")
-            
-            D, I = index.search(query_embedding, 5)
-            print(f"FAISS search result IDs: {I[0]}")
-            result_id = id_map.get(int(I[0][0]))
-            print(f"FAISS result ID: {result_id}")
-            print(f"ID Map: {id_map}")
-            
-            if result_id is None:
-                raise ValueError(f"No data found for FAISS result ID {result_id}")
+            results = get_next_question(session, session_id, user_response, job_title, company_name, industry)
 
-            if result_id["table"] == "training_data":
-                training_data_entry = session.query(TrainingData).filter_by(id=result_id["id"]).first()
-                if training_data_entry is None:
-                    raise ValueError(f"No training data found for ID {result_id['id']} in table training_data")
-                faiss_index_first_question = training_data_entry.data
-            elif result_id["table"] == "users":
-                user_entry = session.query(User).filter_by(id=result_id["id"]).first()
-                if user_entry is None:
-                    raise ValueError(f"No user found for ID {result_id['id']} in table users")
-                faiss_index_first_question = "User resume and experience data available."
-            else:
-                raise ValueError(f"Unknown table {result_id['table']}")
+            return jsonify({
+                'feedback_response': results['fact_check_feedback'],
+                'score_response': results['score'],
+                'next_question_response': results['next_question']
+            })
 
-            # Truncate faiss_index_first_question if it exceeds a certain length
-            max_length = 2000  # Adjust based on the acceptable limit
-            if len(faiss_index_first_question) > max_length:
-                faiss_index_first_question = faiss_index_first_question[:max_length]
-
-            # Chat model prompt for feedback
-            messages_1 = [
-                SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
-                HumanMessage(content=f"Compare my answer: {answer_1} with my recent work experience {faiss_index_first_question}. Respond with critical feedback about how well I answered the question: tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company. Specifically check that in my answer I showed you why I’m the best candidate for this job, in terms of hard skills and experience as well as soft skills. Did I clearly provide an overview of my professional history, current role, and where I would like to go in the future? Did I prove that I’ve done my research and know how {job_title} and {company_name} company would be a logical next step in my career? Did I demonstrate that I can communicate clearly and effectively, connect with and react to other humans, and present myself professionally?")
-            ]
-            feedback_response = model.invoke(messages_1)[0]
-
-            # Chat model prompt for score
-            messages_2 = [
-                SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
-                HumanMessage(content=f"I want you to only respond to me with a score of one number between 0 and 10 where 0 is awful and 10 is the best. Be critical and harsh and only give the very best answers a 9 or a 10. You are scoring based on my answer to the question: tell me about your professional experience and any relevant skills for working as a {job_title} at {company_name} company. Here is my answer: {answer_1}. Here is additional information about my resume: {faiss_index_first_question}.")
-            ]
-            score_response = model.invoke(messages_2)[0]
-
-            # FAISS index query for second question
-            query_text_2 = f"Return a summary of the most important information about {company_name}"
-            query_embedding_2 = embedder.embed_query(query_text_2)
-            query_embedding_2 = np.array(query_embedding_2)  # Convert to NumPy array
-            
-            # Ensure the query embedding has the correct shape
-            if query_embedding_2.ndim == 1:
-                query_embedding_2 = query_embedding_2.reshape(1, -1)
-            
-            # Debugging prints
-            print(f"Second query embedding shape: {query_embedding_2.shape}")
-
-            if query_embedding_2.shape[1] != index.d:
-                raise ValueError(f"Second query embedding dimension {query_embedding_2.shape[1]} does not match FAISS index dimension {index.d}")
-
-            D, I = index.search(query_embedding_2, 5)
-            result_id_2 = id_map.get(int(I[0][0]))
-            print(f"FAISS result ID for second question: {result_id_2}")
-            print(f"ID Map: {id_map}")
-
-            if result_id_2 is None:
-                raise ValueError(f"No data found for FAISS result ID {result_id_2}")
-
-            if result_id_2["table"] == "training_data":
-                training_data_entry_2 = session.query(TrainingData).filter_by(id=result_id_2["id"]).first()
-                if training_data_entry_2 is None:
-                    raise ValueError(f"No training data found for ID {result_id_2['id']} in table training_data")
-                faiss_index_second_question = training_data_entry_2.data
-            elif result_id_2["table"] == "users":
-                user_entry_2 = session.query(User).filter_by(id=result_id_2["id"]).first()
-                if user_entry_2 is None:
-                    raise ValueError(f"No user found for ID {result_id_2['id']} in table users")
-                faiss_index_second_question = "User resume and experience data available."
-            else:
-                raise ValueError(f"Unknown table {result_id_2['table']}")
-
-            # Truncate faiss_index_second_question if it exceeds a certain length
-            if len(faiss_index_second_question) > max_length:
-                faiss_index_second_question = faiss_index_second_question[:max_length]
-
-            # Chat model prompt for next question
-            messages_3 = [
-                SystemMessage(content=f"You are a job coach conducting a mock interview for a {job_title} position at {company_name}."),
-                HumanMessage(content=f"Ask me a new interview question but do not ask any questions you’ve asked me already in this interview. Your question should be very specific to what you would ask a {job_title} at {company_name} company. You can reference this information about {company_name} company: {faiss_index_second_question}")
-            ]
-            next_question_response = model.invoke(messages_3)[0]
-
-            return render_template('specific_interview.html', first_question=answer_1, feedback_response=feedback_response.content, score_response=score_response.content, next_question_response=next_question_response.content, job_title=job_title, company_name=company_name, industry=industry, username=username)
-
-# Ensure FAISS index and chat model setup are included
-def get_faiss_index(session):
-    training_data = session.query(TrainingData).all()
-    user_data = session.query(User).all()
-    embeddings = []
-    id_map = {}
-    index = 0
-
-    # TrainingData embeddings
-    for data in training_data:
-        embedding = np.frombuffer(data.embeddings, dtype='float32').reshape(-1, 1536)
-        for i in range(embedding.shape[0]):
-            embeddings.append(embedding[i])
-            id_map[index] = {"id": data.id, "table": "training_data"}
-            index += 1
-
-    # User resume embeddings
-    for user in user_data:
-        embedding = np.frombuffer(user.resume_embeddings, dtype='float32').reshape(-1, 1536)
-        for i in range(embedding.shape[0]):
-            embeddings.append(embedding[i])
-            id_map[index] = {"id": user.id, "table": "users"}
-            index += 1
-
-    if len(embeddings) == 0:
-        raise ValueError("No valid embeddings found.")
-    embedding_array = np.vstack(embeddings).astype('float32')
-    dimension = embedding_array.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embedding_array)
-    return index, id_map
-
-# OpenAI chat model setup
-api_key = os.getenv('OPENAI_API_KEY')
-model = ChatOpenAI(model="gpt-3.5-turbo", api_key=api_key, temperature=0.5)
-embedder = OpenAIEmbeddings(openai_api_key=api_key)

@@ -1,64 +1,64 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Progress</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script>
-        async function fetchProgress() {
-            const response = await fetch('/progress_data');
-            const data = await response.json();
-            const progressElement = document.getElementById('progress');
-            progressElement.innerHTML = data.map(status => `<p>${status}</p>`).join('');
-            if (data[data.length - 1].includes('successfully')) {
-                if (!document.getElementById('add-more-button')) {
-                    const button = document.createElement('button');
-                    button.id = 'add-more-button';
-                    button.innerText = 'Add More Training Data';
-                    button.onclick = () => {
-                        const params = new URLSearchParams({
-                            job_title: "{{ job_title }}",
-                            company_name: "{{ company_name }}",
-                            industry: "{{ industry }}",
-                            username: "{{ username }}"
-                        });
-                        window.location.href = '/upload_options?' + params.toString();
-                    };
-                    progressElement.appendChild(button);
-                }
-                if (!document.getElementById('start-interview-button')) {
-                    const button = document.createElement('button');
-                    button.id = 'start-interview-button';
-                    button.innerText = 'Start Interview!';
-                    button.onclick = () => {
-                        const params = new URLSearchParams({
-                            job_title: "{{ job_title }}",
-                            company_name: "{{ company_name }}",
-                            industry: "{{ industry }}",
-                            username: "{{ username }}"
-                        });
-                        window.location.href = 'http://localhost:5013/?' + params.toString();
-                    };
-                    progressElement.appendChild(button);
-                }
-            } else {
-                setTimeout(fetchProgress, 1000);
-            }
-        }
-        document.addEventListener('DOMContentLoaded', fetchProgress);
-    </script>
+   <meta charset="utf-8">
+   <title>Progress</title>
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+   <script>
+       async function fetchProgress() {
+           const response = await fetch('/progress_data');
+           const data = await response.json();
+           const progressElement = document.getElementById('progress');
+           progressElement.innerHTML = data.map(status => `<p>${status}</p>`).join('');
+           if (data[data.length - 1].includes('successfully')) {
+               if (!document.getElementById('add-more-button')) {
+                   const button = document.createElement('button');
+                   button.id = 'add-more-button';
+                   button.innerText = 'Add More Training Data';
+                   button.onclick = () => {
+                       const params = new URLSearchParams({
+                           job_title: "{{ job_title.lower() }}",
+                           company_name: "{{ company_name.lower() }}",
+                           industry: "{{ industry.lower() }}",
+                           username: "{{ username.lower() }}"
+                       });
+                       window.location.href = '/upload_options?' + params.toString();
+                   };
+                   progressElement.appendChild(button);
+               }
+               if (!document.getElementById('start-interview-button')) {
+                   const button = document.createElement('button');
+                   button.id = 'start-interview-button';
+                   button.innerText = 'Start Interview!';
+                   button.onclick = () => {
+                       const params = new URLSearchParams({
+                           job_title: "{{ job_title.lower() }}",
+                           company_name: "{{ company_name.lower() }}",
+                           industry: "{{ industry.lower() }}",
+                           username: "{{ username.lower() }}"
+                       });
+                       window.location.href = 'http://localhost:5013/start_interview?' + params.toString();
+                   };
+                   progressElement.appendChild(button);
+               }
+           } else {
+               setTimeout(fetchProgress, 1000);
+           }
+       }
+       document.addEventListener('DOMContentLoaded', fetchProgress);
+   </script>
 </head>
 <body>
-    <div id="page-container">
-        <div id="content-wrap">
-            <header>
-                <h1>Processing Progress</h1>
-            </header>
-            <div id="progress"></div>
-        </div>
-        <footer id="footers">
-            <p>&copy; Your Company 2024</p>
-        </footer>
-    </div>
+   <div id="page-container">
+       <div id="content-wrap">
+           <header>
+               <h1>Processing Progress</h1>
+           </header>
+           <div id="progress"></div>
+       </div>
+       <footer id="footers">
+           <p>&copy; Your Company 2024</p>
+       </footer>
+   </div>
 </body>
 </html>

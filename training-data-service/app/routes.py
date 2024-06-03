@@ -81,7 +81,7 @@ def get_video_urls_from_channel(channel_id, num_videos):
 def sanitize_filename(filename):
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
-def download_and_transcribe(video):
+def download_and_transcribe(video, job_title, company_name):
     global status
     video_url = video['url']
     video_title = sanitize_filename(video['title'])
@@ -130,9 +130,11 @@ def download_and_transcribe(video):
 
     with app.app_context():
         db = next(get_db())
+        job_title = job_title.lower().strip()
+        company_name = company_name.lower().strip()
         new_training_data = TrainingData(
-            job_title='unknown',  # Set appropriate values if available
-            company_name='unknown',  # Set appropriate values if available
+            job_title=job_title,
+            company_name=company_name,
             data='\n'.join(chunks),
             embeddings=embedding_array.tobytes(),
             processed_files=transcription_file_path
@@ -143,17 +145,20 @@ def download_and_transcribe(video):
 
     status.append(f"{video_title} complete")
 
-def transcribe_videos(channel_id, num_videos):
+
+
+def transcribe_videos(channel_id, num_videos, job_title, company_name):
     global status
     status = []
     try:
         video_urls = get_video_urls_from_channel(channel_id, num_videos)
         for video in video_urls:
-            download_and_transcribe(video)
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip())
         status.append("All videos processed successfully")
         cleanup_uploads_folder()
     except Exception as e:
         status.append(f"Error: {str(e)}")
+
 
 def process_file(file, job_title, company_name):
     global status
@@ -167,6 +172,8 @@ def process_file(file, job_title, company_name):
     chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
     with app.app_context():
         db = next(get_db())
+        job_title = job_title.lower().strip()
+        company_name = company_name.lower().strip()
         training_data = load_training_data(db, job_title, company_name)
         existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
         
@@ -194,12 +201,16 @@ def process_file(file, job_title, company_name):
     
     status.append(f"{filename} uploaded")
 
+
+
 def process_raw_text(job_title, company_name, raw_text):
     global status
     status.append(f"Processing raw text for {job_title} at {company_name}")
     chunks, embedding_array = create_chunks_and_embeddings(raw_text)
     with app.app_context():
         db = next(get_db())
+        job_title = job_title.lower().strip()
+        company_name = company_name.lower().strip()
         training_data = load_training_data(db, job_title, company_name)
         if training_data:
             training_data.data += '\n' + '\n'.join(chunks)
@@ -221,6 +232,8 @@ def process_raw_text(job_title, company_name, raw_text):
         db.commit()
     status.append(f"Raw text for {job_title} at {company_name} processed successfully")
     cleanup_uploads_folder()
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -255,8 +268,10 @@ def youtube_transcription():
     username = request.form['username']
     channel_id = request.form['channel_id']
     num_videos = int(request.form['num_videos'])
-    threading.Thread(target=transcribe_videos, args=(channel_id, num_videos)).start()
-    return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+    threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip())).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+
+
 
 @app.route('/file_upload', methods=['POST'])
 def file_upload():

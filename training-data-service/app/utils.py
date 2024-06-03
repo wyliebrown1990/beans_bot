@@ -7,7 +7,12 @@ from langchain_community.embeddings import OpenAIEmbeddings
 import logging
 
 def load_training_data(db: Session, job_title: str, company_name: str):
-    return db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first()
+    logging.debug(f"Loading training data for job title: {job_title}, company name: {company_name}")
+    training_data = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first()
+    logging.debug(f"Retrieved training data: {training_data}")
+    if training_data:
+        logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
+    return training_data
 
 def create_chunks_and_embeddings_from_file(file_path: str):
     logging.debug(f"Processing file: {file_path}")
@@ -52,24 +57,38 @@ def create_chunks_and_embeddings(data: str):
     return chunks, embedding_array
 
 def store_training_data_and_mappings(db_session, training_data, embeddings):
+    logging.debug(f"Storing training data: {training_data}")
+    logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
+    logging.debug(f"Embeddings: {len(embeddings)} embeddings")
     db_session.add(training_data)
     db_session.commit()
+    logging.debug(f"Stored training data with ID: {training_data.id}")
+    
     for i, _ in enumerate(embeddings):
         mapping = EmbeddingIDMapping(db_id=training_data.id, faiss_id=i, table_name='training_data')
         db_session.add(mapping)
     db_session.commit()
+    logging.debug("Stored embedding ID mappings")
 
 def process_file(file, job_title, company_name):
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
+    logging.debug(f"Saved file to {file_path}")
+
     chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
+    logging.debug(f"Created chunks and embeddings for file: {filename}")
+
     with app.app_context():
         db = next(get_db())
+        job_title = job_title.lower().strip()
+        company_name = company_name.lower().strip()
         training_data = load_training_data(db, job_title, company_name)
         existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
+        
         if filename not in existing_files:
             if training_data:
+                logging.debug(f"Updating existing training data with ID: {training_data.id}")
                 training_data.data += '\n' + '\n'.join(chunks)
                 existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
                 if embedding_array.size > 0:
@@ -78,6 +97,7 @@ def process_file(file, job_title, company_name):
                     training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
                 training_data.processed_files += ',' + filename
             else:
+                logging.debug("Creating new training data entry")
                 new_training_data = TrainingData(
                     job_title=job_title,
                     company_name=company_name,
@@ -89,3 +109,4 @@ def process_file(file, job_title, company_name):
                 training_data = new_training_data
             store_training_data_and_mappings(db, training_data, embedding_array)
         db.commit()
+        logging.debug(f"Committed changes to the database for file: {filename}")
