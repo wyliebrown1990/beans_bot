@@ -35,103 +35,90 @@ def load_training_data(session: Session, job_title, company_name):
         logging.debug("No training data found")
     return training_data
 
+def load_user_resume_embeddings(session: Session, username: str):
+    logging.debug(f"Querying for username: '{username}'")
+    user = session.query(User).filter_by(username=username).first()
+    if user:
+        logging.debug(f"Found user: {user}")
+        if user.resume_embeddings:
+            logging.debug(f"Resume embeddings found: {user.resume_embeddings[:100]}...")  # Print first 100 bytes
+    else:
+        logging.debug("No user found")
+    return user
+
+def create_faiss_index(embedding_array):
+    dimension = embedding_array.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embedding_array)
+    return index
 
 def query_faiss_index(index, embedding_array, query_embedding, k=5):
     D, I = index.search(np.array([query_embedding]), k)
     return [embedding_array[i] for i in I[0]]
 
-def get_initial_question(training_data, industry, job_title, company_name):
-   print("Entering get_initial_question function")
-   chunks = training_data.data.split('\n')
-   print(f"Chunks: {chunks[:5]}")  # Print first 5 chunks for debug
-   embedding_array = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
-   print(f"Embedding array shape: {embedding_array.shape}")
-   dimension = embedding_array.shape[1]
-   index = faiss.IndexFlatL2(dimension)
-   index.add(embedding_array)
+def generate_next_question(job_title, company_name, industry, session_history):
+    print("Entering generate_next_question function")
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry."),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
-   query_text = f"How would a {job_title} demonstrate knowledge of {company_name} in the {industry} industry?"
-   example_query_embedding = embedder.embed_query(query_text)
-   print(f"Example query embedding: {example_query_embedding[:5]}")  # Print first 5 values
-   relevant_embeddings = query_faiss_index(index, embedding_array, example_query_embedding)
-   print(f"Relevant embeddings: {relevant_embeddings}")
-   relevant_chunks = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings]
-   print(f"Relevant chunks: {relevant_chunks}")
-   relevant_context = " ".join(relevant_chunks)
-   print(f"Relevant context: {relevant_context}")
+    chain = prompt | model
+    response = chain.invoke({"messages": session_history.messages})
+    last_question = response.content  # Store the generated question
+    print("Leaving generate_next_question function")
 
-   prompt = ChatPromptTemplate.from_messages([
-       ("system", f"You are helping me land a new job by conducting a mock interview with me. You should ask me a new question each time that is related to {job_title} job role at {company_name} company in the {industry} industry. Your questions should test my knowledge of the {job_title} job role and {company_name} company. You should challenge me to give concise and relevant answers. Here is some context about {company_name}: {relevant_context}"),
-       MessagesPlaceholder(variable_name="messages"),
-   ])
+    return last_question
 
-   chain = prompt | model
-   initial_prompt = "Ask a challenging interview question."
-   response = chain.invoke({"messages": [HumanMessage(content=initial_prompt)]})
-   print("Leaving get_initial_question function")
+def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str):
+    user = load_user_resume_embeddings(session, username)
+    if not user or not user.resume_embeddings:
+        print("No resume embeddings found for user")
+        return {"response": "No resume embeddings found for user.", "score": "N/A", "next_question": "N/A"}
 
-   return response.content
+    embedding_array = np.frombuffer(user.resume_embeddings, dtype='float32').reshape(-1, 1536)
+    index = create_faiss_index(embedding_array)
 
-def get_next_question(session, session_id, user_response, job_title, company_name, industry):
-   session_history = get_session_history(session_id)
-   session_history.add_message(HumanMessage(content=user_response))
+    query_text = f"Tell me about your professional experience and how it relates to this role at {company_name}"
+    query_embedding = embedder.embed_query(query_text)
 
-   training_data = load_training_data(session, job_title, company_name)
-   chunks = training_data.data.split('\n')
-   embedding_array = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
-   dimension = embedding_array.shape[1]
-   index = faiss.IndexFlatL2(dimension)
-   index.add(embedding_array)
+    print(f"Query embedding: {query_embedding[:5]}")  # Print first 5 values
+    relevant_embeddings = query_faiss_index(index, embedding_array, query_embedding)
+    print(f"Relevant embeddings: {relevant_embeddings}")
 
-   response_embedding = embedder.embed_query(user_response)
-   relevant_embeddings_for_fact_checking = query_faiss_index(index, embedding_array, response_embedding)
-   relevant_chunks_for_fact_checking = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings_for_fact_checking]
-   relevant_context_for_fact_checking = " ".join(relevant_chunks_for_fact_checking)
+    relevant_chunks = [embedding_array[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings]
+    resume_context = " ".join([str(chunk) for chunk in relevant_chunks])
+    print(f"Resume context: {resume_context}")
 
-   fact_check_prompt = ChatPromptTemplate.from_messages([
-       ("system", f"Give me critical feedback on how well I answered your last question. Specifically call out the following: Was my answer concise? Did I provide a STAR (Situation, Task, Action, and Result) formatted answer? Did I use too many filler words? Did I provide an answer that was specific to being a {job_title} at {company_name}? Finally, you must always score my answer from between 0 being the worst answer and 10 being the best. Always return a score out of 10. Once you complete giving feedback, move on to ask me a new question you haven’t asked before in this interview. If you need additional context about being a {job_title} at {company_name}, use this: {relevant_context_for_fact_checking}"),
-       ("user", user_response),
-       MessagesPlaceholder(variable_name="messages"),
-   ])
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. Your questions should test my knowledge of the {job_title} job role and {company_name} company. I just answered the question 'tell me about your professional experience and how it relates to this role at {company_name}'. Respond to me analyzing how good my answer was and reference my resume experience here: {resume_context}"),
+        ("user", resume_user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
-   fact_check_chain = fact_check_prompt | model
-   fact_check_response = fact_check_chain.invoke({"messages": session_history.messages})
-   fact_check_feedback = fact_check_response.content
+    chain = prompt | model
+    response = chain.invoke({"messages": [HumanMessage(content=resume_user_response)]}).content
 
-   score = extract_score(fact_check_feedback)
+    # Step to score the answer
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score my answer to the question 'tell me about your professional experience and how it relates to this role at {company_name}' from 0 to 10. Here is the answer: {resume_user_response} and my resume context: {resume_context}"),
+        ("user", resume_user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
-   relevant_embeddings_for_next_question = query_faiss_index(index, embedding_array, response_embedding)
-   relevant_chunks_for_next_question = [chunks[np.where(embedding_array == emb)[0][0]] for emb in relevant_embeddings_for_next_question]
-   relevant_context_for_next_question = " ".join(relevant_chunks_for_next_question)
+    score_chain = score_prompt | model
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=resume_user_response)]})
+    score = extract_score(score_response.content)
 
-   next_question_prompt = ChatPromptTemplate.from_messages([
-       ("system", f"You are helping me land a new job by conducting a mock interview with me. You should ask me a new question each time that is related to {job_title} job role at {company_name} company. You should reference this Context: {relevant_context_for_next_question}"),
-       MessagesPlaceholder(variable_name="messages"),
-   ])
+    # Generate the next question
+    session_history = get_session_history(os.urandom(24).hex())
+    next_question = generate_next_question(job_title, company_name, industry, session_history)
 
-   next_question_chain = next_question_prompt | model
-   next_question_response = next_question_chain.invoke({"messages": session_history.messages})
-   next_question = next_question_response.content
-   session_history.add_message(AIMessage(content=next_question))
-
-   new_answer = InterviewAnswer(
-       job_title=job_title,
-       company_name=company_name,
-       industry=industry,
-       question=session_history.messages[-2].content,
-       answer=user_response,
-       critique=fact_check_feedback,
-       score=score
-   )
-   session.add(new_answer)
-   session.commit()
-
-   return {
-       "next_question": next_question,
-       "fact_check_feedback": fact_check_feedback,
-       "score": score
-   }
-
+    return {
+        "response": response,
+        "score": score,
+        "next_question": next_question
+    }
 
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)
@@ -151,21 +138,16 @@ def setup_routes(app_instance, session_instance):
             job_title = request.args.get('job_title').strip().lower()
             company_name = request.args.get('company_name').strip().lower()
             industry = request.args.get('industry').strip().lower()
-            username = request.args.get('username')
+            username = request.args.get('username').strip().lower()
 
             print(f"Parameters received: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}")
 
-            training_data = load_training_data(session, job_title, company_name)
-            if training_data:
-                print("Training data found")
-                initial_question = get_initial_question(training_data, industry, job_title, company_name)
-                session_id = os.urandom(24).hex()
-                session_history = get_session_history(session_id)
-                session_history.add_message(AIMessage(content=initial_question))
-                return render_template('start_interview.html', question=initial_question, session_id=session_id, job_title=job_title, company_name=company_name, industry=industry, username=username)
-            else:
-                print("No training data found")
-                return render_template('index.html', message="No training data found. To improve results please provide a file path to training data:", job_title=job_title, company_name=company_name, industry=industry)
+            initial_question = f"Tell me about your professional experience and how it relates to this role at {company_name}"
+            session_id = os.urandom(24).hex()
+            session_history = get_session_history(session_id)
+            session_history.add_message(AIMessage(content=initial_question))
+
+            return render_template('start_interview.html', question=initial_question, session_id=session_id, job_title=job_title, company_name=company_name, industry=industry, username=username)
         
         if request.method == 'POST':
             print("POST request received at /start_interview")
@@ -174,15 +156,36 @@ def setup_routes(app_instance, session_instance):
             industry = request.form['industry']
             username = request.form['username']
             session_id = request.form['session_id']
-            user_response = request.form['answer_1']
+            resume_user_response = request.form['answer_1']
 
             print(f"Form data received: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, session_id={session_id}")
 
-            results = get_next_question(session, session_id, user_response, job_title, company_name, industry)
+            results = get_resume_question_answer(session, username, job_title, company_name, industry, resume_user_response)
+
+            session_history = get_session_history(session_id)
+            session_history.add_message(AIMessage(content=results["response"]))
+            session_history.add_message(AIMessage(content=results["next_question"]))
+
+            # Update the last_question variable
+            global last_question
+            last_question = results["next_question"]
 
             return jsonify({
-                'feedback_response': results['fact_check_feedback'],
-                'score_response': results['score'],
-                'next_question_response': results['next_question']
+                'feedback_response': results["response"],
+                'score_response': results["score"],
+                'next_question_response': results["next_question"]
             })
+
+    @app_instance.route('/get_similar_resumes', methods=['GET'])
+    def get_similar_resumes():
+        username = request.args.get('username').strip().lower()
+        query_text = request.args.get('query_text').strip().lower()
+
+        with app.app_context():
+            similar_embeddings = get_similar_resume_embeddings(session, username, query_text)
+
+        if similar_embeddings is None:
+            return jsonify({"error": "No embeddings found for the specified user"}), 404
+
+        return jsonify({"similar_embeddings": [emb.tolist() for emb in similar_embeddings]})
 
