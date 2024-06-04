@@ -4,8 +4,24 @@
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        function toggleNav() {
+            var nav = document.getElementById("nav-menu");
+            if (nav.style.display === "block") {
+                nav.style.display = "none";
+            } else {
+                nav.style.display = "block";
+            }
+        }
+    </script>
 </head>
 <body>
+    <div class="navbar">
+        <span class="nav-toggle" onclick="toggleNav()">&#9776;</span>
+        <div id="nav-menu" class="nav-menu">
+            <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+        </div>
+    </div>
     <h1>Login</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -21,6 +37,9 @@
         <input type="password" name="password" placeholder="Password" required>
         <button type="submit">Login</button>
     </form>
-    <a href="{{ url_for('auth.signup') }}">Sign up</a>
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('auth.signup') }}">or you can signup here</a>
+    </div>
 </body>
 </html>
+

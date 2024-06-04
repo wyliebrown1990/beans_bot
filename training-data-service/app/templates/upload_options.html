@@ -1,57 +1,119 @@
 <!doctype html>
 <html lang="en">
 <head>
-   <meta charset="utf-8">
-   <title>Upload Options</title>
-   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+ <meta charset="utf-8">
+ <title>Upload Options</title>
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+ <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const infoButton = document.getElementById("info-button");
+        const infoPopup = document.getElementById("info-popup");
+        const closeButton = document.getElementById("close-button");
+
+        infoButton.addEventListener("click", function() {
+            infoPopup.style.display = "block";
+        });
+
+        closeButton.addEventListener("click", function() {
+            infoPopup.style.display = "none";
+        });
+
+        const message = `{{ message|safe }}`;
+        const text = document.createElement("textarea");
+        text.innerHTML = message;
+        const decodedMessage = text.value;
+
+        let i = 0;
+        function typeWriter() {
+            if (i < decodedMessage.length) {
+                document.getElementById("message-text").innerHTML += decodedMessage.charAt(i);
+                i++;
+                setTimeout(typeWriter, 25);
+            }
+        }
+        if (message) {
+            typeWriter();
+        }
+    });
+ </script>
 </head>
 <body>
-   <h1>Select Your Method(s) For Uploading Training Data</h1>
-   {% if message %}
-   <p class="centered-message">{{ message }}</p>
-   {% endif %}
-   <h2>If you want to extract the text from videos on a youtube channel:</h2>
-       <ul>
-           <p style="text-align: center;">Navigate to the channel's homepage on Youtube</p>
-           <p style="text-align: center;">Right click and "view page source"</p>
-           <p style="text-align: center;">CTRL+F search for "channelid" and copy the preceding value</p>
-       </ul>
-   <form method="post" action="/youtube_transcription">
-       <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-       <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-       <input type="hidden" name="industry" value="{{ industry.lower() }}">
-       <input type="hidden" name="username" value="{{ username.lower() }}">
-       <label for="channel_id">YouTube Channel ID:</label>
-       <input type="text" id="channel_id" name="channel_id" required>
-       <br>
-       <label for="num_videos">Number of Videos:</label>
-       <input type="number" id="num_videos" name="num_videos" required>
-       <br>
-       <input type="submit" value="Start Transcription">
-   </form>
-   <h2>Feel free to upload text files from your computer:</h2>
-   <br>
-   <form method="post" action="/file_upload" enctype="multipart/form-data">
-       <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-       <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-       <input type="hidden" name="industry" value="{{ industry.lower() }}">
-       <input type="hidden" name="username" value="{{ username.lower() }}">
-       <label for="files">File Upload:</label>
-       <input type="file" id="files" name="files" multiple required>
-       <br>
-       <input type="submit" value="Upload Files">
-   </form>
-   <br>
-   <h2>Or if you prefer paste some text here and submit it:</h2>
-   <form method="post" action="/raw_text_submission">
-       <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-       <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-       <input type="hidden" name="industry" value="{{ industry.lower() }}">
-       <input type="hidden" name="username" value="{{ username.lower() }}">
-       <label for="raw_text">Raw Text:</label>
-       <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
-       <br>
-       <input type="submit" value="Submit Text">
-   </form>
+ <h1>Select Your Method(s) For Uploading Training Data</h1>
+ <div class="container">
+     <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
+     <div class="speech-bubble" style="border-color: #EFBC9B;">
+         <p id="message-text" class="centered-message"></p>
+     </div>
+ </div>
+ <h2>If you want to extract the text from videos on a youtube channel:</h2>
+ <form method="post" action="/youtube_transcription">
+     <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+     <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+     <input type="hidden" name="industry" value="{{ industry.lower() }}">
+     <input type="hidden" name="username" value="{{ username.lower() }}">
+     <label for="channel_id">YouTube Channel ID:
+         <span id="info-button" class="info-button">?</span>
+     </label>
+     <input type="text" id="channel_id" name="channel_id" required>
+     <br>
+     <label for="num_videos">Number of Videos:</label>
+     <input type="number" id="num_videos" name="num_videos" required>
+     <br>
+     <input type="submit" value="Start Transcription">
+ </form>
+
+ <h2>Or enter individual YouTube video URLs:</h2>
+ <form method="post" action="/youtube_urls_transcription">
+     <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+     <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+     <input type="hidden" name="industry" value="{{ industry.lower() }}">
+     <input type="hidden" name="username" value="{{ username.lower() }}">
+     <label for="youtube_urls">YouTube URLs:</label>
+     <textarea id="youtube_urls" name="youtube_urls" rows="5" cols="50" placeholder="Enter one URL per line"></textarea>
+     <br>
+     <input type="submit" value="Start Transcription">
+ </form>
+
+ <h2>Feel free to upload text files from your computer:</h2>
+ <br>
+ <form method="post" action="/file_upload" enctype="multipart/form-data">
+     <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+     <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+     <input type="hidden" name="industry" value="{{ industry.lower() }}">
+     <input type="hidden" name="username" value="{{ username.lower() }}">
+     <label for="files">File Upload:</label>
+     <input type="file" id="files" name="files" multiple required>
+     <br>
+     <input type="submit" value="Upload Files">
+ </form>
+ <br>
+ <h2>Or if you prefer paste some text here and submit it:</h2>
+ <form method="post" action="/raw_text_submission">
+     <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+     <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+     <input type="hidden" name="industry" value="{{ industry.lower() }}">
+     <input type="hidden" name="username" value="{{ username.lower() }}">
+     <label for="raw_text">Raw Text:</label>
+     <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
+     <br>
+     <input type="submit" value="Submit Text">
+ </form>
+
+ <div id="info-popup" class="info-popup">
+     <span id="close-button" class="close-button">&times;</span>
+     <div class="info-content">
+         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="popup-image">
+         <div class="speech-bubble">
+             <p>If you want to extract the text from multiple videos on a specific youtube channel:</p>
+             <ul>
+                 <li>Navigate to the channel's homepage on Youtube</li>
+                 <li>Right click on the page and "view page source"</li>
+                 <li>CTRL+F search for "channelid" and copy the preceding value</li>
+                 <li>For example: "UC4X9DZim5FK94v5ZflRZszQ" (my pal grumpy cat's channel)</li>
+             </ul>
+         </div>
+     </div>
+ </div>
 </body>
 </html>
+

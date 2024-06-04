@@ -183,3 +183,116 @@ button {
     margin: 0 auto;
     text-align: center;
 }
+
+/* Info button specific CSS */
+.info-button {
+    background-color: #9CAFAA;
+    color: white;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.info-popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 500px;
+    background-color: #FBF3D5;
+    border: 2px solid #7a918d;
+    border-radius: 10px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    padding: 20px;
+}
+
+.info-content {
+    display: flex;
+    align-items: flex-start;
+}
+
+.popup-image {
+    max-width: 100px;
+    height: auto;
+    margin-right: 20px;
+}
+
+.speech-bubble {
+    background-color: #f1f1f1;
+    border: 2px solid #7a918d;
+    border-radius: 10px;
+    padding: 20px;
+    padding-right: 50px; /* Increase the padding on the right side */
+    position: relative;
+    box-sizing: border-box; /* Ensure padding is applied correctly */
+}
+
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -20px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #f1f1f1;
+    border-left-color: #7a918d;
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    color: #7a918d;
+}
+
+/* Updated container and speech bubble styles */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 50px;
+    padding: 20px;
+}
+
+.image {
+    flex: 1;
+    max-width: 200px;
+    padding: 20px;
+}
+
+.speech-bubble {
+    flex: 2;
+    background-color: #f1f1f1;
+    border: 2px solid #EFBC9B;
+    border-radius: 10px;
+    padding: 20px;
+    padding-right: 50px; /* Increase the padding on the right side */
+    position: relative;
+    margin-left: 20px;
+    box-sizing: border-box; /* Ensure padding is applied correctly */
+}
+
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -20px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #f1f1f1;
+    border-left-color: #EFBC9B;
+}
+
+#speech-text {
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+}

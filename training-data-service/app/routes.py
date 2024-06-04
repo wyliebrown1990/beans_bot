@@ -113,7 +113,8 @@ def download_and_transcribe(video, job_title, company_name):
     model = whisper.load_model("base")
     result = model.transcribe(audio_file_path)
 
-    transcription_file_path = os.path.join(transcription_dir, f"{video_title}.txt")
+    transcription_file_name = f"{video_title}.txt"
+    transcription_file_path = os.path.join(transcription_dir, transcription_file_name)
     # Ensure the directory for the transcription file exists
     if not os.path.exists(os.path.dirname(transcription_file_path)):
         os.makedirs(os.path.dirname(transcription_file_path))
@@ -137,13 +138,14 @@ def download_and_transcribe(video, job_title, company_name):
             company_name=company_name,
             data='\n'.join(chunks),
             embeddings=embedding_array.tobytes(),
-            processed_files=transcription_file_path
+            processed_files=transcription_file_name  # Save only the file name
         )
         db.add(new_training_data)
         db.commit()
         store_training_data_and_mappings(db, new_training_data, embedding_array)
 
     status.append(f"{video_title} complete")
+
 
 
 
@@ -164,41 +166,28 @@ def process_file(file, job_title, company_name):
     global status
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    
+  
     file.save(file_path)
-    
+  
     status.append(f"Processing {filename}")
-    
+  
     chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
+  
     with app.app_context():
         db = next(get_db())
         job_title = job_title.lower().strip()
         company_name = company_name.lower().strip()
-        training_data = load_training_data(db, job_title, company_name)
-        existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
-        
-        if filename not in existing_files:
-            if training_data:
-                training_data.data += '\n' + '\n'.join(chunks)
-                existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
-                if embedding_array.size > 0:
-                    if len(embedding_array.shape) == 1:
-                        embedding_array = embedding_array.reshape(1, -1)
-                    training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
-                training_data.processed_files += ',' + filename
-            else:
-                new_training_data = TrainingData(
-                    job_title=job_title,
-                    company_name=company_name,
-                    data='\n'.join(chunks),
-                    embeddings=embedding_array.tobytes(),
-                    processed_files=filename
-                )
-                db.add(new_training_data)
-                training_data = new_training_data
-            store_training_data_and_mappings(db, training_data, embedding_array)
+        new_training_data = TrainingData(
+            job_title=job_title,
+            company_name=company_name,
+            data='\n'.join(chunks),
+            embeddings=embedding_array.tobytes(),
+            processed_files=filename
+        )
+        db.add(new_training_data)
         db.commit()
-    
+        store_training_data_and_mappings(db, new_training_data, embedding_array)
+  
     status.append(f"{filename} uploaded")
 
 
@@ -271,6 +260,40 @@ def youtube_transcription():
     threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip())).start()
     return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
 
+@app.route('/youtube_urls_transcription', methods=['POST'])
+def youtube_urls_transcription():
+    global status
+    status = []
+    job_title = request.form['job_title']
+    company_name = request.form['company_name']
+    industry = request.form['industry']
+    username = request.form['username']
+    youtube_urls = request.form['youtube_urls'].strip().split('\n')
+    youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
+    threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+
+def process_youtube_urls(youtube_urls, job_title, company_name):
+    global status
+    status = []
+    try:
+        for url in youtube_urls:
+            video_id = url.split('v=')[-1]
+            request = youtube.videos().list(part="snippet", id=video_id)
+            response = request.execute()
+            if response['items']:
+                video_title = response['items'][0]['snippet']['title']
+            else:
+                video_title = 'Unknown Title'
+            video = {
+                'url': url,
+                'title': video_title  # Use actual video title
+            }
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip())
+        status.append("All videos processed successfully")
+        cleanup_uploads_folder()
+    except Exception as e:
+        status.append(f"Error: {str(e)}")
 
 
 @app.route('/file_upload', methods=['POST'])
