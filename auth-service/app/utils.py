@@ -65,6 +65,7 @@ def create_chunks_and_embeddings_from_file(file_path, api_key):
     print(f"Final embedding array shape: {embedding_array.shape}")
     return chunks, embedding_array
 
+
 def store_embeddings_and_mappings(db_session, user, embeddings, table_name):
     db_session.add(user)
     db_session.commit()

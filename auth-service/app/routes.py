@@ -50,15 +50,21 @@ def signup():
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             chunks, embeddings = create_chunks_and_embeddings_from_file(file_path, current_app.config['OPENAI_API_KEY'])
-            user = User(username=username, email=email)
+            user = User(
+                username=username, 
+                email=email,
+                resume_embeddings=embeddings.tobytes(),
+                resume_data='\n'.join(chunks),  # Store the extracted text data
+                processed_files=filename  # Store the uploaded file name
+            )
             user.set_password(password)
-            user.resume_embeddings = embeddings.tobytes()
             store_embeddings_and_mappings(session, user, embeddings, 'users')
             flash('User registered successfully')
             return redirect(url_for('auth.login'))
         else:
             flash('Invalid file format. Please upload a .docx, .pdf, or .txt file.')
     return render_template('signup.html')
+
 
 @auth_bp.route('/logout')
 @login_required

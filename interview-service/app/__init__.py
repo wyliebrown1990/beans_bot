@@ -1,8 +1,9 @@
+# interview-service/__init__.py
 from flask import Flask
 from .config import DATABASE_URL
 from .utils import create_table_if_not_exists, setup_database
 from .routes import setup_routes
-from .models import Base  
+from .models import Base
 
 app = Flask(__name__)
 

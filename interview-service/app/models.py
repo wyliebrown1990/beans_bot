@@ -1,6 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, TIMESTAMP
+# interview-service/models.py
+from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, TIMESTAMP, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -33,6 +35,9 @@ class User(Base):
     email = Column(String(150), unique=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
     resume_embeddings = Column(LargeBinary, nullable=True)
+    resume_data = Column(Text, nullable=True)  # New column for resume text data
+    processed_files = Column(String(255), nullable=True)  # New column for file names
+    created_at = Column(DateTime, default=datetime.utcnow)  # New column for timestamp
 
 class EmbeddingIDMapping(Base):
     __tablename__ = 'embedding_id_mapping'
