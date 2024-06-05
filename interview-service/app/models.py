@@ -1,6 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, TIMESTAMP
+from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, TIMESTAMP, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
+from datetime import datetime
+from flask_login import UserMixin
 
 Base = declarative_base()
 
@@ -26,18 +28,17 @@ class InterviewAnswer(Base):
     score = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-class User(Base):
+class User(UserMixin, Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(150), unique=True, nullable=False)
     email = Column(String(150), unique=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
-    resume_embeddings = Column(LargeBinary, nullable=True)
-
-class EmbeddingIDMapping(Base):
-    __tablename__ = 'embedding_id_mapping'
-    id = Column(Integer, primary_key=True)
-    db_id = Column(Integer, nullable=False)
-    faiss_id = Column(Integer, nullable=False)
-    table_name = Column(String(255), nullable=False)
-    username = Column(String(150), nullable=False)
+    resume_text_full = Column(Text, nullable=True)
+    top_technical_skills = Column(Text, nullable=True)
+    most_recent_job_title = Column(String(255), nullable=True)
+    most_recent_company_name = Column(String(255), nullable=True)
+    most_recent_experience_summary = Column(Text, nullable=True)
+    industry_expertise = Column(Text, nullable=True)
+    top_soft_skills = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

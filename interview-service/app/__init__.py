@@ -2,7 +2,7 @@ from flask import Flask
 from .config import DATABASE_URL
 from .utils import create_table_if_not_exists, setup_database
 from .routes import setup_routes
-from .models import Base  
+from .models import Base, TrainingData, InterviewAnswer, User  # Ensure all necessary models are imported
 
 app = Flask(__name__)
 
