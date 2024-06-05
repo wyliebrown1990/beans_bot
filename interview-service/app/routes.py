@@ -1,8 +1,9 @@
 from flask import render_template, request, jsonify
 import os
 from .utils import (
-    get_session_history, load_training_data, generate_next_question, 
-    get_resume_question_answer, extract_score
+    get_session_history, load_training_data, generate_next_question,
+    get_resume_question_answer, get_career_experience_answer, extract_score,
+    most_recent_question, user_responses
 )
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -35,17 +36,22 @@ def setup_routes(app_instance, session_instance):
             industry = request.form['industry']
             username = request.form['username']
             session_id = request.form['session_id']
-            resume_user_response = request.form['answer_1']
+            user_response = request.form['answer_1']
 
-            results = get_resume_question_answer(session, username, job_title, company_name, industry, resume_user_response)
+            if user_responses["resume_user_response"] is None:
+                # First response (resume_user_response)
+                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response)
+            else:
+                # Subsequent responses (career_user_responses)
+                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response)
 
             session_history = get_session_history(session_id)
-            session_history.add_message(AIMessage(content=results["response"]))
+            session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))
             session_history.add_message(AIMessage(content=results["next_question"]))
 
             return jsonify({
-                'feedback_response': results["response"],
-                'score_response': results["score"],
+                'feedback_response': results["analysis_response"] if results["analysis_response"] else "",
+                'score_response': results["score"] if results["score"] else "N/A",
                 'next_question_response': results["next_question"]
             })
 
