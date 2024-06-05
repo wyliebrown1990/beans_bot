@@ -170,7 +170,9 @@ button {
 .centered-message {
     text-align: center;
     color: #CC5500;
-    font-weight: bold; /* Optional: Makes the message stand out more */
+    font-weight: bold;
+    margin-left: 100px;
+    margin-right: 100px;
 }
 
 .centered-text {

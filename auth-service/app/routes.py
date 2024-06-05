@@ -1,8 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import os
-from .models import User, SessionLocal
+import logging
+import numpy as np  # Add this line to import numpy
+from .models import User, SessionLocal, EmbeddingIDMapping  # Ensure EmbeddingIDMapping is imported
 from .utils import get_user_by_username, get_user_by_email, allowed_file, create_chunks_and_embeddings_from_file, store_embeddings_and_mappings
 from . import login_manager  # Import login_manager
 
@@ -53,7 +55,9 @@ def signup():
             user = User(username=username, email=email)
             user.set_password(password)
             user.resume_embeddings = embeddings.tobytes()
-            store_embeddings_and_mappings(session, user, embeddings, 'users')
+            session.add(user)
+            session.commit()
+            store_embeddings_and_mappings(session, user, embeddings, 'users', chunks)
             flash('User registered successfully')
             return redirect(url_for('auth.login'))
         else:
@@ -72,3 +76,34 @@ def home():
         return render_template('home.html')
     else:
         return redirect(url_for('auth.login'))
+
+@auth_bp.route('/view_resume_chunks', methods=['GET'])
+@login_required
+def view_resume_chunks():
+    session = SessionLocal()
+    try:
+        logging.debug("Fetching user data from database")
+        user = session.query(User).filter_by(username=current_user.username).first()
+        if user:
+            logging.debug(f"User found: {user.username}")
+            if user.resume_embeddings:
+                logging.debug("Resume embeddings found")
+                embedding_array = np.frombuffer(user.resume_embeddings, dtype='float32').reshape(-1, 1536)
+                chunks = session.query(EmbeddingIDMapping).filter_by(db_id=user.id).order_by(EmbeddingIDMapping.faiss_id).all()
+                chunk_texts = [chunk.chunk_text for chunk in chunks]
+
+                # Prepare data for rendering
+                chunk_embedding_pairs = list(zip(chunk_texts, embedding_array.tolist()))
+
+                return render_template('view_chunks.html', chunk_embedding_pairs=chunk_embedding_pairs)
+            else:
+                logging.debug("No resume embeddings found for user")
+                return jsonify({"error": "No resume embeddings found."})
+        else:
+            logging.debug("User not found")
+            return jsonify({"error": "User not found."})
+    except Exception as e:
+        logging.error(f"Error in view_chunks: {e}")
+        return jsonify({"error": str(e)})
+    finally:
+        session.close()

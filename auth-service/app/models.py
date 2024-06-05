@@ -17,7 +17,7 @@ def init_db(db_url):
 
 class User(UserMixin, Base):
     __tablename__ = 'users'
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(150), unique=True, nullable=False)
     email = Column(String(150), unique=True, nullable=False)
@@ -26,7 +26,7 @@ class User(UserMixin, Base):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
+  
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -37,3 +37,4 @@ class EmbeddingIDMapping(Base):
     faiss_id = Column(Integer, nullable=False)
     table_name = Column(String(255), nullable=False)
     username = Column(String(150), nullable=False)  # Ensure this field is included
+    chunk_text = Column(String, nullable=False)  # Add this line to store the chunk text

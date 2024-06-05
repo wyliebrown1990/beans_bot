@@ -1,60 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Start Interview</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Start Interview</title>
+   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <style>
+       .chat-container {
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           margin-bottom: 20px;
+       }
+       .chat-block {
+           display: flex;
+           align-items: flex-start;
+           margin-bottom: 10px;
+           width: 50%; /* Ensure the chat block takes up 80% of the container width */
+       }
+       .chat-image {
+           max-width: 100px;
+           margin-right: 10px;
+       }
+       .speech-bubble {
+           background-color: #f1f1f1;
+           border: 2px solid #7a918d;
+           border-radius: 10px;
+           padding: 20px;
+           position: relative;
+           max-width: 70%;
+           color: #7a918d; /* Updated text color to dark green */
+       }
+       .speech-bubble:after {
+           content: '';
+           position: absolute;
+           top: 20px;
+           left: -20px;
+           width: 0;
+           height: 0;
+           border: 10px solid transparent;
+           border-right-color: #f1f1f1;
+           border-left-color: #7a918d;
+       }
+   </style>
 </head>
 <body>
-    <header>
-        <h1>Interview Chat for {{ username }}</h1>
-    </header>
-    <div id="chat">
-        <div class="chat-block">
-            <p>Bot: {{ question }}</p>
-            <hr>
-        </div>
-        <div id="responses"></div>
-    </div>
-    <form id="response-form" method="POST">
-        <input type="hidden" name="job_title" value="{{ job_title }}">
-        <input type="hidden" name="company_name" value="{{ company_name }}">
-        <input type="hidden" name="industry" value="{{ industry }}">
-        <input type="hidden" name="username" value="{{ username }}">
-        <input type="hidden" name="session_id" value="{{ session_id }}">
-        <label for="answer_1">Your Response:</label>
-        <textarea id="answer_1" name="answer_1" rows="5" style="width: 100%;" required></textarea>
-        <button type="submit">Send</button>
-    </form>
-    <script>
-        $(document).ready(function() {
-            $('#response-form').on('submit', function(event) {
-                event.preventDefault();
-                const form = $(this);
-                $.ajax({
-                    type: 'POST',
-                    url: "{{ url_for('start_interview') }}",
-                    data: form.serialize(),
-                    success: function(response) {
-                        $('#responses').append(`
-                            <div class="chat-block">
-                                <p>You: ${$('#answer_1').val()}</p>
-                                <p>Bot Feedback: ${response.feedback_response}</p>
-                                <p>Bot Score: ${response.score_response}</p>
-                                <p>Bot: ${response.next_question_response}</p>
-                                <hr>
-                            </div>
-                        `);
-                        $('#answer_1').val('');
-                    },
-                    error: function(error) {
-                        console.log('Error:', error);
-                    }
-                });
-            });
-        });
-    </script>
+   <header>
+       <h1>Interview Chat for {{ username }}</h1>
+   </header>
+   <div id="chat" class="chat-container">
+       <div class="chat-block">
+           <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image" id="bot-image">
+           <div class="speech-bubble">
+               <p>Beans-bot: {{ question }}</p>
+           </div>
+       </div>
+       <div id="responses"></div>
+   </div>
+   <form id="response-form" method="POST">
+       <input type="hidden" name="job_title" value="{{ job_title }}">
+       <input type="hidden" name="company_name" value="{{ company_name }}">
+       <input type="hidden" name="industry" value="{{ industry }}">
+       <input type="hidden" name="username" value="{{ username }}">
+       <input type="hidden" name="session_id" value="{{ session_id }}">
+       <label for="answer_1">Your Response:</label>
+       <textarea id="answer_1" name="answer_1" rows="5" style="width: 100%;" required></textarea>
+       <button type="submit">Send</button>
+   </form>
+   <script>
+       $(document).ready(function() {
+           $('#response-form').on('submit', function(event) {
+               event.preventDefault();
+               const form = $(this);
+               const userResponse = $('#answer_1').val();
+               console.log("User response:", userResponse);
+               $.ajax({
+                   type: 'POST',
+                   url: "{{ url_for('start_interview') }}",
+                   data: form.serialize(),
+                   success: function(response) {
+                       console.log("Server response:", response);
+                       $('#responses').append(`
+                           <div class="chat-block">
+                               <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                               <div class="speech-bubble">
+                                   <p>You: ${userResponse}</p>
+                               </div>
+                           </div>
+                           <div class="chat-block">
+                               <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                               <div class="speech-bubble">
+                                   <p>Beans-bot Feedback: ${response.feedback_response}</p>
+                                   <p>Beans-bot Score: ${response.score_response}</p>
+                                   <p>Beans-bot: ${response.next_question_response}</p>
+                               </div>
+                           </div>
+                       `);
+                       $('#answer_1').val('');
+                   },
+                   error: function(error) {
+                       console.log('Error:', error);
+                   }
+               });
+           });
+       });
+   </script>
 </body>
 </html>

@@ -16,4 +16,5 @@ class EmbeddingIDMapping(Base):
     db_id = Column(Integer, nullable=False)
     faiss_id = Column(Integer, nullable=False)
     table_name = Column(String(255), nullable=False)
-    username = Column(String(150))  # Optional, if you want to store the username
+    username = Column(String(150), nullable=False)  # Ensure this field is included
+    chunk_text = Column(String, nullable=False)  # Add this line to store the chunk text

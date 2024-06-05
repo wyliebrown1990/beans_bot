@@ -79,7 +79,7 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
     embedding_array = np.frombuffer(user.resume_embeddings, dtype='float32').reshape(-1, 1536)
     index = create_faiss_index(embedding_array)
 
-    query_text = f"Tell me about your professional experience and how it relates to this role at {company_name}"
+    query_text = "Return a summary of my work experience, skill sets and notable accomplishments"
     query_embedding = embedder.embed_query(query_text)
 
     print(f"Query embedding: {query_embedding[:5]}")  # Print first 5 values

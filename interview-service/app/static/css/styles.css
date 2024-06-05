@@ -162,3 +162,40 @@ button {
         font-size: 24px; /* Adjusts the size of the heading */
     }
 }
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.chat-block {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    width: 50%; /* Ensure the chat block takes up 80% of the container width */
+}
+.chat-image {
+    max-width: 100px;
+    margin-right: 10px;
+}
+.speech-bubble {
+    background-color: #f1f1f1;
+    border: 2px solid #7a918d;
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    max-width: 70%;
+    color: #7a918d; /* Updated text color to dark green */
+}
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -20px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #f1f1f1;
+    border-left-color: #7a918d;
+}

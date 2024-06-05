@@ -65,11 +65,11 @@ def create_chunks_and_embeddings_from_file(file_path, api_key):
     print(f"Final embedding array shape: {embedding_array.shape}")
     return chunks, embedding_array
 
-def store_embeddings_and_mappings(db_session, user, embeddings, table_name):
+def store_embeddings_and_mappings(db_session, user, embeddings, table_name, chunks):
     db_session.add(user)
     db_session.commit()
-    for i, _ in enumerate(embeddings):
-        mapping = EmbeddingIDMapping(db_id=user.id, faiss_id=i, table_name=table_name, username=user.username)
+    for i, chunk in enumerate(chunks):
+        mapping = EmbeddingIDMapping(db_id=user.id, faiss_id=i, table_name=table_name, username=user.username, chunk_text=chunk)
         db_session.add(mapping)
     db_session.commit()
 

@@ -199,7 +199,6 @@ button:hover, .button:hover {
 }
 
 /* Updated container and speech bubble styles */
-
 .container {
     display: flex;
     justify-content: center;
@@ -217,9 +216,10 @@ button:hover, .button:hover {
 .speech-bubble {
     flex: 2;
     background-color: #f1f1f1;
-    border: 2px solid #7a918d;
+    border: 2px solid #EFBC9B;
     border-radius: 10px;
     padding: 20px;
+    padding-right: 40px !important; /* Ensure the padding is applied */
     position: relative;
     margin-left: 20px;
 }
@@ -233,7 +233,7 @@ button:hover, .button:hover {
     height: 0;
     border: 10px solid transparent;
     border-right-color: #f1f1f1;
-    border-left-color: #7a918d;
+    border-left-color: #EFBC9B;
 }
 
 #speech-text {

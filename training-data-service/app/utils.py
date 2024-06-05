@@ -56,7 +56,7 @@ def create_chunks_and_embeddings(data: str):
     logging.debug(f"Created {len(chunks)} chunks and embeddings for raw text")
     return chunks, embedding_array
 
-def store_training_data_and_mappings(db_session, training_data, embeddings):
+def store_training_data_and_mappings(db_session, training_data, embeddings, username, chunks):
     logging.debug(f"Storing training data: {training_data}")
     logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
     logging.debug(f"Embeddings: {len(embeddings)} embeddings")
@@ -64,18 +64,24 @@ def store_training_data_and_mappings(db_session, training_data, embeddings):
     db_session.commit()
     logging.debug(f"Stored training data with ID: {training_data.id}")
     
-    for i, _ in enumerate(embeddings):
-        mapping = EmbeddingIDMapping(db_id=training_data.id, faiss_id=i, table_name='training_data')
+    for i, chunk in enumerate(chunks):
+        mapping = EmbeddingIDMapping(db_id=training_data.id, faiss_id=i, table_name='training_data', username=username, chunk_text=chunk)
         db_session.add(mapping)
     db_session.commit()
     logging.debug("Stored embedding ID mappings")
 
-def process_file(file, job_title, company_name):
+
+
+
+
+def process_file(file, job_title, company_name, username):
+    global status
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
     logging.debug(f"Saved file to {file_path}")
 
+    status.append(f"Processing {filename}")
     chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
     logging.debug(f"Created chunks and embeddings for file: {filename}")
 
@@ -107,6 +113,37 @@ def process_file(file, job_title, company_name):
                 )
                 db.add(new_training_data)
                 training_data = new_training_data
-            store_training_data_and_mappings(db, training_data, embedding_array)
+            store_training_data_and_mappings(db, training_data, embedding_array, username)
         db.commit()
         logging.debug(f"Committed changes to the database for file: {filename}")
+    status.append(f"{filename} uploaded")
+
+def process_raw_text(job_title, company_name, raw_text, username):
+    global status
+    status.append(f"Processing raw text for {job_title} at {company_name}")
+    chunks, embedding_array = create_chunks_and_embeddings(raw_text)
+    with app.app_context():
+        db = next(get_db())
+        job_title = job_title.lower().strip()
+        company_name = company_name.lower().strip()
+        training_data = load_training_data(db, job_title, company_name)
+        if training_data:
+            training_data.data += '\n' + '\n'.join(chunks)
+            existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
+            if embedding_array.size > 0:
+                if len(embedding_array.shape) == 1:
+                    embedding_array = embedding_array.reshape(1, -1)
+                training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
+        else:
+            new_training_data = TrainingData(
+                job_title=job_title,
+                company_name=company_name,
+                data='\n'.join(chunks),
+                embeddings=embedding_array.tobytes(),
+            )
+            db.add(new_training_data)
+            training_data = new_training_data
+        store_training_data_and_mappings(db, training_data, embedding_array, username, chunks)
+        db.commit()
+    status.append(f"Raw text for {job_title} at {company_name} processed successfully")
+    cleanup_uploads_folder()
