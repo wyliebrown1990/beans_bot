@@ -10,3 +10,4 @@ openai-whisper
 gunicorn
 langchain
 sqlalchemy
+gevent

@@ -188,4 +188,3 @@ def setup_routes(app_instance, session_instance):
             return jsonify({"error": "No embeddings found for the specified user"}), 404
 
         return jsonify({"similar_embeddings": [emb.tolist() for emb in similar_embeddings]})
-

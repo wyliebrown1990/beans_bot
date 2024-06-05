@@ -1,15 +1,45 @@
 import os
-import glob  # Make sure to import glob for file operations
+import glob
+import requests
 from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 import numpy as np
 from app.models import TrainingData
-from langchain_openai import OpenAIEmbeddings  # Update this import based on the deprecation warning
+from langchain_openai import OpenAIEmbeddings
 import logging
 from app import app
 from app.database import get_db
+import re
+import yt_dlp
+import whisper
+from googleapiclient.discovery import build
+from datetime import datetime
 
-status = []  # Define the global status variable
+# Load environment variables
+youtube_api_key = os.getenv('GOOGLE_API_KEY')
+cookies_file = os.getenv('COOKIES_FILE')
+ffmpeg_location = os.getenv('FFMPEG_LOCATION')
+save_dir = app.config['UPLOAD_FOLDER']
+transcription_dir = os.path.join(save_dir, "youtube")
+os.makedirs(transcription_dir, exist_ok=True)
+
+# Initialize YouTube API client
+youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+
+def update_process_status(username, job_title, company_name, status):
+    username = username.lower().strip()
+    job_title = job_title.lower().strip()
+    company_name = company_name.lower().strip()
+    
+    print(f"Updating status for user: {username}, job: {job_title}, company: {company_name} to status: {status}")
+    response = requests.post('http://localhost:5011/update_status', json={
+        'username': username,
+        'job_title': job_title,
+        'company_name': company_name,
+        'status': status
+    })
+    print(f"Status update response: {response.status_code} - {response.text}")
+
 
 def load_training_data(db: Session, job_title: str, company_name: str):
     logging.debug(f"Loading training data for job title: {job_title}, company name: {company_name}")
@@ -68,84 +98,71 @@ def store_training_data(db_session, training_data):
     db_session.commit()  # Ensure the session is committed
     logging.debug(f"Stored training data with ID: {training_data.id}")
 
-# utils.py
 def process_file(file_path, job_title, company_name, username):
-    global status
     filename = os.path.basename(file_path)
     logging.debug(f"Processing file: {filename}")
 
-    status.append(f"Processing {filename}")
-    chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
-    logging.debug(f"Created chunks and embeddings for file: {filename}")
+    try:
+        update_process_status(username, job_title, company_name, f'Processing file: {filename}')
+        chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
+        logging.debug(f"Created chunks and embeddings for file: {filename}")
 
-    with app.app_context():
-        db = next(get_db())
-        job_title = job_title.lower().strip()
-        company_name = company_name.lower().strip()
-        training_data = load_training_data(db, job_title, company_name)
-        existing_files = training_data.processed_files.split(',') if training_data and training_data.processed_files else []
+        with app.app_context():
+            db = next(get_db())
+            job_title = job_title.lower().strip()
+            company_name = company_name.lower().strip()
 
-        if filename not in existing_files:
-            if training_data:
-                logging.debug(f"Updating existing training data with ID: {training_data.id}")
-                training_data.data += '\n' + '\n'.join(chunks)
-                existing_embeddings = np.frombuffer(training_data.embeddings, dtype='float32').reshape(-1, 1536)
-                if embedding_array.size > 0:
-                    if len(embedding_array.shape) == 1:
-                        embedding_array = embedding_array.reshape(1, -1)
-                    training_data.embeddings = np.concatenate((existing_embeddings, embedding_array), axis=0).tobytes()
-                training_data.processed_files += ',' + filename
-            else:
-                logging.debug("Creating new training data entry")
-                new_training_data = TrainingData(
-                    job_title=job_title,
-                    company_name=company_name,
-                    data='\n'.join(chunks),
-                    chunk_text='\n'.join(chunks),
-                    embeddings=embedding_array.tobytes(),
-                    processed_files=filename
-                )
-                db.add(new_training_data)
-                training_data = new_training_data
-            store_training_data(db, training_data)
-        db.commit()
-        logging.debug(f"Committed changes to the database for file: {filename}")
-    status.append(f"{filename} uploaded")
+            new_training_data = TrainingData(
+                job_title=job_title,
+                company_name=company_name,
+                data='\n'.join(chunks),
+                chunk_text='\n'.join(chunks),
+                embeddings=embedding_array.tobytes(),
+                processed_files=filename
+            )
+            db.add(new_training_data)
+            store_training_data(db, new_training_data)
 
+            db.commit()
+            logging.debug(f"Committed changes to the database for file: {filename}")
+        update_process_status(username, job_title, company_name, f'File processed successfully: {filename}')
+    except Exception as e:
+        logging.error(f"Error processing file {filename}: {str(e)}")
+        update_process_status(username, job_title, company_name, f'Error processing file: {filename}')
 
 
 def process_raw_text(job_title, company_name, raw_text, username):
-    global status  # Ensure the global status variable is used
-    status.append(f"Processing raw text for {job_title} at {company_name}")
-    chunks, embedding_array = create_chunks_and_embeddings(raw_text)
-    logging.debug(f"Created chunks and embeddings for raw text")
-    status.append("Created chunks and embeddings for raw text")
-    with app.app_context():
-        db = next(get_db())
-        job_title = job_title.lower().strip()
-        company_name = company_name.lower().strip()
-        
-        # Enumerate raw text processed files
-        existing_files = db.query(TrainingData.processed_files).filter_by(job_title=job_title, company_name=company_name).all()
-        raw_text_count = sum(1 for files in existing_files for file in files.processed_files.split(',') if 'raw_text' in file)
-        processed_file_name = f"raw_text_{raw_text_count + 1}"
-        
-        status.append(f"Storing training data as {processed_file_name}")
-        # Always create new training data instead of updating existing ones
-        new_training_data = TrainingData(
-            job_title=job_title,
-            company_name=company_name,
-            data='\n'.join(chunks),
-            chunk_text='\n'.join(chunks),
-            embeddings=embedding_array.tobytes(),
-            processed_files=processed_file_name
-        )
-        db.add(new_training_data)
-        store_training_data(db, new_training_data)
-        db.commit()
-    status.append(f"Raw text for {job_title} at {company_name} processed successfully as {processed_file_name}")
+    try:
+        update_process_status(username, job_title, company_name, 'Processing raw text')
+        chunks, embedding_array = create_chunks_and_embeddings(raw_text)
+        logging.debug(f"Created chunks and embeddings for raw text")
+
+        with app.app_context():
+            db = next(get_db())
+            job_title = job_title.lower().strip()
+            company_name = company_name.lower().strip()
+
+            existing_files = db.query(TrainingData.processed_files).filter_by(job_title=job_title, company_name=company_name).all()
+            raw_text_count = sum(1 for files in existing_files for file in files.processed_files.split(',') if 'raw_text' in file)
+            processed_file_name = f"raw_text_{raw_text_count + 1}"
+
+            new_training_data = TrainingData(
+                job_title=job_title,
+                company_name=company_name,
+                data='\n'.join(chunks),
+                chunk_text='\n'.join(chunks),
+                embeddings=embedding_array.tobytes(),
+                processed_files=processed_file_name
+            )
+            db.add(new_training_data)
+            store_training_data(db, new_training_data)
+            db.commit()
+        update_process_status(username, job_title, company_name, f'Raw text processed successfully: {processed_file_name}')
+    except Exception as e:
+        logging.error(f"Error processing raw text: {str(e)}")
+        update_process_status(username, job_title, company_name, 'Error processing raw text')
     cleanup_uploads_folder()
-    status.append("All raw text processed successfully")
+
 
 def cleanup_uploads_folder():
     txt_files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], '*.txt'))
@@ -155,3 +172,139 @@ def cleanup_uploads_folder():
             logging.info(f"Deleted file: {txt_file}")
         except Exception as e:
             logging.error(f"Error deleting file {txt_file}: {e}")
+
+def get_video_urls_from_channel(channel_id, num_videos):
+    video_data = []
+    next_page_token = None
+
+    while len(video_data) < num_videos:
+        request = youtube.search().list(
+            part="snippet",
+            channelId=channel_id,
+            maxResults=min(50, num_videos - len(video_data)),
+            pageToken=next_page_token,
+            type="video",
+            order="date"
+        )
+
+        # Log the request URL for debugging
+        logging.debug(f"Request URL: {request.uri}")
+
+        try:
+            response = request.execute()
+        except Exception as e:
+            logging.error(f"Error executing YouTube API request: {e}")
+            raise e
+
+        for item in response['items']:
+            video_data.append({
+                'url': f"https://www.youtube.com/watch?v={item['id']['videoId']}",
+                'title': item['snippet']['title'],
+                'publishedAt': item['snippet']['publishedAt']
+            })
+
+        next_page_token = response.get('nextPageToken')
+        if not next_page_token:
+            break
+
+    video_data.sort(key=lambda x: datetime.strptime(x['publishedAt'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
+    return video_data[:num_videos]
+
+def sanitize_filename(filename):
+    return re.sub(r'[\\/*?:"<>|]', "", filename)
+
+def download_and_transcribe(video, job_title, company_name, username):
+    video_url = video['url']
+    video_title = sanitize_filename(video['title'])
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(save_dir, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'cookiefile': cookies_file,
+        'ffmpeg_location': ffmpeg_location
+    }
+
+    try:
+        update_process_status(username, job_title, company_name, f'Downloading and transcribing video: {video_title}')
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(video_url, download=True)
+            audio_file_path = ydl.prepare_filename(info_dict).replace('.webm', '.mp3')
+
+        if not os.path.exists(audio_file_path):
+            return
+
+        model = whisper.load_model("base")
+        result = model.transcribe(audio_file_path)
+
+        transcription_file_name = f"{video_title}.txt"
+        transcription_file_path = os.path.join(transcription_dir, transcription_file_name)
+        # Ensure the directory for the transcription file exists
+        if not os.path.exists(os.path.dirname(transcription_file_path)):
+            os.makedirs(os.path.dirname(transcription_file_path))
+
+        with open(transcription_file_path, "w") as f:
+            f.write(result["text"])
+
+        os.remove(audio_file_path)
+
+        chunks, embedding_array = create_chunks_and_embeddings_from_file(transcription_file_path)
+
+        with app.app_context():
+            db = next(get_db())
+            job_title = job_title.lower().strip()
+            company_name = company_name.lower().strip()
+            new_training_data = TrainingData(
+                job_title=job_title,
+                company_name=company_name,
+                data='\n'.join(chunks),
+                chunk_text='\n'.join(chunks),
+                embeddings=embedding_array.tobytes(),
+                processed_files=transcription_file_name  # Save only the file name
+            )
+            db.add(new_training_data)
+            db.commit()
+            store_training_data(db, new_training_data)
+        update_process_status(username, job_title, company_name, f'Video transcribed: {video_title}')
+    except Exception as e:
+        logging.error(f"Error downloading and transcribing video {video_title}: {str(e)}")
+        update_process_status(username, job_title, company_name, f'Error downloading/transcribing video: {video_title}')
+
+
+def transcribe_videos(channel_id, num_videos, job_title, company_name, username):
+    try:
+        update_process_status(username, job_title, company_name, 'Transcribing videos')
+        video_urls = get_video_urls_from_channel(channel_id, num_videos)
+        for video in video_urls:
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username)
+        cleanup_uploads_folder()
+        update_process_status(username, job_title, company_name, 'Videos transcribed successfully')
+    except Exception as e:
+        logging.error(f"Error transcribing videos: {str(e)}")
+        update_process_status(username, job_title, company_name, 'Error transcribing videos')
+
+def process_youtube_urls(youtube_urls, job_title, company_name, username):
+    try:
+        update_process_status(username, job_title, company_name, 'Processing YouTube URLs')
+        for url in youtube_urls:
+            video_id = url.split('v=')[-1]
+            request = youtube.videos().list(part="snippet", id=video_id)
+            response = request.execute()
+            if response['items']:
+                video_title = response['items'][0]['snippet']['title']
+            else:
+                video_title = 'Unknown Title'
+            video = {
+                'url': url,
+                'title': video_title  # Use actual video title
+            }
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username)
+        cleanup_uploads_folder()
+        update_process_status(username, job_title, company_name, 'YouTube URLs processed successfully')
+    except Exception as e:
+        logging.error(f"Error processing YouTube URLs: {str(e)}")
+        update_process_status(username, job_title, company_name, 'Error processing YouTube URLs')

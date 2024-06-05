@@ -3,7 +3,7 @@ from flask import Flask
 from dotenv import load_dotenv
 from flask_session import Session
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -21,8 +21,9 @@ Session(app)
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Import routes and models after app initialization
-from app import routes, models
+# Import routes
+from app import routes
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5011)
+

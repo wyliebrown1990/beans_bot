@@ -1,64 +1,99 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Progress</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-  <script>
-      async function fetchProgress() {
-          const response = await fetch('/progress_data');
-          const data = await response.json();
-          const progressElement = document.getElementById('progress');
-          progressElement.innerHTML = data.map(status => `<p>${status}</p>`).join('');
-          if (data.length > 0 && data[data.length - 1].includes('successfully')) {
-              if (!document.getElementById('add-more-button')) {
-                  const button = document.createElement('button');
-                  button.id = 'add-more-button';
-                  button.innerText = 'Add More Training Data';
-                  button.onclick = () => {
-                      const params = new URLSearchParams({
-                          job_title: "{{ job_title.lower() }}",
-                          company_name: "{{ company_name.lower() }}",
-                          industry: "{{ industry.lower() }}",
-                          username: "{{ username.lower() }}"
-                      });
-                      window.location.href = '/upload_options?' + params.toString();
-                  };
-                  progressElement.appendChild(button);
-              }
-              if (!document.getElementById('start-interview-button')) {
-                  const button = document.createElement('button');
-                  button.id = 'start-interview-button';
-                  button.innerText = 'Start Interview!';
-                  button.onclick = () => {
-                      const params = new URLSearchParams({
-                          job_title: "{{ job_title.lower() }}",
-                          company_name: "{{ company_name.lower() }}",
-                          industry: "{{ industry.lower() }}",
-                          username: "{{ username.lower() }}"
-                      });
-                      window.location.href = 'http://localhost:5013/start_interview?' + params.toString();
-                  };
-                  progressElement.appendChild(button);
-              }
-          } else {
-              setTimeout(fetchProgress, 1000);
-          }
-      }
-      document.addEventListener('DOMContentLoaded', fetchProgress);
-  </script>
+    <meta charset="utf-8">
+    <title>Progress</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        #statusLog {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        #buttonContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .actionButton {
+            margin: 10px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+    <script>
+        function pollStatus() {
+            const jobTitle = "{{ job_title }}";
+            const companyName = "{{ company_name }}";
+            const industry = "{{ industry }}";
+            const username = "{{ username }}";
+
+            console.log(`Fetching status for: username=${username}, jobTitle=${jobTitle}, companyName=${companyName}`);
+
+            fetch(`/get_status?username=${username}&job_title=${jobTitle}&company_name=${companyName}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(`Received status: ${data.status}`);
+                    appendStatus(data.status);
+
+                    if (data.status.toLowerCase().includes('successfully')) {
+                        displayButtons(jobTitle, companyName, industry, username);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+
+            setTimeout(pollStatus, 5000);
+        }
+
+        function appendStatus(status) {
+            const statusLog = document.getElementById('statusLog');
+            const statusEntry = document.createElement('p');
+            statusEntry.innerText = status;
+            statusLog.appendChild(statusEntry);
+        }
+
+        function displayButtons(jobTitle, companyName, industry, username) {
+            // Check if the buttons have already been added to the DOM
+            if (document.getElementById('buttonContainer')) {
+                return;
+            }
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.id = 'buttonContainer';
+
+            const addMoreButton = document.createElement('button');
+            addMoreButton.innerText = 'Add More Training Data';
+            addMoreButton.classList.add('actionButton');
+            addMoreButton.onclick = function() {
+                window.location.href = `/upload_options?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}`;
+            };
+
+            const startInterviewButton = document.createElement('button');
+            startInterviewButton.innerText = 'Start Interview!';
+            startInterviewButton.classList.add('actionButton');
+            startInterviewButton.onclick = function() {
+                window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle.toLowerCase()}&company_name=${companyName.toLowerCase()}&industry=${industry.toLowerCase()}&username=${username.toLowerCase()}`;
+            };
+
+            buttonContainer.appendChild(addMoreButton);
+            buttonContainer.appendChild(startInterviewButton);
+
+            document.body.appendChild(buttonContainer);
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            pollStatus();
+        });
+    </script>
 </head>
 <body>
-  <div id="page-container">
-      <div id="content-wrap">
-          <header>
-              <h1>Processing Progress</h1>
-          </header>
-          <div id="progress"></div>
-      </div>
-      <footer id="footers">
-          <p>&copy; Your Company 2024</p>
-      </footer>
-  </div>
+    <h1>Process Progress</h1>
+    <div>
+        <p id="status">Initializing...</p>
+    </div>
+    <div id="statusLog"></div>
 </body>
 </html>
