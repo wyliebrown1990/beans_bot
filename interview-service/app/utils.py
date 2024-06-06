@@ -1,4 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, Float, LargeBinary, DateTime, TIMESTAMP, func
+import os
+import uuid
+from io import BytesIO
+from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, DateTime, TIMESTAMP, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import ProgrammingError
@@ -7,13 +10,64 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-import os
-import re
-import logging
 from datetime import datetime
 from flask_login import UserMixin
 import faiss
 import numpy as np
+import re
+import logging
+from dotenv import load_dotenv
+from elevenlabs import VoiceSettings
+from elevenlabs.client import ElevenLabs
+
+load_dotenv()
+
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+def text_to_speech_file(text: str) -> str:
+    # Handle empty text case
+    if not text.strip():
+        print("Text is empty, skipping text-to-speech conversion.")
+        return ""
+
+    try:
+        # Calling the text_to_speech conversion API with detailed parameters
+        response = elevenlabs_client.text_to_speech.convert(
+            voice_id="xU744AaoW3SYWVj6TN6H", # Knightley - dapper and deep narrator
+            optimize_streaming_latency="0",
+            output_format="mp3_22050_32",
+            text=text,
+            model_id="eleven_turbo_v2", # use the turbo model for low latency, for other languages use the `eleven_multilingual_v2`
+            voice_settings=VoiceSettings(
+                stability=0.0,
+                similarity_boost=1.0,
+                style=0.0,
+                use_speaker_boost=True,
+            ),
+        )
+
+        # Generating a unique file name for the output MP3 file
+        save_file_path = os.path.join("audio_files", f"{uuid.uuid4()}.mp3")
+
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(save_file_path), exist_ok=True)
+
+        # Writing the audio to a file
+        with open(save_file_path, "wb") as f:
+            for chunk in response:
+                if chunk:
+                    f.write(chunk)
+
+        print(f"{save_file_path}: A new audio file was saved successfully!")
+
+        # Return the path of the saved audio file
+        return save_file_path
+
+    except ApiError as e:
+        print(f"Error generating speech: {e}")
+        return ""
+    
 
 Base = declarative_base()
 
@@ -104,7 +158,6 @@ def generate_next_question(job_title, company_name, industry, session_history, c
     most_recent_question = response.content  # Store the generated question
     print("Most Recent Question:", most_recent_question)
     return most_recent_question
-
 
 def get_user_resume_data(session: Session, username: str):
     user = session.query(User).filter_by(username=username).first()
@@ -248,7 +301,6 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
         "score": score if score else "N/A",
         "next_question": next_question
     }
-
 
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)

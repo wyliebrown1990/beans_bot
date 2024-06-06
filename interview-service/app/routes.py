@@ -3,7 +3,7 @@ import os
 from .utils import (
     get_session_history, load_training_data, generate_next_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
-    most_recent_question, user_responses, query_faiss_index
+    most_recent_question, user_responses, query_faiss_index, text_to_speech_file
 )
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -37,6 +37,7 @@ def setup_routes(app_instance, session_instance):
             username = request.form['username']
             session_id = request.form['session_id']
             user_response = request.form['answer_1']
+            generate_audio = 'generate_audio' in request.form
 
             # Query FAISS index for career context
             career_context_query = f"Top features of {company_name}"
@@ -53,20 +54,16 @@ def setup_routes(app_instance, session_instance):
             session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))
             session_history.add_message(AIMessage(content=results["next_question"]))
 
+            # Convert text to speech for next question response only if the box is checked
+            next_question_audio_path = None
+            if generate_audio:
+                next_question_audio_path = text_to_speech_file(results["next_question"])
+
+            print(f"Next question audio path: {next_question_audio_path}")
+
             return jsonify({
                 'feedback_response': results["analysis_response"] if results["analysis_response"] else "",
                 'score_response': results["score"] if results["score"] else "N/A",
-                'next_question_response': results["next_question"]
+                'next_question_response': results["next_question"],
+                'next_question_audio': next_question_audio_path if next_question_audio_path else None
             })
-
-    @app_instance.route('/get_similar_resumes', methods=['GET'])
-    def get_similar_resumes():
-        username = request.args.get('username').strip().lower()
-        query_text = request.args.get('query_text').strip().lower()
-
-        similar_embeddings = get_similar_resume_embeddings(session, username, query_text)
-
-        if similar_embeddings is None:
-            return jsonify({"error": "No embeddings found for the specified user"}), 404
-
-        return jsonify({"similar_embeddings": [emb.tolist() for emb in similar_embeddings]})
