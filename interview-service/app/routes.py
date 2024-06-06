@@ -1,9 +1,11 @@
 from flask import render_template, request, jsonify
+import openai
 import os
+from werkzeug.utils import secure_filename
 from .utils import (
-    get_session_history, load_training_data, generate_next_question,
-    get_resume_question_answer, get_career_experience_answer, extract_score,
-    most_recent_question, user_responses, query_faiss_index, text_to_speech_file
+   get_session_history, load_training_data, generate_next_question,
+   get_resume_question_answer, get_career_experience_answer, extract_score,
+   most_recent_question, user_responses, query_faiss_index, text_to_speech_file
 )
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -67,3 +69,33 @@ def setup_routes(app_instance, session_instance):
                 'next_question_response': results["next_question"],
                 'next_question_audio': next_question_audio_path if next_question_audio_path else None
             })
+
+    @app_instance.route('/transcribe_audio', methods=['POST'])
+    def transcribe_audio():
+        print("Received audio file for transcription...")
+        if 'audio' not in request.files:
+            print("No audio file uploaded.")
+            return jsonify({'error': 'No audio file uploaded'}), 400
+
+        audio_file = request.files['audio']
+        filename = secure_filename(audio_file.filename)
+        filepath = os.path.join('/tmp', filename)
+        print(f"Saving audio file to {filepath}...")
+        audio_file.save(filepath)
+
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+
+        try:
+            with open(filepath, 'rb') as audio:
+                print("Transcribing audio file using Whisper...")
+                response = openai.Audio.transcribe("whisper-1", audio)
+                transcription = response['text']
+                print("Transcription successful.")
+        except Exception as e:
+            print(f"Error during transcription: {e}")
+            return jsonify({'error': str(e)}), 500
+        finally:
+            print("Removing temporary audio file...")
+            os.remove(filepath)
+
+        return jsonify({'transcription': transcription})
