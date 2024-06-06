@@ -6,6 +6,7 @@ from app import app
 from app.database import get_db
 from app.models import TrainingData, ProcessStatus
 from app.utils import secure_filename, load_training_data, create_chunks_and_embeddings_from_file, create_chunks_and_embeddings, store_training_data, process_raw_text, process_file, cleanup_uploads_folder, get_video_urls_from_channel, sanitize_filename, download_and_transcribe, transcribe_videos, process_youtube_urls
+from sqlalchemy import func
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -111,40 +112,47 @@ def progress():
 
 @app.route('/upload_options', methods=['GET'])
 def upload_options():
-   job_title = request.args.get('job_title')
-   company_name = request.args.get('company_name')
-   industry = request.args.get('industry')
-   username = request.args.get('username')
+    job_title = request.args.get('job_title').lower().strip()
+    company_name = request.args.get('company_name').lower().strip()
+    industry = request.args.get('industry')
+    username = request.args.get('username')
 
-   with app.app_context():
-       db = next(get_db())
-       training_data_exists = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first() is not None
+    with app.app_context():
+        db = next(get_db())
+        training_data_exists = db.query(TrainingData).filter(
+            func.lower(TrainingData.job_title) == job_title,
+            func.lower(TrainingData.company_name) == company_name
+        ).first() is not None
 
-   if training_data_exists:
-       message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
-   else:
-       message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
+    if training_data_exists:
+        message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
+    else:
+        message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-   return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, message=message)
+    return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, message=message)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-   username = request.args.get('username')
-   if request.method == 'POST':
-       job_title = request.form['job_title']
-       company_name = request.form['company_name']
-       industry = request.form['industry']
-       username = request.form['username']  # Ensure username is taken from the form
+    username = request.args.get('username')
+    if request.method == 'POST':
+        job_title = request.form['job_title'].lower().strip()
+        company_name = request.form['company_name'].lower().strip()
+        industry = request.form['industry']
+        username = request.form['username']  # Ensure username is taken from the form
 
-       with app.app_context():
-           db = next(get_db())
-           training_data_exists = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first() is not None
+        with app.app_context():
+            db = next(get_db())
+            training_data_exists = db.query(TrainingData).filter(
+                func.lower(TrainingData.job_title) == job_title,
+                func.lower(TrainingData.company_name) == company_name
+            ).first() is not None
 
-       if training_data_exists:
-           message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
-       else:
-           message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
+        if training_data_exists:
+            message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
+        else:
+            message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-       return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username))
+        return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username))
 
-   return render_template('index.html', username=username)
+    return render_template('index.html', username=username)

@@ -1,17 +1,21 @@
 from flask import render_template, request, jsonify
-import openai
 import os
+import logging
 from werkzeug.utils import secure_filename
+from pydub import AudioSegment
+from openai import OpenAI
 from .utils import (
-   get_session_history, load_training_data, generate_next_question,
-   get_resume_question_answer, get_career_experience_answer, extract_score,
-   most_recent_question, user_responses, query_faiss_index, text_to_speech_file
+    get_session_history, load_training_data, generate_next_question,
+    get_resume_question_answer, get_career_experience_answer, extract_score,
+    most_recent_question, user_responses, query_faiss_index, text_to_speech_file
 )
-from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+# Initialize the OpenAI client
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def setup_routes(app_instance, session_instance):
     global session
@@ -79,23 +83,42 @@ def setup_routes(app_instance, session_instance):
 
         audio_file = request.files['audio']
         filename = secure_filename(audio_file.filename)
-        filepath = os.path.join('/tmp', filename)
-        print(f"Saving audio file to {filepath}...")
-        audio_file.save(filepath)
-
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        file_path = os.path.join('/tmp', filename)
+        print(f"Saving audio file to {file_path}...")
+        audio_file.save(file_path)
 
         try:
-            with open(filepath, 'rb') as audio:
-                print("Transcribing audio file using Whisper...")
-                response = openai.Audio.transcribe("whisper-1", audio)
-                transcription = response['text']
-                print("Transcription successful.")
+            # Convert audio file to WAV format using pydub
+            audio = AudioSegment.from_file(file_path)
+            wav_path = os.path.join('/tmp', 'audio.wav')
+            audio.export(wav_path, format='wav')
+            print(f"Audio file converted to WAV format at {wav_path}")
+
+            # Transcribe audio using OpenAI API
+            print("Starting transcription with OpenAI Whisper API...")
+            with open(wav_path, "rb") as audio_file:
+                response = openai_client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text"
+                )
+                print(f"Transcription API response: {response}")
+
+                # Check the structure of the response to handle it properly
+                if isinstance(response, dict) and "text" in response:
+                    text = response["text"]
+                    print(f"Transcription result: {text}")
+                elif isinstance(response, str):
+                    text = response
+                    print(f"Transcription result: {text}")
+                else:
+                    raise ValueError("Unexpected response format from transcription API")
         except Exception as e:
             print(f"Error during transcription: {e}")
             return jsonify({'error': str(e)}), 500
         finally:
-            print("Removing temporary audio file...")
-            os.remove(filepath)
+            print("Removing temporary audio files...")
+            os.remove(file_path)
+            os.remove(wav_path)
 
-        return jsonify({'transcription': transcription})
+        return jsonify({'transcription': text})

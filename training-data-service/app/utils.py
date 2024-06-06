@@ -42,12 +42,18 @@ def update_process_status(username, job_title, company_name, status):
 
 
 def load_training_data(db: Session, job_title: str, company_name: str):
+    job_title = job_title.lower().strip()
+    company_name = company_name.lower().strip()
     logging.debug(f"Loading training data for job title: {job_title}, company name: {company_name}")
-    training_data = db.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first()
+    training_data = db.query(TrainingData).filter(
+        func.lower(TrainingData.job_title) == job_title,
+        func.lower(TrainingData.company_name) == company_name
+    ).first()
     logging.debug(f"Retrieved training data: {training_data}")
     if training_data:
         logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
     return training_data
+
 
 def create_chunks_and_embeddings_from_file(file_path: str):
     logging.debug(f"Processing file: {file_path}")

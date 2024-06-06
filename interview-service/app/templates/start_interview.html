@@ -6,9 +6,6 @@
 <title>Start Interview</title>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<style>
-/* Your existing styles */
-</style>
 </head>
 <body>
 <header>
@@ -55,26 +52,26 @@
             stopRecording();
         }
     });
-    
+
     function startRecording() {
         console.log("Starting recording...");
         $('#status-message').text("Recording...").fadeIn();
         $('#record-answer').text("Stop Recording");
         recording = true;
-    
+
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
                 mediaRecorder = new MediaRecorder(stream);
                 mediaRecorder.start();
-    
+
                 mediaRecorder.ondataavailable = function(event) {
                     audioChunks.push(event.data);
                 };
-    
+
                 mediaRecorder.onstart = function() {
                     console.log("Recording started.");
                 };
-    
+
                 mediaRecorder.onerror = function(event) {
                     console.error("Recording error:", event.error);
                 };
@@ -83,20 +80,20 @@
                 console.error('Error accessing microphone:', error);
             });
     }
-    
+
     function stopRecording() {
         console.log("Stopping recording...");
         $('#status-message').text("Transcribing answer. This can take a while... Sit tight.").fadeIn();
         $('#record-answer').text("Record Answer");
         recording = false;
-    
+
         mediaRecorder.stop();
         mediaRecorder.onstop = function() {
             console.log("Recording stopped.");
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             const formData = new FormData();
             formData.append('audio', audioBlob);
-    
+
             console.log("Sending audio blob to server...");
             $.ajax({
                 type: 'POST',
@@ -114,8 +111,63 @@
                     $('#status-message').text("An error occurred during transcription. Please try again.").fadeIn().delay(3000).fadeOut();
                 }
             });
-    
+
             audioChunks = [];
         };
     }
-    </script>
+
+    $('#response-form').on('submit', function(event) {
+        event.preventDefault();
+        const form = $(this);
+        const userResponse = $('#answer_1').val();
+        console.log("User response:", userResponse);
+
+        // Show status message
+        $('#status-message').text("Processing your response...").fadeIn();
+
+        $.ajax({
+            type: 'POST',
+            url: "{{ url_for('start_interview') }}",
+            data: form.serialize(),
+            success: function(response) {
+                console.log("Server response:", response);
+
+                // Hide status message
+                $('#status-message').fadeOut();
+
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User Image" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>{{ username }}: ${userResponse}</p>
+                        </div>
+                    </div>
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>Beans-bot Feedback: ${response.feedback_response}</p>
+                            <p>Beans-bot Score: ${response.score_response}</p>
+                            <p>Beans-bot: ${response.next_question_response}</p>
+                            ${response.next_question_audio ? `<button class="play-button" onclick="playAudio('${response.next_question_audio}')">Play Next Question</button>` : ''}
+                        </div>
+                    </div>
+                `);
+
+                $('#answer_1').val('');
+            },
+            error: function(error) {
+                console.log('Error:', error);
+
+                // Show error message
+                $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
+            }
+        });
+    });
+
+    function playAudio(audioPath) {
+        const audio = new Audio(audioPath);
+        audio.play();
+    }
+</script>
+</body>
+</html>
