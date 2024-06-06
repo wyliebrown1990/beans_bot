@@ -3,7 +3,7 @@ import os
 from .utils import (
     get_session_history, load_training_data, generate_next_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
-    most_recent_question, user_responses
+    most_recent_question, user_responses, query_faiss_index
 )
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -38,12 +38,16 @@ def setup_routes(app_instance, session_instance):
             session_id = request.form['session_id']
             user_response = request.form['answer_1']
 
+            # Query FAISS index for career context
+            career_context_query = f"Top features of {company_name}"
+            career_context = query_faiss_index(career_context_query)
+
             if user_responses["resume_user_response"] is None:
                 # First response (resume_user_response)
-                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response)
+                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, career_context)
             else:
                 # Subsequent responses (career_user_responses)
-                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response)
+                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, career_context)
 
             session_history = get_session_history(session_id)
             session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))

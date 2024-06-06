@@ -12,6 +12,8 @@ import re
 import logging
 from datetime import datetime
 from flask_login import UserMixin
+import faiss
+import numpy as np
 
 Base = declarative_base()
 
@@ -90,10 +92,10 @@ def load_training_data(session: Session, job_title, company_name):
         logging.debug("No training data found")
     return training_data
 
-def generate_next_question(job_title, company_name, industry, session_history):
+def generate_next_question(job_title, company_name, industry, session_history, career_context):
     global most_recent_question
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry."),
+        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {career_context}."),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
@@ -102,6 +104,7 @@ def generate_next_question(job_title, company_name, industry, session_history):
     most_recent_question = response.content  # Store the generated question
     print("Most Recent Question:", most_recent_question)
     return most_recent_question
+
 
 def get_user_resume_data(session: Session, username: str):
     user = session.query(User).filter_by(username=username).first()
@@ -119,8 +122,14 @@ def get_user_resume_data(session: Session, username: str):
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
             most_recent_experience_summary, industry_expertise, top_soft_skills)
 
-def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str):
-    global user_responses
+def query_faiss_index(query: str):
+    # Placeholder function to simulate querying FAISS index
+    # This should be replaced with the actual code to query your FAISS index
+    # For demonstration purposes, it returns a static string
+    return "Career context from FAISS index based on the query."
+
+def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, career_context: str):
+    global most_recent_question, user_responses
 
     resume_data = get_user_resume_data(session, username)
     if not resume_data:
@@ -131,7 +140,7 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
 
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I am going to answer you and I want you to give me an analysis of how well I answered the question. You can also reference this information about me: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {career_context}."),
         ("user", resume_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -154,23 +163,16 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
     if not score or not score.isdigit():
         score = None
 
-    # Generate the next question
+    # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_next_question(job_title, company_name, industry, session_history)
-
-    # Store the first user response and subsequent responses
-    if user_responses["resume_user_response"] is None:
-        user_responses["resume_user_response"] = resume_user_response
-    else:
-        user_responses["career_user_responses"].append(resume_user_response)
-        print("Career User Responses:", user_responses["career_user_responses"])
+    next_question = generate_next_question(job_title, company_name, industry, session_history, career_context)
 
     # Store the response in the database
     new_answer = InterviewAnswer(
         job_title=job_title,
         company_name=company_name,
         industry=industry,
-        question=f"Tell me about your professional experience and how it relates to this role at {company_name}",  # Last question asked before the user's answer
+        question="Tell me about your professional experience and how it relates to this role at {company_name}",  # Last question asked before the user's answer
         answer=resume_user_response,
         critique=analysis_response,
         score=score if score else "N/A"  # Store "N/A" if score is None
@@ -184,8 +186,8 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
         "next_question": next_question
     }
 
-def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str):
-    global user_responses
+def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str, career_context: str):
+    global most_recent_question, user_responses
 
     resume_data = get_user_resume_data(session, username)
     if not resume_data:
@@ -196,7 +198,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Based on my experience and my answer please give me feedback."),
+        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {career_context}. Based on my experience and the context about {company_name} and my specific answer please give me feedback."),
         ("user", career_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -219,13 +221,14 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
     if not score or not score.isdigit():
         score = None
 
-    # Generate the next question
+    # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_next_question(job_title, company_name, industry, session_history)
+    next_question = generate_next_question(job_title, company_name, industry, session_history, career_context)
 
     # Store the career user response
     user_responses["career_user_responses"].append(career_user_response)
     print("Career User Response:", career_user_response)
+    print("Most Recent Question:", most_recent_question)
 
     # Store the response in the database
     new_answer = InterviewAnswer(
@@ -245,6 +248,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)
