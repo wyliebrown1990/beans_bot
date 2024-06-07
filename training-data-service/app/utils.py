@@ -14,6 +14,7 @@ import yt_dlp
 import whisper
 from googleapiclient.discovery import build
 from datetime import datetime
+import faiss
 
 # Load environment variables
 youtube_api_key = os.getenv('GOOGLE_API_KEY')
@@ -25,6 +26,8 @@ os.makedirs(transcription_dir, exist_ok=True)
 
 # Initialize YouTube API client
 youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+
+FAISS_INDEX_PATH = os.path.join('beans_bot', 'training-data-service', 'faiss_index.idx')
 
 def update_process_status(username, job_title, company_name, status):
     username = username.lower().strip()
@@ -40,7 +43,6 @@ def update_process_status(username, job_title, company_name, status):
     })
     print(f"Status update response: {response.status_code} - {response.text}")
 
-
 def load_training_data(db: Session, job_title: str, company_name: str):
     job_title = job_title.lower().strip()
     company_name = company_name.lower().strip()
@@ -54,7 +56,6 @@ def load_training_data(db: Session, job_title: str, company_name: str):
         logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
     return training_data
 
-
 def create_chunks_and_embeddings_from_file(file_path: str):
     logging.debug(f"Processing file: {file_path}")
     with open(file_path, "r") as f:
@@ -63,19 +64,21 @@ def create_chunks_and_embeddings_from_file(file_path: str):
     chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
     embedder = OpenAIEmbeddings()
     embeddings = []
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks):
         embedding = embedder.embed_documents([chunk])
         if isinstance(embedding, list) and len(embedding) == 1:
             embedding = np.array(embedding[0])  # Convert to NumPy array
+        logging.debug(f"Chunk {i} embedding shape: {embedding.shape}")
         if embedding.shape[0] == 1536:  # Ensure embedding has correct dimensions
             embeddings.append(embedding)
         else:
-            print(f"Skipping chunk with incorrect embedding shape: {embedding.shape}")
+            logging.error(f"Chunk {i} has incorrect embedding shape: {embedding.shape}. Skipping this chunk.")
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings generated.")
     embedding_array = np.vstack(embeddings).astype('float32')
     logging.debug(f"Created {len(chunks)} chunks and embeddings")
     return chunks, embedding_array
+
 
 def create_chunks_and_embeddings(data: str):
     logging.debug("Processing raw text data")
@@ -83,19 +86,22 @@ def create_chunks_and_embeddings(data: str):
     chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
     embedder = OpenAIEmbeddings()
     embeddings = []
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks):
         embedding = embedder.embed_documents([chunk])
         if isinstance(embedding, list) and len(embedding) == 1:
             embedding = np.array(embedding[0])  # Convert to NumPy array
+        logging.debug(f"Chunk {i} embedding shape: {embedding.shape}")
         if embedding.shape[0] == 1536:  # Ensure embedding has correct dimensions
             embeddings.append(embedding)
         else:
-            print(f"Skipping chunk with incorrect embedding shape: {embedding.shape}")
+            logging.error(f"Chunk {i} has incorrect embedding shape: {embedding.shape}. Skipping this chunk.")
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings generated.")
     embedding_array = np.vstack(embeddings).astype('float32')
     logging.debug(f"Created {len(chunks)} chunks and embeddings for raw text")
     return chunks, embedding_array
+
+
 
 def store_training_data(db_session, training_data):
     logging.debug(f"Storing training data: {training_data}")
@@ -103,6 +109,57 @@ def store_training_data(db_session, training_data):
     db_session.add(training_data)
     db_session.commit()  # Ensure the session is committed
     logging.debug(f"Stored training data with ID: {training_data.id}")
+
+# Update FAISS index
+
+def normalize_l2(x):
+    x = np.array(x)
+    if x.ndim == 1:
+        norm = np.linalg.norm(x)
+        if norm == 0:
+            return x
+        return x / norm
+    else:
+        norm = np.linalg.norm(x, 2, axis=1, keepdims=True)
+        return np.where(norm == 0, x, x / norm)
+
+def check_existing_embeddings(db_session: Session, expected_dim: int = 1536):
+    all_embeddings = db_session.query(TrainingData.embeddings).all()
+    for i, embedding in enumerate(all_embeddings):
+        if embedding[0]:
+            array = np.frombuffer(embedding[0], dtype=np.float32)
+            if array.shape[0] != expected_dim:
+                logging.error(f"Existing embedding at index {i} has incorrect shape: {array.shape}")
+                db_session.query(TrainingData).filter(TrainingData.embeddings == embedding[0]).delete()
+    db_session.commit()
+
+def update_faiss_index(db_session: Session):
+    # Directory where the FAISS index file will be stored
+    faiss_index_path = os.path.join(os.getcwd(), 'beans_bot', 'training-data-service', 'faiss_index.idx')
+    faiss_index_dir = os.path.dirname(faiss_index_path)
+
+    # Ensure the directory exists
+    if not os.path.exists(faiss_index_dir):
+        os.makedirs(faiss_index_dir)
+
+    # Check existing embeddings and remove incorrect ones
+    check_existing_embeddings(db_session)
+
+    # Retrieve all embeddings from the database
+    all_embeddings = db_session.query(TrainingData.embeddings).all()
+    embeddings = [normalize_l2(np.frombuffer(embedding[0], dtype=np.float32)) for embedding in all_embeddings if embedding[0]]
+
+    if embeddings:
+        # Create a FAISS index
+        embeddings_matrix = np.vstack(embeddings)
+        index = faiss.IndexFlatL2(embeddings_matrix.shape[1])
+        index.add(embeddings_matrix)
+        
+        # Save the FAISS index to a file
+        faiss.write_index(index, faiss_index_path)
+        logging.debug(f"FAISS index updated and saved to {faiss_index_path}")
+    else:
+        logging.debug("No embeddings found to create FAISS index.")
 
 def process_file(file_path, job_title, company_name, username):
     filename = os.path.basename(file_path)
@@ -129,13 +186,15 @@ def process_file(file_path, job_title, company_name, username):
             db.add(new_training_data)
             store_training_data(db, new_training_data)
 
+            # Update FAISS index
+            update_faiss_index(db)
+            
             db.commit()
             logging.debug(f"Committed changes to the database for file: {filename}")
         update_process_status(username, job_title, company_name, f'File processed successfully: {filename}')
     except Exception as e:
         logging.error(f"Error processing file {filename}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error processing file: {filename}')
-
 
 def process_raw_text(job_title, company_name, raw_text, username):
     try:
@@ -162,13 +221,16 @@ def process_raw_text(job_title, company_name, raw_text, username):
             )
             db.add(new_training_data)
             store_training_data(db, new_training_data)
+
+            # Update FAISS index
+            update_faiss_index(db)
+
             db.commit()
         update_process_status(username, job_title, company_name, f'Raw text processed successfully: {processed_file_name}')
     except Exception as e:
         logging.error(f"Error processing raw text: {str(e)}")
         update_process_status(username, job_title, company_name, 'Error processing raw text')
     cleanup_uploads_folder()
-
 
 def cleanup_uploads_folder():
     txt_files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], '*.txt'))
@@ -273,13 +335,16 @@ def download_and_transcribe(video, job_title, company_name, username):
                 processed_files=transcription_file_name  # Save only the file name
             )
             db.add(new_training_data)
-            db.commit()
             store_training_data(db, new_training_data)
+
+            # Update FAISS index
+            update_faiss_index(db)
+
+            db.commit()
         update_process_status(username, job_title, company_name, f'Video transcribed: {video_title}')
     except Exception as e:
         logging.error(f"Error downloading and transcribing video {video_title}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error downloading/transcribing video: {video_title}')
-
 
 def transcribe_videos(channel_id, num_videos, job_title, company_name, username):
     try:
@@ -314,3 +379,21 @@ def process_youtube_urls(youtube_urls, job_title, company_name, username):
     except Exception as e:
         logging.error(f"Error processing YouTube URLs: {str(e)}")
         update_process_status(username, job_title, company_name, 'Error processing YouTube URLs')
+
+def query_faiss_index(query: str):
+    if not os.path.exists(FAISS_INDEX_PATH):
+        logging.error(f"FAISS index file not found at {FAISS_INDEX_PATH}")
+        return "Career context from FAISS index based on the query."
+
+    try:
+        index = faiss.read_index(FAISS_INDEX_PATH)
+        embedder = OpenAIEmbeddings()
+        query_embedding = embedder.embed_query(query)
+        query_vector = np.array(query_embedding, dtype=np.float32)
+        D, I = index.search(query_vector.reshape(1, -1), 5)
+        results = [index.reconstruct(int(idx)) for idx in I[0]]
+        logging.debug(f"FAISS query results: {results}")
+        return results[0] if results else "No relevant data found in the FAISS index."
+    except Exception as e:
+        logging.error(f"Error querying FAISS index: {str(e)}")
+        return "Error querying FAISS index."

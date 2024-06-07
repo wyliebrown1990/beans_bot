@@ -16,10 +16,10 @@ COPY . .
 # Ensure that the environment variables are set
 ENV FLASK_APP=app
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=5010
+ENV FLASK_RUN_PORT=5013
 
 # Expose the port the app runs on
-EXPOSE 5010
+EXPOSE 5013
 
 # Run the application
 CMD ["flask", "run"]

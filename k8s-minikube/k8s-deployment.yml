@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: auth-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5010
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api-key
+                  key: api-key
+            - name: DATABASE_URL
+              value: "postgresql://wyliebrown:test123@postgres:5432/interview_bot"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5010
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: interview-service
+  template:
+    metadata:
+      labels:
+        app: interview-service
+    spec:
+      containers:
+        - name: interview-service
+          image: interview-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5013
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api-key
+                  key: api-key
+            - name: DATABASE_URL
+              value: "postgresql://wyliebrown:test123@postgres:5432/interview_bot"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interview-service
+spec:
+  selector:
+    app: interview-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5013
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: training-data-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: training-data-service
+  template:
+    metadata:
+      labels:
+        app: training-data-service
+    spec:
+      containers:
+        - name: training-data-service
+          image: training-data-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5011
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api-key
+                  key: api-key
+            - name: DATABASE_URL
+              value: "postgresql://wyliebrown:test123@postgres:5432/interview_bot"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: training-data-service
+spec:
+  selector:
+    app: training-data-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5011

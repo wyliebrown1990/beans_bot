@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: wyliebrown
+      POSTGRES_PASSWORD: test123
+      POSTGRES_DB: interview_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  auth-service:
+    build:
+      context: ./auth-service
+    command: flask run --host=0.0.0.0 --port=5001
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  interview-service:
+    build:
+      context: ./interview-service
+    command: flask run --host=0.0.0.0 --port=5002
+    ports:
+      - "5002:5002"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  training-data-service:
+    build:
+      context: ./training-data-service
+    command: gunicorn -b 0.0.0.0:5011 app:app
+    ports:
+      - "5011:5011"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

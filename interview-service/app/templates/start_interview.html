@@ -34,6 +34,16 @@
         <input type="checkbox" id="generate_audio" name="generate_audio">
         <label for="generate_audio">Generate Audio For Next Question</label>
     </div>
+    <div id="voice-selection" style="display:none;">
+        <label for="voice">Choose Voice:</label>
+        <select id="voice" name="voice">
+            <option value="xU744AaoW3SYWVj6TN6H">Knightley (English)</option>
+            <option value="P9OzYIULscDISblYABOC">Raj (Indian American)</option>
+            <option value="tnSpp4vdxKPjI9w0GnoV">Hope (American)</option>
+            <option value="kBag1HOZlaVBH7ICPE8x">Sally (English)</option>
+            <option value="aTxZrSrp47xsP6Ot4Kgd">Kayla (American)</option>
+        </select>
+    </div>
     <button type="submit">Send</button>
 </form>
 <button id="record-answer">Record Answer</button>
@@ -44,6 +54,14 @@
     let mediaRecorder;
     let audioChunks = [];
     let recording = false;
+
+    document.getElementById('generate_audio').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('voice-selection').style.display = 'block';
+        } else {
+            document.getElementById('voice-selection').style.display = 'none';
+        }
+    });
     
     document.getElementById('record-answer').addEventListener('click', function() {
         if (!recording) {

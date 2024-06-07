@@ -29,7 +29,7 @@ def setup_routes(app_instance, session_instance):
             industry = request.args.get('industry').strip().lower()
             username = request.args.get('username').strip().lower()
 
-            initial_question = f"Tell me about your professional experience and how it relates to this role at {company_name}"
+            initial_question = f"Tell me about yourself. What relevant professional experience have you had and what skillsets have you learned that make you uniquely qualified to succeed at {company_name}?"
             session_id = os.urandom(24).hex()
             session_history = get_session_history(session_id)
             session_history.add_message(AIMessage(content=initial_question))
@@ -44,9 +44,10 @@ def setup_routes(app_instance, session_instance):
             session_id = request.form['session_id']
             user_response = request.form['answer_1']
             generate_audio = 'generate_audio' in request.form
+            voice_id = request.form.get('voice', 'xU744AaoW3SYWVj6TN6H')  # Default to Knightley if no voice is selected
 
             # Query FAISS index for career context
-            career_context_query = f"Top features of {company_name}"
+            career_context_query = f"What does {company_name} do and what are their main product features?"
             career_context = query_faiss_index(career_context_query)
 
             if user_responses["resume_user_response"] is None:
@@ -63,7 +64,7 @@ def setup_routes(app_instance, session_instance):
             # Convert text to speech for next question response only if the box is checked
             next_question_audio_path = None
             if generate_audio:
-                next_question_audio_path = text_to_speech_file(results["next_question"])
+                next_question_audio_path = text_to_speech_file(results["next_question"], voice_id)
 
             print(f"Next question audio path: {next_question_audio_path}")
 

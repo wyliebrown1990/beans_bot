@@ -1,10 +1,24 @@
 FROM python:3.9-slim
 
-WORKDIR /code
+# Set the working directory in the container
+WORKDIR /app
 
-COPY requirements.txt ./
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install build-essential tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the required Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application code into the container
 COPY . .
 
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5011"]
+# Expose the port that the app runs on
+EXPOSE 5011
+
+# Command to run the app
+CMD ["gunicorn", "--bind", "0.0.0.0:5011", "app:app"]

@@ -25,7 +25,7 @@ load_dotenv()
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
-def text_to_speech_file(text: str) -> str:
+def text_to_speech_file(text: str, voice_id: str) -> str:
     # Handle empty text case
     if not text.strip():
         print("Text is empty, skipping text-to-speech conversion.")
@@ -34,11 +34,11 @@ def text_to_speech_file(text: str) -> str:
     try:
         # Calling the text_to_speech conversion API with detailed parameters
         response = elevenlabs_client.text_to_speech.convert(
-            voice_id="xU744AaoW3SYWVj6TN6H", # Knightley - dapper and deep narrator
+            voice_id=voice_id,
             optimize_streaming_latency="0",
             output_format="mp3_22050_32",
             text=text,
-            model_id="eleven_turbo_v2", # use the turbo model for low latency, for other languages use the `eleven_multilingual_v2`
+            model_id="eleven_turbo_v2",  # use the turbo model for low latency, for other languages use the `eleven_multilingual_v2`
             voice_settings=VoiceSettings(
                 stability=0.0,
                 similarity_boost=1.0,
@@ -67,6 +67,7 @@ def text_to_speech_file(text: str) -> str:
     except ApiError as e:
         print(f"Error generating speech: {e}")
         return ""
+
     
 
 Base = declarative_base()
@@ -148,8 +149,12 @@ def load_training_data(session: Session, job_title, company_name):
 
 def generate_next_question(job_title, company_name, industry, session_history, career_context):
     global most_recent_question
+
+    # Query FAISS index for company information
+    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?")
+    
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {career_context}."),
+        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {company_info}."),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
@@ -175,11 +180,46 @@ def get_user_resume_data(session: Session, username: str):
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
             most_recent_experience_summary, industry_expertise, top_soft_skills)
 
-def query_faiss_index(query: str):
-    # Placeholder function to simulate querying FAISS index
-    # This should be replaced with the actual code to query your FAISS index
-    # For demonstration purposes, it returns a static string
-    return "Career context from FAISS index based on the query."
+def query_faiss_index(query: str) -> str:
+    # Update the path to match where the FAISS index file is stored
+    faiss_index_path = os.path.join(os.getcwd(), 'beans_bot', 'training-data-service', 'faiss_index.idx')
+
+    if not os.path.exists(faiss_index_path):
+        logging.error(f"FAISS index file not found at {faiss_index_path}")
+        return "Error querying FAISS index: Index file not found."
+
+    try:
+        # Read the FAISS index
+        index = faiss.read_index(faiss_index_path)
+        
+        # Example: Create an embedding for the query
+        embedding = embedder.embed_documents([query])[0]
+        
+        # Search the FAISS index
+        D, I = index.search(np.array([embedding]), k=1)
+        
+        # Retrieve the matched data (this part will depend on how your index and data are structured)
+        if I[0][0] == -1:
+            return "No relevant information found in FAISS index."
+        
+        with app.app_context():
+            db = next(get_db())
+            training_data = db.query(TrainingData).all()
+            matched_data = [training_data[i].data for i in I[0]]
+
+        return f"Retrieved information for query '{query}' from FAISS index: {matched_data}"
+
+    except Exception as e:
+        logging.error(f"Error querying FAISS index: {e}")
+        return "Error querying FAISS index."
+
+
+
+def fetch_data_from_storage(index_id: int) -> str:
+    # Replace this function with actual implementation to fetch data
+    # For example, querying a database or reading from a file
+    return "Mock data for index ID: {}".format(index_id)
+
 
 def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, career_context: str):
     global most_recent_question, user_responses
@@ -239,8 +279,12 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
         "next_question": next_question
     }
 
-def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str, career_context: str):
+
+def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str):
     global most_recent_question, user_responses
+
+    # Fetch company context from FAISS index
+    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?")
 
     resume_data = get_user_resume_data(session, username)
     if not resume_data:
@@ -251,7 +295,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. Give me a very critical critique of how well I ansered the question. Specifically check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Once I finished my answer did I say something that showed I was finished? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {career_context}. Based on my experience and the context about {company_name} and my specific answer please give me feedback."),
+        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. Give me a very critical critique of how well I answered the question. Specifically check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Once I finished my answer did I say something that showed I was finished? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {company_info}. Based on my experience and the context about {company_name} and my specific answer please give me feedback."),
         ("user", career_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -276,7 +320,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_next_question(job_title, company_name, industry, session_history, career_context)
+    next_question = generate_next_question(job_title, company_name, industry, session_history, company_info)
 
     # Store the career user response
     user_responses["career_user_responses"].append(career_user_response)
@@ -301,6 +345,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)
