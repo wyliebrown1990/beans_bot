@@ -76,10 +76,11 @@ def create_chunks_and_embeddings_from_file(file_path: str):
             logging.error(f"Chunk {i} has incorrect embedding shape: {embedding.shape}. Skipping this chunk.")
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings generated.")
-    embedding_array = np.vstack(embeddings).astype('float32')
     logging.debug(f"Created {len(chunks)} chunks and embeddings")
-    return chunks, embedding_array
+    return chunks, embeddings  # Return list of embeddings
 
+
+# Ensure create_chunks_and_embeddings returns a list of embeddings (not combined)
 def create_chunks_and_embeddings(data: str):
     logging.debug("Processing raw text data")
     chunk_size = 1000
@@ -97,11 +98,8 @@ def create_chunks_and_embeddings(data: str):
             logging.error(f"Chunk {i} has incorrect embedding shape: {embedding.shape}. Skipping this chunk.")
     if len(embeddings) == 0:
         raise ValueError("No valid embeddings generated.")
-    embedding_array = np.vstack(embeddings).astype('float32')
     logging.debug(f"Created {len(chunks)} chunks and embeddings for raw text")
-    return chunks, embedding_array
-
-
+    return chunks, embeddings  # Return list of embeddings
 
 
 def store_training_data(db_session, training_data):
@@ -151,7 +149,7 @@ def check_existing_embeddings(db_session: Session, expected_dim: int = 1536):
 
 def update_faiss_index(db_session):
     logging.debug("Updating FAISS index.")
-    
+
     # Load all valid embeddings from the database
     embeddings = db_session.query(TrainingData.embeddings).all()
     valid_embeddings = [np.frombuffer(embedding[0], dtype=np.float32) for embedding in embeddings if embedding[0] is not None]
@@ -163,7 +161,7 @@ def update_faiss_index(db_session):
 
     # Convert to numpy array
     valid_embeddings_array = np.array(valid_embeddings)
-    
+
     if valid_embeddings_array.shape[1] != 1536:
         logging.error(f"Invalid embedding shape found: {valid_embeddings_array.shape}")
         return
@@ -172,10 +170,10 @@ def update_faiss_index(db_session):
     d = 1536  # dimension
     index = faiss.IndexFlatL2(d)
     index.add(valid_embeddings_array)
-    
+
     # Serialize the FAISS index
     index_data = faiss.serialize_index(index)
-    
+
     # Store the FAISS index in the database
     existing_index = db_session.query(FaissIndex).first()
     if existing_index:
@@ -189,6 +187,9 @@ def update_faiss_index(db_session):
 
     db_session.commit()
     logging.debug("FAISS index updated and saved to the database.")
+
+
+
 
 
 def load_faiss_index(db_session):
@@ -212,7 +213,7 @@ def process_file(file_path, job_title, company_name, username):
 
     try:
         update_process_status(username, job_title, company_name, f'Processing file: {filename}')
-        chunks, embedding_array = create_chunks_and_embeddings_from_file(file_path)
+        chunks, embeddings = create_chunks_and_embeddings_from_file(file_path)
         logging.debug(f"Created chunks and embeddings for file: {filename}")
 
         with app.app_context():
@@ -220,25 +221,28 @@ def process_file(file_path, job_title, company_name, username):
             job_title = job_title.lower().strip()
             company_name = company_name.lower().strip()
 
-            new_training_data = TrainingData(
-                job_title=job_title,
-                company_name=company_name,
-                data='\n'.join(chunks),
-                chunk_text='\n'.join(chunks),
-                embeddings=embedding_array.tobytes(),
-                processed_files=filename
-            )
-            db.add(new_training_data)
-            db.commit()
-            logging.debug(f"Committed changes to the database for file: {filename}")
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                new_training_data = TrainingData(
+                    job_title=job_title,
+                    company_name=company_name,
+                    data=chunk,
+                    chunk_text=chunk,
+                    embeddings=embedding.tobytes(),
+                    processed_files=f"{filename}_chunk_{i}"
+                )
+                db.add(new_training_data)
+                db.commit()
+                logging.debug(f"Committed chunk {i} to the database for file: {filename}")
 
             # Update FAISS index
             update_faiss_index(db)
-        
+
         update_process_status(username, job_title, company_name, f'File processed successfully: {filename}')
     except Exception as e:
         logging.error(f"Error processing file {filename}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error processing file: {filename}')
+
+
 
 
 
@@ -260,15 +264,17 @@ def process_raw_text(job_title, company_name, raw_text, username):
             # Check and delete incorrect embeddings before adding new data
             check_existing_embeddings(db)
 
-            new_training_data = TrainingData(
-                job_title=job_title_lower,
-                company_name=company_name_lower,
-                data='\n'.join(chunks),
-                chunk_text='\n'.join(chunks),
-                embeddings=embedding_array.tobytes(),
-                processed_files=processed_file_name
-            )
-            db.add(new_training_data)
+            # Ensure embeddings are stored correctly
+            for i, chunk in enumerate(chunks):
+                new_training_data = TrainingData(
+                    job_title=job_title_lower,
+                    company_name=company_name_lower,
+                    data=chunk,
+                    chunk_text=chunk,
+                    embeddings=embedding_array[i].tobytes(),
+                    processed_files=processed_file_name
+                )
+                db.add(new_training_data)
             db.commit()
             logging.debug(f"Committed changes to the database for raw text")
 
