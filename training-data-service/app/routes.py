@@ -5,7 +5,13 @@ from flask import render_template, request, redirect, url_for, jsonify
 from app import app
 from app.database import get_db
 from app.models import TrainingData, ProcessStatus
-from app.utils import secure_filename, load_training_data, create_chunks_and_embeddings_from_file, create_chunks_and_embeddings, store_training_data, process_raw_text, process_file, cleanup_uploads_folder, get_video_urls_from_channel, sanitize_filename, download_and_transcribe, transcribe_videos, process_youtube_urls
+from app.utils import (
+    secure_filename, load_training_data, create_chunks_and_embeddings_from_file,
+    create_chunks_and_embeddings, store_training_data, process_raw_text,
+    process_file, cleanup_uploads_folder, get_video_urls_from_channel,
+    sanitize_filename, download_and_transcribe, transcribe_videos,
+    process_youtube_urls, update_faiss_index
+)
 from sqlalchemy import func
 
 logging.basicConfig(level=logging.DEBUG)
@@ -76,20 +82,21 @@ def youtube_urls_transcription():
 
 @app.route('/file_upload', methods=['POST'])
 def file_upload():
-   job_title = request.form['job_title']
-   company_name = request.form['company_name']
-   industry = request.form['industry']
-   username = request.form['username']
-   files = request.files.getlist('files')
+    job_title = request.form['job_title']
+    company_name = request.form['company_name']
+    industry = request.form['industry']
+    username = request.form['username']
+    files = request.files.getlist('files')
 
-   for file in files:
-       if file and file.filename.endswith('.txt'):
-           filename = secure_filename(file.filename)
-           file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-           file.save(file_path)
-           threading.Thread(target=process_file, args=(file_path, job_title, company_name, username)).start()
+    for file in files:
+        if file and file.filename.endswith('.txt'):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            threading.Thread(target=process_file, args=(file_path, job_title, company_name, username)).start()
 
-   return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+    return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+
 
 @app.route('/raw_text_submission', methods=['POST'])
 def raw_text_submission():

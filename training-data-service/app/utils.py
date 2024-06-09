@@ -15,6 +15,7 @@ import whisper
 from googleapiclient.discovery import build
 from datetime import datetime
 import faiss
+import pickle
 
 # Load environment variables
 youtube_api_key = os.getenv('GOOGLE_API_KEY')
@@ -79,7 +80,6 @@ def create_chunks_and_embeddings_from_file(file_path: str):
     logging.debug(f"Created {len(chunks)} chunks and embeddings")
     return chunks, embedding_array
 
-
 def create_chunks_and_embeddings(data: str):
     logging.debug("Processing raw text data")
     chunk_size = 1000
@@ -103,12 +103,19 @@ def create_chunks_and_embeddings(data: str):
 
 
 
+
 def store_training_data(db_session, training_data):
     logging.debug(f"Storing training data: {training_data}")
     logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
     db_session.add(training_data)
-    db_session.commit()  # Ensure the session is committed
-    logging.debug(f"Stored training data with ID: {training_data.id}")
+    try:
+        db_session.commit()  # Ensure the session is committed
+        logging.debug(f"Stored training data with ID: {training_data.id}")
+    except Exception as e:
+        logging.error(f"Error committing training data to the database: {str(e)}")
+        db_session.rollback()
+        raise e
+
 
 # Update FAISS index
 
@@ -124,42 +131,80 @@ def normalize_l2(x):
         return np.where(norm == 0, x, x / norm)
 
 def check_existing_embeddings(db_session: Session, expected_dim: int = 1536):
-    all_embeddings = db_session.query(TrainingData.embeddings).all()
-    for i, embedding in enumerate(all_embeddings):
-        if embedding[0]:
-            array = np.frombuffer(embedding[0], dtype=np.float32)
+    all_embeddings = db_session.query(TrainingData.id, TrainingData.embeddings).all()
+    incorrect_embeddings = []
+    for record in all_embeddings:
+        embedding_id, embedding = record
+        if embedding:
+            array = np.frombuffer(embedding, dtype=np.float32)
             if array.shape[0] != expected_dim:
-                logging.error(f"Existing embedding at index {i} has incorrect shape: {array.shape}")
-                db_session.query(TrainingData).filter(TrainingData.embeddings == embedding[0]).delete()
-    db_session.commit()
+                logging.error(f"Existing embedding with ID {embedding_id} has incorrect shape: {array.shape}")
+                incorrect_embeddings.append(embedding_id)
+    if incorrect_embeddings:
+        db_session.query(TrainingData).filter(TrainingData.id.in_(incorrect_embeddings)).delete(synchronize_session=False)
+        logging.info(f"Deleted {len(incorrect_embeddings)} records with incorrect embedding shapes.")
+        db_session.commit()
 
-def update_faiss_index(db_session: Session):
-    # Directory where the FAISS index file will be stored
-    faiss_index_path = os.path.join(os.getcwd(), 'beans_bot', 'training-data-service', 'faiss_index.idx')
-    faiss_index_dir = os.path.dirname(faiss_index_path)
 
-    # Ensure the directory exists
-    if not os.path.exists(faiss_index_dir):
-        os.makedirs(faiss_index_dir)
 
-    # Check existing embeddings and remove incorrect ones
-    check_existing_embeddings(db_session)
 
-    # Retrieve all embeddings from the database
-    all_embeddings = db_session.query(TrainingData.embeddings).all()
-    embeddings = [normalize_l2(np.frombuffer(embedding[0], dtype=np.float32)) for embedding in all_embeddings if embedding[0]]
 
-    if embeddings:
-        # Create a FAISS index
-        embeddings_matrix = np.vstack(embeddings)
-        index = faiss.IndexFlatL2(embeddings_matrix.shape[1])
-        index.add(embeddings_matrix)
-        
-        # Save the FAISS index to a file
-        faiss.write_index(index, faiss_index_path)
-        logging.debug(f"FAISS index updated and saved to {faiss_index_path}")
-    else:
+def update_faiss_index(db_session):
+    logging.debug("Updating FAISS index.")
+    
+    # Load all valid embeddings from the database
+    embeddings = db_session.query(TrainingData.embeddings).all()
+    valid_embeddings = [np.frombuffer(embedding[0], dtype=np.float32) for embedding in embeddings if embedding[0] is not None]
+
+    # Ensure we have embeddings to update the index
+    if not valid_embeddings:
         logging.debug("No embeddings found to create FAISS index.")
+        return
+
+    # Convert to numpy array
+    valid_embeddings_array = np.array(valid_embeddings)
+    
+    if valid_embeddings_array.shape[1] != 1536:
+        logging.error(f"Invalid embedding shape found: {valid_embeddings_array.shape}")
+        return
+
+    # Create FAISS index
+    d = 1536  # dimension
+    index = faiss.IndexFlatL2(d)
+    index.add(valid_embeddings_array)
+    
+    # Serialize the FAISS index
+    index_data = faiss.serialize_index(index)
+    
+    # Store the FAISS index in the database
+    existing_index = db_session.query(FaissIndex).first()
+    if existing_index:
+        existing_index.index_data = index_data
+    else:
+        new_index = FaissIndex(index_data=index_data)
+        db_session.add(new_index)
+        db_session.commit()
+        # Update faiss_index_id for all TrainingData records
+        db_session.query(TrainingData).update({TrainingData.faiss_index_id: new_index.id})
+
+    db_session.commit()
+    logging.debug("FAISS index updated and saved to the database.")
+
+
+def load_faiss_index(db_session):
+    logging.debug("Loading FAISS index from the database.")
+    
+    faiss_index_record = db_session.query(FaissIndex).first()
+    if not faiss_index_record:
+        raise ValueError("FAISS index not found in the database.")
+    
+    index_data = faiss_index_record.index_data
+    index = faiss.deserialize_index(index_data)
+    
+    logging.debug("FAISS index loaded from the database.")
+    return index
+
+
 
 def process_file(file_path, job_title, company_name, username):
     filename = os.path.basename(file_path)
@@ -184,17 +229,18 @@ def process_file(file_path, job_title, company_name, username):
                 processed_files=filename
             )
             db.add(new_training_data)
-            store_training_data(db, new_training_data)
+            db.commit()
+            logging.debug(f"Committed changes to the database for file: {filename}")
 
             # Update FAISS index
             update_faiss_index(db)
-            
-            db.commit()
-            logging.debug(f"Committed changes to the database for file: {filename}")
+        
         update_process_status(username, job_title, company_name, f'File processed successfully: {filename}')
     except Exception as e:
         logging.error(f"Error processing file {filename}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error processing file: {filename}')
+
+
 
 def process_raw_text(job_title, company_name, raw_text, username):
     try:
@@ -204,33 +250,39 @@ def process_raw_text(job_title, company_name, raw_text, username):
 
         with app.app_context():
             db = next(get_db())
-            job_title = job_title.lower().strip()
-            company_name = company_name.lower().strip()
+            job_title_lower = job_title.lower().strip()
+            company_name_lower = company_name.lower().strip()
 
-            existing_files = db.query(TrainingData.processed_files).filter_by(job_title=job_title, company_name=company_name).all()
+            existing_files = db.query(TrainingData.processed_files).filter_by(job_title=job_title_lower, company_name=company_name_lower).all()
             raw_text_count = sum(1 for files in existing_files for file in files.processed_files.split(',') if 'raw_text' in file)
             processed_file_name = f"raw_text_{raw_text_count + 1}"
 
+            # Check and delete incorrect embeddings before adding new data
+            check_existing_embeddings(db)
+
             new_training_data = TrainingData(
-                job_title=job_title,
-                company_name=company_name,
+                job_title=job_title_lower,
+                company_name=company_name_lower,
                 data='\n'.join(chunks),
                 chunk_text='\n'.join(chunks),
                 embeddings=embedding_array.tobytes(),
                 processed_files=processed_file_name
             )
             db.add(new_training_data)
-            store_training_data(db, new_training_data)
+            db.commit()
+            logging.debug(f"Committed changes to the database for raw text")
 
-            # Update FAISS index
+            # Update FAISS index after committing data
             update_faiss_index(db)
 
-            db.commit()
         update_process_status(username, job_title, company_name, f'Raw text processed successfully: {processed_file_name}')
     except Exception as e:
         logging.error(f"Error processing raw text: {str(e)}")
         update_process_status(username, job_title, company_name, 'Error processing raw text')
     cleanup_uploads_folder()
+
+
+
 
 def cleanup_uploads_folder():
     txt_files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], '*.txt'))
