@@ -7,7 +7,8 @@ from openai import OpenAI
 from .utils import (
     get_session_history, load_training_data, generate_next_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
-    most_recent_question, user_responses, query_faiss_index, text_to_speech_file
+    most_recent_question, user_responses, query_faiss_index, text_to_speech_file,
+    setup_database
 )
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
@@ -16,6 +17,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # Initialize the OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Ensure you have the session setup globally in the routes file
+engine, session = setup_database(os.getenv("DATABASE_URL"))
 
 def setup_routes(app_instance, session_instance):
     global session
@@ -48,7 +52,7 @@ def setup_routes(app_instance, session_instance):
 
             # Query FAISS index for career context
             career_context_query = f"What does {company_name} do and what are their main product features?"
-            career_context = query_faiss_index(career_context_query)
+            career_context = query_faiss_index(career_context_query, session)  # Pass session to query_faiss_index
 
             if user_responses["resume_user_response"] is None:
                 # First response (resume_user_response)

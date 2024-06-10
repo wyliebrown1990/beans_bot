@@ -1,8 +1,7 @@
 import os
 import uuid
 from io import BytesIO
-from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, DateTime, TIMESTAMP, func
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import ProgrammingError
 from langchain_openai import ChatOpenAI
@@ -10,6 +9,7 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from openai import OpenAI
 from datetime import datetime
 from flask_login import UserMixin
 import faiss
@@ -19,6 +19,9 @@ import logging
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
+
+# Import models from app package
+from app.models import TrainingData, FaissIndex, InterviewAnswer, User
 
 load_dotenv()
 
@@ -68,50 +71,10 @@ def text_to_speech_file(text: str, voice_id: str) -> str:
         print(f"Error generating speech: {e}")
         return ""
 
-    
-
-Base = declarative_base()
-
-class TrainingData(Base):
-    __tablename__ = 'training_data'
-    id = Column(Integer, primary_key=True)
-    job_title = Column(String(255), nullable=False)
-    company_name = Column(String(255), nullable=False)
-    data = Column(Text, nullable=False)
-    embeddings = Column(LargeBinary, nullable=True)
-    processed_files = Column(Text, nullable=True)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-class InterviewAnswer(Base):
-    __tablename__ = 'interview_answers'
-    id = Column(Integer, primary_key=True)
-    job_title = Column(String(255), nullable=False)
-    company_name = Column(String(255), nullable=False)
-    industry = Column(String(255), nullable=False)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
-    critique = Column(Text, nullable=False)
-    score = Column(Text, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-class User(UserMixin, Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(150), unique=True, nullable=False)
-    email = Column(String(150), unique=True, nullable=False)
-    password_hash = Column(String(256), nullable=False)
-    resume_text_full = Column(Text, nullable=True)
-    top_technical_skills = Column(Text, nullable=True)
-    most_recent_job_title = Column(String(255), nullable=True)
-    most_recent_company_name = Column(String(255), nullable=True)
-    most_recent_experience_summary = Column(Text, nullable=True)
-    industry_expertise = Column(Text, nullable=True)
-    top_soft_skills = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
 def create_table_if_not_exists(engine):
     try:
         TrainingData.__table__.create(engine, checkfirst=True)
+        FaissIndex.__table__.create(engine, checkfirst=True)
         InterviewAnswer.__table__.create(engine, checkfirst=True)
         User.__table__.create(engine, checkfirst=True)
     except ProgrammingError:
@@ -140,18 +103,23 @@ def get_session_history(session_id: str) -> ChatMessageHistory:
 
 def load_training_data(session: Session, job_title, company_name):
     logging.debug(f"Querying for job_title: '{job_title}', company_name: '{company_name}'")
-    training_data = session.query(TrainingData).filter_by(job_title=job_title, company_name=company_name).first()
+    training_data = session.query(TrainingData).filter(
+        func.lower(TrainingData.job_title) == job_title.lower(),
+        func.lower(TrainingData.company_name) == company_name.lower()
+    ).first()
     if training_data:
         logging.debug(f"Found training data: {training_data}")
     else:
         logging.debug("No training data found")
     return training_data
 
-def generate_next_question(job_title, company_name, industry, session_history, career_context):
+
+def generate_next_question(job_title, company_name, industry, session_history, session):
     global most_recent_question
 
     # Query FAISS index for company information
-    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?")
+    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?", session)
+    print(f"Retrieved company information: {company_info}")
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {company_info}."),
@@ -163,6 +131,8 @@ def generate_next_question(job_title, company_name, industry, session_history, c
     most_recent_question = response.content  # Store the generated question
     print("Most Recent Question:", most_recent_question)
     return most_recent_question
+
+
 
 def get_user_resume_data(session: Session, username: str):
     user = session.query(User).filter_by(username=username).first()
@@ -180,35 +150,40 @@ def get_user_resume_data(session: Session, username: str):
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
             most_recent_experience_summary, industry_expertise, top_soft_skills)
 
-def query_faiss_index(query: str) -> str:
-    # Update the path to match where the FAISS index file is stored
-    faiss_index_path = os.path.join(os.getcwd(), 'beans_bot', 'training-data-service', 'faiss_index.idx')
-
-    if not os.path.exists(faiss_index_path):
-        logging.error(f"FAISS index file not found at {faiss_index_path}")
-        return "Error querying FAISS index: Index file not found."
+def query_faiss_index(query: str, session: Session) -> str:
+    # Load FAISS index from the database
+    faiss_index_record = session.query(FaissIndex).first()
+    if not faiss_index_record:
+        logging.error("FAISS index not found in the database.")
+        return "Error querying FAISS index: Index not found in database."
 
     try:
-        # Read the FAISS index
-        index = faiss.read_index(faiss_index_path)
+        # Deserialize the FAISS index
+        index = faiss.deserialize_index(faiss_index_record.index_data)
         
-        # Example: Create an embedding for the query
-        embedding = embedder.embed_documents([query])[0]
-        
+        # Create an embedding for the query
+        query_embedding = embedder.embed_documents([query])[0]
+        query_vector = np.array(query_embedding, dtype=np.float32)
+
         # Search the FAISS index
-        D, I = index.search(np.array([embedding]), k=1)
-        
-        # Retrieve the matched data (this part will depend on how your index and data are structured)
-        if I[0][0] == -1:
-            return "No relevant information found in FAISS index."
-        
-        with app.app_context():
-            db = next(get_db())
-            training_data = db.query(TrainingData).all()
-            matched_data = [training_data[i].data for i in I[0]]
+        D, I = index.search(query_vector.reshape(1, -1), 5)
+        print(f"Query embedding shape: {query_vector.shape}")
+        print(f"Search results - Distances: {D}, Indices: {I}")
 
+        # Retrieve the matched data
+        matched_data = []
+        for idx in I[0]:
+            if idx != -1:
+                training_data = session.query(TrainingData).filter_by(id=idx).first()
+                if training_data:
+                    # Convert embedding from bytes to numpy array if needed
+                    embedding_array = np.frombuffer(training_data.embeddings, dtype=np.float32)
+                    matched_data.append(training_data.data)
+                    print(f"Retrieved data for index {idx}: {training_data.data[:100]}...")  # Log first 100 characters of data
+                else:
+                    logging.error(f"No training data found for index {idx}")
+        
         return f"Retrieved information for query '{query}' from FAISS index: {matched_data}"
-
     except Exception as e:
         logging.error(f"Error querying FAISS index: {e}")
         return "Error querying FAISS index."
@@ -219,7 +194,6 @@ def fetch_data_from_storage(index_id: int) -> str:
     # Replace this function with actual implementation to fetch data
     # For example, querying a database or reading from a file
     return "Mock data for index ID: {}".format(index_id)
-
 
 def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, career_context: str):
     global most_recent_question, user_responses
@@ -258,7 +232,8 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
 
     # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_next_question(job_title, company_name, industry, session_history, career_context)
+    next_question = generate_next_question(job_title, company_name, industry, session_history, session)
+
 
     # Store the response in the database
     new_answer = InterviewAnswer(
@@ -284,7 +259,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
     global most_recent_question, user_responses
 
     # Fetch company context from FAISS index
-    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?")
+    company_info = query_faiss_index(f"What does {company_name} do and what are their main product features?", session)
 
     resume_data = get_user_resume_data(session, username)
     if not resume_data:
@@ -320,7 +295,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_next_question(job_title, company_name, industry, session_history, company_info)
+    next_question = generate_next_question(job_title, company_name, industry, session_history, session)
 
     # Store the career user response
     user_responses["career_user_responses"].append(career_user_response)
