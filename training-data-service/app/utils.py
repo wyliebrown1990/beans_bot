@@ -2,6 +2,7 @@ import os
 import uuid
 import glob
 import requests
+import json
 from io import BytesIO
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
@@ -72,7 +73,7 @@ def load_training_data(db: Session, job_title: str, company_name: str):
     ).first()
     logging.debug(f"Retrieved training data: {training_data}")
     if training_data:
-        logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
+        logging.debug(f"Data: {training_data.file_summary[:100]}...")  # Log first 100 characters of file_summary
     return training_data
 
 def generate_summary(text):
@@ -80,7 +81,7 @@ def generate_summary(text):
     model = ChatOpenAI(api_key=openai_api_key)
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert in summarizing the content of files. Return a 1000 character summary of the file I submit to you."),
+        ("system", "You are an expert in summarizing the content of files. Return a JSON file with these attributes and corresponding serialized values: “file_summary”: where serialized value is a 1000 character summary of the file. “top_topics”: where serialized value is a summary of the top 3 topics in the file. “primary_products_and_services”: where serialized value is a summary of the top products and services in the file. “target_market”: where serialized value is a single definition of the market discussed in the file. “market_position”: where serialized value is a summary of the market position of the company discussed in the file. “required_skills”: where serialized value is a summary of the top 3 skills required to work at the company discussed in the file. “unique_selling_proposition”: where serialized value is a summary of the unique selling proposition of the company discussed in the file."),
         ("user", text)
     ])
 
@@ -93,12 +94,18 @@ def generate_summary(text):
     # Print the response content for debugging
     print("Response Content:", response_content)
 
-    return response_content
+    response_json = json.loads(response_content)  # Ensure response is valid JSON
+
+    # Print the parsed JSON data for debugging
+    print("Response JSON:", response_json)
+
+    return response_json
+
 
 
 def store_training_data(db_session, training_data):
     logging.debug(f"Storing training data: {training_data}")
-    logging.debug(f"Data: {training_data.data[:100]}...")  # Log first 100 characters of data
+    logging.debug(f"Data: {training_data.file_summary[:100]}...")  # Log first 100 characters of file_summary
     db_session.add(training_data)
     try:
         db_session.commit()  # Ensure the session is committed
@@ -108,9 +115,10 @@ def store_training_data(db_session, training_data):
         db_session.rollback()
         raise e
 
-def process_file(file_path, job_title, company_name, username):
+def process_file(file_path, job_title, company_name, username, user_id):
     filename = os.path.basename(file_path)
     logging.debug(f"Processing file: {filename}")
+    print(f"DEBUG: Processing file: {filename}, job_title: {job_title}, company_name: {company_name}, username: {username}, user_id: {user_id}")
 
     try:
         update_process_status(username, job_title, company_name, f'Processing file: {filename}')
@@ -124,21 +132,32 @@ def process_file(file_path, job_title, company_name, username):
             db = next(get_db())
             job_title = job_title.lower().strip()
             company_name = company_name.lower().strip()
+            print(f"DEBUG: Inside app context, job_title: {job_title}, company_name: {company_name}, username: {username}, user_id: {user_id}")
 
             new_training_data = TrainingData(
+                user_id=user_id,
                 job_title=job_title,
                 company_name=company_name,
-                data=summary,
+                file_summary=summary.get("file_summary", ""),
+                top_topics=summary.get("top_topics", ""),
+                primary_products_and_services=summary.get("primary_products_and_services", ""),
+                target_market=summary.get("target_market", ""),
+                market_position=summary.get("market_position", ""),
+                required_skills=summary.get("required_skills", ""),
+                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
                 processed_files=filename
             )
+            print(f"DEBUG: Prepared new_training_data: {new_training_data.__dict__}")
             store_training_data(db, new_training_data)
 
         update_process_status(username, job_title, company_name, f'File processed successfully: {filename}')
     except Exception as e:
         logging.error(f"Error processing file {filename}: {str(e)}")
+        print(f"ERROR: Error processing file {filename}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error processing file: {filename}')
 
-def process_raw_text(job_title, company_name, raw_text, username):
+
+def process_raw_text(job_title, company_name, raw_text, username, user_id):
     try:
         update_process_status(username, job_title, company_name, 'Processing raw text')
 
@@ -155,9 +174,16 @@ def process_raw_text(job_title, company_name, raw_text, username):
             processed_file_name = f"raw_text_{raw_text_count + 1}"
 
             new_training_data = TrainingData(
+                user_id=user_id,
                 job_title=job_title_lower,
                 company_name=company_name_lower,
-                data=summary,
+                file_summary=summary.get("file_summary", ""),
+                top_topics=summary.get("top_topics", ""),
+                primary_products_and_services=summary.get("primary_products_and_services", ""),
+                target_market=summary.get("target_market", ""),
+                market_position=summary.get("market_position", ""),
+                required_skills=summary.get("required_skills", ""),
+                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
                 processed_files=processed_file_name
             )
             store_training_data(db, new_training_data)
@@ -168,7 +194,7 @@ def process_raw_text(job_title, company_name, raw_text, username):
         update_process_status(username, job_title, company_name, 'Error processing raw text')
     cleanup_uploads_folder()
 
-def download_and_transcribe(video, job_title, company_name, username):
+def download_and_transcribe(video, job_title, company_name, username, user_id):
     video_url = video['url']
     video_title = sanitize_filename(video['title'])
 
@@ -215,9 +241,16 @@ def download_and_transcribe(video, job_title, company_name, username):
             company_name = company_name.lower().strip()
 
             new_training_data = TrainingData(
+                user_id=user_id,
                 job_title=job_title,
                 company_name=company_name,
-                data=summary,
+                file_summary=summary.get("file_summary", ""),
+                top_topics=summary.get("top_topics", ""),
+                primary_products_and_services=summary.get("primary_products_and_services", ""),
+                target_market=summary.get("target_market", ""),
+                market_position=summary.get("market_position", ""),
+                required_skills=summary.get("required_skills", ""),
+                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
                 processed_files=transcription_file_name
             )
             store_training_data(db, new_training_data)
@@ -227,19 +260,19 @@ def download_and_transcribe(video, job_title, company_name, username):
         logging.error(f"Error downloading and transcribing video {video_title}: {str(e)}")
         update_process_status(username, job_title, company_name, f'Error downloading/transcribing video: {video_title}')
 
-def transcribe_videos(channel_id, num_videos, job_title, company_name, username):
+def transcribe_videos(channel_id, num_videos, job_title, company_name, username, user_id):
     try:
         update_process_status(username, job_title, company_name, 'Transcribing videos')
         video_urls = get_video_urls_from_channel(channel_id, num_videos)
         for video in video_urls:
-            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username)
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username, user_id)
         cleanup_uploads_folder()
         update_process_status(username, job_title, company_name, 'Videos transcribed successfully')
     except Exception as e:
         logging.error(f"Error transcribing videos: {str(e)}")
         update_process_status(username, job_title, company_name, 'Error transcribing videos')
 
-def process_youtube_urls(youtube_urls, job_title, company_name, username):
+def process_youtube_urls(youtube_urls, job_title, company_name, username, user_id):
     try:
         update_process_status(username, job_title, company_name, 'Processing YouTube URLs')
         for url in youtube_urls:
@@ -254,7 +287,7 @@ def process_youtube_urls(youtube_urls, job_title, company_name, username):
                 'url': url,
                 'title': video_title  # Use actual video title
             }
-            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username)
+            download_and_transcribe(video, job_title.lower().strip(), company_name.lower().strip(), username, user_id)
         cleanup_uploads_folder()
         update_process_status(username, job_title, company_name, 'YouTube URLs processed successfully')
     except Exception as e:

@@ -30,6 +30,7 @@
             const companyName = "{{ company_name }}";
             const industry = "{{ industry }}";
             const username = "{{ username }}";
+            const userId = "{{ user_id }}"; // Add user_id
 
             console.log(`Fetching status for: username=${username}, jobTitle=${jobTitle}, companyName=${companyName}`);
 
@@ -40,7 +41,7 @@
                     appendStatus(data.status);
 
                     if (data.status.toLowerCase().includes('successfully')) {
-                        displayButtons(jobTitle, companyName, industry, username);
+                        displayButtons(jobTitle, companyName, industry, username, userId); // Pass user_id
                     }
                 })
                 .catch(error => console.error('Error:', error));
@@ -55,7 +56,7 @@
             statusLog.appendChild(statusEntry);
         }
 
-        function displayButtons(jobTitle, companyName, industry, username) {
+        function displayButtons(jobTitle, companyName, industry, username, userId) { // Add user_id parameter
             // Check if the buttons have already been added to the DOM
             if (document.getElementById('buttonContainer')) {
                 return;
@@ -68,14 +69,14 @@
             addMoreButton.innerText = 'Add More Training Data';
             addMoreButton.classList.add('actionButton');
             addMoreButton.onclick = function() {
-                window.location.href = `/upload_options?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}`;
+                window.location.href = `/upload_options?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}&user_id=${userId}`;
             };
 
             const startInterviewButton = document.createElement('button');
             startInterviewButton.innerText = 'Start Interview!';
             startInterviewButton.classList.add('actionButton');
             startInterviewButton.onclick = function() {
-                window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle.toLowerCase()}&company_name=${companyName.toLowerCase()}&industry=${industry.toLowerCase()}&username=${username.toLowerCase()}`;
+                window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle.toLowerCase()}&company_name=${companyName.toLowerCase()}&industry=${industry.toLowerCase()}&username=${username.toLowerCase()}&user_id=${userId}`;
             };
 
             buttonContainer.appendChild(addMoreButton);
@@ -88,6 +89,7 @@
             pollStatus();
         });
     </script>
+
 </head>
 <body>
     <h1>Process Progress</h1>

@@ -2,7 +2,7 @@ import os
 import threading
 import logging
 from flask import render_template, request, redirect, url_for, jsonify
-from werkzeug.utils import secure_filename  # Correct import
+from werkzeug.utils import secure_filename
 from app import app
 from app.database import get_db
 from app.models import TrainingData, ProcessStatus
@@ -62,10 +62,11 @@ def youtube_transcription():
     company_name = request.form['company_name']
     industry = request.form['industry']
     username = request.form['username']
+    user_id = request.form['user_id']
     channel_id = request.form['channel_id']
     num_videos = int(request.form['num_videos'])
-    threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+    threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username, user_id)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
 
 @app.route('/youtube_urls_transcription', methods=['POST'])
 def youtube_urls_transcription():
@@ -73,10 +74,11 @@ def youtube_urls_transcription():
     company_name = request.form['company_name']
     industry = request.form['industry']
     username = request.form['username']
+    user_id = request.form['user_id']
     youtube_urls = request.form['youtube_urls'].strip().split('\n')
     youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
-    threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name, username)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+    threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name, username, user_id)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
 
 @app.route('/file_upload', methods=['POST'])
 def file_upload():
@@ -84,6 +86,10 @@ def file_upload():
     company_name = request.form['company_name']
     industry = request.form['industry']
     username = request.form['username']
+    user_id = request.form['user_id']
+    
+    print(f"DEBUG: file_upload - Received data: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
+
     files = request.files.getlist('files')
 
     for file in files:
@@ -91,9 +97,10 @@ def file_upload():
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
-            threading.Thread(target=process_file, args=(file_path, job_title, company_name, username)).start()
+            threading.Thread(target=process_file, args=(file_path, job_title, company_name, username, user_id)).start()
 
-    return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+    return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id))
+
 
 @app.route('/raw_text_submission', methods=['POST'])
 def raw_text_submission():
@@ -101,9 +108,10 @@ def raw_text_submission():
     company_name = request.form['company_name']
     industry = request.form['industry']
     username = request.form['username']
+    user_id = request.form['user_id']
     raw_text = request.form['raw_text']
-    threading.Thread(target=process_raw_text, args=(job_title, company_name, raw_text, username)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+    threading.Thread(target=process_raw_text, args=(job_title, company_name, raw_text, username, user_id)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
 
 @app.route('/progress')
 def progress():
@@ -111,8 +119,12 @@ def progress():
     company_name = request.args.get('company_name')
     industry = request.args.get('industry')
     username = request.args.get('username')
-    print(f"Rendering progress page for {job_title} at {company_name}")
-    return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username)
+    user_id = request.args.get('user_id')
+    
+    print(f"DEBUG: progress - Received query params: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
+
+    return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id)
+
 
 @app.route('/upload_options', methods=['GET'])
 def upload_options():
@@ -137,25 +149,27 @@ def upload_options():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    username = request.args.get('username')
-    if request.method == 'POST':
-        job_title = request.form['job_title'].lower().strip()
-        company_name = request.form['company_name'].lower().strip()
-        industry = request.form['industry']
-        username = request.form['username']  # Ensure username is taken from the form
+   username = request.args.get('username')
+   user_id = request.args.get('user_id')
+   if request.method == 'POST':
+       job_title = request.form['job_title'].lower().strip()
+       company_name = request.form['company_name'].lower().strip()
+       industry = request.form['industry']
+       username = request.form['username']
+       user_id = request.form['user_id']
 
-        with app.app_context():
-            db = next(get_db())
-            training_data_exists = db.query(TrainingData).filter(
-                func.lower(TrainingData.job_title) == job_title,
-                func.lower(TrainingData.company_name) == company_name
-            ).first() is not None
+       with app.app_context():
+           db = next(get_db())
+           training_data_exists = db.query(TrainingData).filter(
+               func.lower(TrainingData.job_title) == job_title,
+               func.lower(TrainingData.company_name) == company_name
+           ).first() is not None
 
-        if training_data_exists:
-            message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
-        else:
-            message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
+       if training_data_exists:
+           message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
+       else:
+           message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-        return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username))
+       return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id))
 
-    return render_template('index.html', username=username)
+   return render_template('index.html', username=username, user_id=user_id)

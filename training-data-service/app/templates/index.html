@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,12 +20,8 @@
        <label for="username">Username:</label>
        <input type="text" id="username" name="username" value="{{ username }}" required>
        <br>
+       <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
        <input type="submit" value="Submit">
    </form>
-
-   <!-- New block for generic interview 
-   <h3 class="centered-text">If you don't have a specific job title, company,<br> and industry in mind, click below (NOT AVAILABLE IN BETA):</h3>
-   <button class="centered-button" onclick="window.location.href='http://localhost:5013/start_interview?job_title=generic&username={{ username.lower() }}'">Start Generic Interview!</button>
-  
 </body>
 </html>
