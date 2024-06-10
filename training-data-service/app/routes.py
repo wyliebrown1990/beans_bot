@@ -2,15 +2,15 @@ import os
 import threading
 import logging
 from flask import render_template, request, redirect, url_for, jsonify
+from werkzeug.utils import secure_filename  # Correct import
 from app import app
 from app.database import get_db
 from app.models import TrainingData, ProcessStatus
 from app.utils import (
-    secure_filename, load_training_data, create_chunks_and_embeddings_from_file,
-    create_chunks_and_embeddings, store_training_data, process_raw_text,
-    process_file, cleanup_uploads_folder, get_video_urls_from_channel,
-    sanitize_filename, download_and_transcribe, transcribe_videos,
-    process_youtube_urls, update_faiss_index
+    load_training_data, generate_summary, store_training_data,
+    process_raw_text, process_file, cleanup_uploads_folder,
+    get_video_urls_from_channel, sanitize_filename, download_and_transcribe,
+    transcribe_videos, process_youtube_urls, update_process_status
 )
 from sqlalchemy import func
 
@@ -38,7 +38,6 @@ def update_status():
         db.commit()
     return jsonify({'status': 'success'})
 
-
 @app.route('/get_status', methods=['GET'])
 def get_status():
     username = request.args.get('username').lower().strip()
@@ -57,28 +56,27 @@ def get_status():
             print("No status found")
             return jsonify({'status': 'No status found'})
 
-
 @app.route('/youtube_transcription', methods=['POST'])
 def youtube_transcription():
-   job_title = request.form['job_title']
-   company_name = request.form['company_name']
-   industry = request.form['industry']
-   username = request.form['username']
-   channel_id = request.form['channel_id']
-   num_videos = int(request.form['num_videos'])
-   threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username)).start()
-   return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+    job_title = request.form['job_title']
+    company_name = request.form['company_name']
+    industry = request.form['industry']
+    username = request.form['username']
+    channel_id = request.form['channel_id']
+    num_videos = int(request.form['num_videos'])
+    threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
 
 @app.route('/youtube_urls_transcription', methods=['POST'])
 def youtube_urls_transcription():
-   job_title = request.form['job_title']
-   company_name = request.form['company_name']
-   industry = request.form['industry']
-   username = request.form['username']
-   youtube_urls = request.form['youtube_urls'].strip().split('\n')
-   youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
-   threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name, username)).start()
-   return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
+    job_title = request.form['job_title']
+    company_name = request.form['company_name']
+    industry = request.form['industry']
+    username = request.form['username']
+    youtube_urls = request.form['youtube_urls'].strip().split('\n')
+    youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
+    threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name, username)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
 
 @app.route('/file_upload', methods=['POST'])
 def file_upload():
@@ -97,25 +95,24 @@ def file_upload():
 
     return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
 
-
 @app.route('/raw_text_submission', methods=['POST'])
 def raw_text_submission():
-   job_title = request.form['job_title']
-   company_name = request.form['company_name']
-   industry = request.form['industry']
-   username = request.form['username']
-   raw_text = request.form['raw_text']
-   threading.Thread(target=process_raw_text, args=(job_title, company_name, raw_text, username)).start()
-   return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username))
+    job_title = request.form['job_title']
+    company_name = request.form['company_name']
+    industry = request.form['industry']
+    username = request.form['username']
+    raw_text = request.form['raw_text']
+    threading.Thread(target=process_raw_text, args=(job_title, company_name, raw_text, username)).start()
+    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username))
 
 @app.route('/progress')
 def progress():
-   job_title = request.args.get('job_title')
-   company_name = request.args.get('company_name')
-   industry = request.args.get('industry')
-   username = request.args.get('username')
-   print(f"Rendering progress page for {job_title} at {company_name}")
-   return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username)
+    job_title = request.args.get('job_title')
+    company_name = request.args.get('company_name')
+    industry = request.args.get('industry')
+    username = request.args.get('username')
+    print(f"Rendering progress page for {job_title} at {company_name}")
+    return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username)
 
 @app.route('/upload_options', methods=['GET'])
 def upload_options():
@@ -137,7 +134,6 @@ def upload_options():
         message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
     return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, message=message)
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
