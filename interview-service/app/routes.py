@@ -5,9 +5,9 @@ from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 from openai import OpenAI
 from .utils import (
-    get_session_history, load_training_data, generate_next_question,
+    get_session_history, generate_next_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
-    most_recent_question, user_responses, query_faiss_index, text_to_speech_file,
+    most_recent_question, user_responses, users_training_data, text_to_speech_file,
     setup_database
 )
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -32,13 +32,14 @@ def setup_routes(app_instance, session_instance):
             company_name = request.args.get('company_name').strip().lower()
             industry = request.args.get('industry').strip().lower()
             username = request.args.get('username').strip().lower()
+            user_id = request.args.get('user_id').strip()
 
             initial_question = f"Tell me about yourself. What relevant professional experience have you had and what skillsets have you learned that make you uniquely qualified to succeed at {company_name}?"
             session_id = os.urandom(24).hex()
             session_history = get_session_history(session_id)
             session_history.add_message(AIMessage(content=initial_question))
 
-            return render_template('start_interview.html', question=initial_question, session_id=session_id, job_title=job_title, company_name=company_name, industry=industry, username=username)
+            return render_template('start_interview.html', question=initial_question, session_id=session_id, job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id)
 
         if request.method == 'POST':
             job_title = request.form['job_title']
@@ -47,19 +48,27 @@ def setup_routes(app_instance, session_instance):
             username = request.form['username']
             session_id = request.form['session_id']
             user_response = request.form['answer_1']
+            user_id = request.form['user_id']
             generate_audio = 'generate_audio' in request.form
             voice_id = request.form.get('voice', 'xU744AaoW3SYWVj6TN6H')  # Default to Knightley if no voice is selected
 
-            # Query FAISS index for career context
-            career_context_query = f"What does {company_name} do and what are their main product features?"
-            career_context = query_faiss_index(career_context_query, session)  # Pass session to query_faiss_index
+            # Load user training data
+            training_data = users_training_data(session, user_id, job_title, company_name)
+            print("Type of training_data:", type(training_data))
+            print("Contents of training_data:", training_data)
 
+            if not training_data:
+                return jsonify({'error': 'No training data found for the given parameters'}), 400
+
+            file_summary = training_data.get("file_summary", "")
+            print("file_summary:", file_summary)
+            
             if user_responses["resume_user_response"] is None:
                 # First response (resume_user_response)
-                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, career_context)
+                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, file_summary)
             else:
                 # Subsequent responses (career_user_responses)
-                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, career_context)
+                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, file_summary)
 
             session_history = get_session_history(session_id)
             session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))
@@ -127,3 +136,11 @@ def setup_routes(app_instance, session_instance):
             os.remove(wav_path)
 
         return jsonify({'transcription': text})
+
+    @app_instance.route('/get_user_training_data', methods=['GET'])
+    def get_user_training_data():
+        user_id = current_user.id  # Assuming you have a way to get the current user's ID
+        job_title = request.args.get('job_title')
+        company_name = request.args.get('company_name')
+        data = users_training_data(session, user_id, job_title, company_name)
+        return jsonify(data)

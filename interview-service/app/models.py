@@ -10,20 +10,19 @@ Base = declarative_base()
 class TrainingData(Base):
     __tablename__ = 'training_data'
     id = Column(Integer, primary_key=True)
-    job_title = Column(String(255), nullable=False)
-    company_name = Column(String(255), nullable=False)
-    data = Column(Text, nullable=False)
-    chunk_text = Column(Text, nullable=False)
-    embeddings = Column(LargeBinary, nullable=False)
-    processed_files = Column(Text, nullable=True)
-    faiss_index_id = Column(Integer, ForeignKey('faiss_index.id'), nullable=True)
-    faiss_index = relationship("FaissIndex", back_populates="training_data")
-
-class FaissIndex(Base):
-    __tablename__ = 'faiss_index'
-    id = Column(Integer, primary_key=True)
-    index_data = Column(LargeBinary, nullable=False)
-    training_data = relationship("TrainingData", back_populates="faiss_index")
+    user_id = Column(Integer, nullable=False)
+    job_title = Column(String(100), nullable=False)
+    company_name = Column(String(100), nullable=False)
+    file_summary = Column(String, nullable=False)
+    processed_files = Column(String, nullable=False)
+    top_topics = Column(Text, nullable=True)
+    primary_products_and_services = Column(Text, nullable=True)
+    target_market = Column(Text, nullable=True)
+    market_position = Column(Text, nullable=True)
+    required_skills = Column(Text, nullable=True)
+    unique_selling_proposition = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class InterviewAnswer(Base):
     __tablename__ = 'interview_answers'

@@ -132,6 +132,9 @@ def upload_options():
     company_name = request.args.get('company_name').lower().strip()
     industry = request.args.get('industry')
     username = request.args.get('username')
+    user_id = request.args.get('user_id')
+
+    print(f"DEBUG: upload_options - Received query params: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
 
     with app.app_context():
         db = next(get_db())
@@ -145,7 +148,7 @@ def upload_options():
     else:
         message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-    return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, message=message)
+    return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id, message=message)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
