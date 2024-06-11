@@ -150,6 +150,58 @@ def upload_options():
 
     return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id, message=message)
 
+@app.route('/api/training-data/<int:user_id>', methods=['GET'])
+def get_training_data(user_id):
+    print(f"Route /api/training-data/{user_id} hit")
+    try:
+        with app.app_context():
+            db_session = next(get_db())
+            print(f"DB session established for user ID: {user_id}")
+            training_data = db_session.query(TrainingData).filter_by(user_id=user_id).all()
+            print(f"Training data fetched: {training_data}")
+            response_data = [
+                {
+                    'id': data.id,
+                    'processed_files': data.processed_files
+                } for data in training_data
+            ]
+            print(f"Response data: {response_data}")
+            return jsonify(response_data)
+    except Exception as e:
+        logging.error(f"Failed to fetch training data for user {user_id}: {str(e)}")
+        print(f"Exception occurred: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/training-data/delete', methods=['DELETE'])
+def delete_selected_files():
+    try:
+        data = request.json
+        ids = data.get('ids', [])
+        print(f"Deleting files with IDs: {ids}")
+
+        with app.app_context():
+            db_session = next(get_db())
+            db_session.query(TrainingData).filter(TrainingData.id.in_(ids)).delete(synchronize_session=False)
+            db_session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Failed to delete selected files: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/training-data/delete-all/<int:user_id>', methods=['DELETE'])
+def delete_all_files(user_id):
+    try:
+        print(f"Deleting all files for user ID: {user_id}")
+
+        with app.app_context():
+            db_session = next(get_db())
+            db_session.query(TrainingData).filter_by(user_id=user_id).delete(synchronize_session=False)
+            db_session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Failed to delete all files for user {user_id}: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
    username = request.args.get('username')
