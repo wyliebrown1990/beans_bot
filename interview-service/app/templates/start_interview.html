@@ -51,6 +51,7 @@
 <div class="status-container">
     <div id="status-message" class="status-message"></div>
 </div>
+<div><button id="download-transcript">Download Transcript</button></div>
 <script>
     let mediaRecorder;
     let audioChunks = [];
@@ -187,6 +188,27 @@
         const audio = new Audio(audioPath);
         audio.play();
     }
+
+    document.getElementById('download-transcript').addEventListener('click', function() {
+        $.ajax({
+        type: 'GET',
+        url: "{{ url_for('download_transcript', session_id=session_id) }}",
+        success: function(response) {
+            const blob = new Blob([response], { type: 'text/csv;charset=utf-8;' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = "interview_transcript.csv";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        },
+        error: function(error) {
+            console.error('Error downloading transcript:', error);
+        }
+    });
+});
+</script>
 </script>
 </body>
 </html>

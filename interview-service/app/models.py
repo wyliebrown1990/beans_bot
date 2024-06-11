@@ -27,6 +27,7 @@ class TrainingData(Base):
 class InterviewAnswer(Base):
     __tablename__ = 'interview_answers'
     id = Column(Integer, primary_key=True)
+    session_id = Column(String(255), nullable=False)  # Add this line
     job_title = Column(String(255), nullable=False)
     company_name = Column(String(255), nullable=False)
     industry = Column(String(255), nullable=False)
@@ -35,6 +36,7 @@ class InterviewAnswer(Base):
     critique = Column(Text, nullable=False)
     score = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
 
 class User(UserMixin, Base):
     __tablename__ = 'users'

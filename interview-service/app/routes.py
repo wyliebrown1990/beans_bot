@@ -1,6 +1,8 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, Response, make_response
+import csv
 import os
 import logging
+from io import StringIO
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 from openai import OpenAI
@@ -8,7 +10,7 @@ from .utils import (
     get_session_history, generate_next_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
     most_recent_question, user_responses, users_training_data, text_to_speech_file,
-    setup_database
+    setup_database, fetch_interview_data
 )
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
@@ -65,10 +67,10 @@ def setup_routes(app_instance, session_instance):
             
             if user_responses["resume_user_response"] is None:
                 # First response (resume_user_response)
-                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, file_summary)
+                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, file_summary, session_id)
             else:
                 # Subsequent responses (career_user_responses)
-                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, file_summary)
+                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, file_summary, session_id)
 
             session_history = get_session_history(session_id)
             session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))
@@ -144,3 +146,20 @@ def setup_routes(app_instance, session_instance):
         company_name = request.args.get('company_name')
         data = users_training_data(session, user_id, job_title, company_name)
         return jsonify(data)
+
+    @app_instance.route('/download_transcript/<session_id>')
+    def download_transcript(session_id):
+        # Fetch interview data from the database
+        interview_data = fetch_interview_data(session, session_id)  # Pass the session first, then session_id
+
+        # Create CSV data
+        si = StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Question', 'Answer', 'Feedback', 'Score'])
+        for item in interview_data:
+            cw.writerow([item.question, item.answer, item.critique, item.score])
+
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=interview_transcript.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output

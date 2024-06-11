@@ -112,6 +112,12 @@ def users_training_data(session: Session, user_id: int, job_title: str, company_
     print("Returning data_dict:", data_dict)  # Debug print
     return data_dict
 
+# used to download csv transcript
+def fetch_interview_data(session: Session, session_id: str):
+    interview_data = session.query(InterviewAnswer).filter_by(session_id=session_id).all()
+    if not interview_data:
+        print("No interview data found for the given session_id.")
+    return interview_data
 
 
 
@@ -147,7 +153,7 @@ def get_user_resume_data(session: Session, username: str):
 
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name, most_recent_experience_summary, industry_expertise, top_soft_skills)
 
-def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, file_summary: str):
+def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, file_summary: str, session_id: str):
     global most_recent_question, user_responses
 
     resume_data = get_user_resume_data(session, username)
@@ -188,6 +194,7 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
 
     # Store the response in the database
     new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
         job_title=job_title,
         company_name=company_name,
         industry=industry,
@@ -206,7 +213,8 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
     }
 
 
-def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str, file_summary: str):
+
+def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str, file_summary: str, session_id: str):
     global most_recent_question, user_responses
 
     resume_data = get_user_resume_data(session, username)
@@ -252,6 +260,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Store the response in the database
     new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
         job_title=job_title,
         company_name=company_name,
         industry=industry,
@@ -268,6 +277,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 
 
