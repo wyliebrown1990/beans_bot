@@ -6,14 +6,16 @@
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const text = `Welcome {{ current_user.username }}! It’s purr-fect to meet you. I’m excited to help you along your job journey. Here are some notes on how to get the most out of my services:
-        Upload as much training data as you have on the company you are interviewing with.
-        If you encounter a long wait time during any step in the process it’s likely due to the size of your files or length of your query. Don’t worry I’m still making my biscuits on the backend and if we ever encounter an error I’ll give you a meow.
-        If you have any recommendations on how to improve my service please send them to: wyliedeveloper@gmail.com`;
+        const text = `Welcome wylie! It's purr-fect to meet you. I'm excited to help you along your career search journey. My creator designed me to help him overcome 2 pain points in his job search journey.<br><br>First, to overcome his anxiety. By interviewing frequently and perfecting your answers you can enter your next interview with confidence.<br><br>Second, he found that companies he interviewed at would never give critical feedback, if any. By getting real, critical feedback on your interview performance you can improve.<br><br>Here are some notes on how to get the most out of my services: Upload as much training data as you have on the company you are interviewing with. Each form of information you process is stored in my memory so that when I ask new questions and give you feedback I'm fact checking you from the data you uploaded. If a file you already uploaded becomes irrelevant just delete it!<br><br>If you have any recommendations on how to improve my service please send them to: wyliedeveloper@gmail.com<br><br>Good Luck and have fun!`;
         let i = 0;
         function typeWriter() {
             if (i < text.length) {
-                document.getElementById("speech-text").innerHTML += text.charAt(i);
+                let charToAdd = text.charAt(i);
+                if (text.substr(i, 4) === "<br>") {
+                    charToAdd = "<br>";
+                    i += 3; // Skip the next 3 characters as they are part of the <br> tag
+                }
+                document.getElementById("speech-text").innerHTML += charToAdd;
                 i++;
                 setTimeout(typeWriter, 25);
             }
