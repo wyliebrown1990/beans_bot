@@ -50,7 +50,7 @@ def setup_routes(app_instance, session_instance):
             user_response = request.form['answer_1']
             user_id = request.form['user_id']
             generate_audio = 'generate_audio' in request.form
-            voice_id = request.form.get('voice', 'xU744AaoW3SYWVj6TN6H')  # Default to Knightley if no voice is selected
+            voice_id = request.form.get('voice', 'WBPMIeOib7vXJnT2Iibp')  # Default to Knightley if no voice is selected
 
             # Load user training data
             training_data = users_training_data(session, user_id, job_title, company_name)

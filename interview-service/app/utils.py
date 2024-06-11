@@ -15,7 +15,7 @@ import re
 import logging
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
-from elevenlabs.client import ElevenLabs
+from elevenlabs.client import ElevenLabs, ApiError
 
 # Import models from app package
 from app.models import TrainingData, InterviewAnswer, User
@@ -58,6 +58,7 @@ def text_to_speech_file(text: str, voice_id: str) -> str:
     except ApiError as e:
         print(f"Error generating speech: {e}")
         return ""
+
 
 def create_table_if_not_exists(engine):
     try:
@@ -120,7 +121,7 @@ def generate_next_question(job_title, company_name, industry, session_history, s
     file_summary = training_data.get("file_summary", "")
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world’s best interview coach. I have hired you to conduct a mock interview with me. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {file_summary}."),
+        ("system", f"You are the world’s best interview coach. I have hired you to conduct an interview with me that should feel like a real interview. You should ask me a new question you haven’t already asked. The question should challenge my ability to work as a {job_title} at {company_name} company in the {industry} industry. Here is more context about {company_name}: {file_summary}."),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
@@ -158,7 +159,7 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
 
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I am going to answer you and I want you to give me a critical critique of how well I answered the question. Specifically check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Once I finished my answer did I say something that showed I was finished? You can also reference this information about me: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {file_summary}."),
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Once I finished my answer did I say something that showed I was finished? Give me a recommendation on how I could have presented my experience better based on this context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {file_summary}."),
         ("user", resume_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -168,7 +169,7 @@ def get_resume_question_answer(session: Session, username: str, job_title: str, 
 
     # Prompt 2: Score the user's answer
     score_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"Score the answer I am sending you to the question 'tell me about your professional experience and how it relates to this role at {company_name}' from 0 to 10. I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("system", f"Score the answer I am sending you to the question 'tell me about your professional experience and how it relates to this role at {company_name}' from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. When scoring, keep in mind that I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
         ("user", resume_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -217,7 +218,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting a mock interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. Give me a very critical critique of how well I answered the question. Specifically check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Once I finished my answer did I say something that showed I was finished? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {file_summary}. Based on my experience and the context about {company_name} and my specific answer please give me feedback."),
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I’m interviewing to work at: {file_summary}."),
         ("user", career_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -227,7 +228,7 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
 
     # Prompt 2: Score the user's answer
     score_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
         ("user", career_user_response),
         MessagesPlaceholder(variable_name="messages"),
     ])
