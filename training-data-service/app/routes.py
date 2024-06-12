@@ -65,8 +65,17 @@ def youtube_transcription():
     user_id = request.form['user_id']
     channel_id = request.form['channel_id']
     num_videos = int(request.form['num_videos'])
+
+    with app.app_context():
+        db = next(get_db())
+        user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+        
+        if user_data_count >= 5:
+            return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
+
     threading.Thread(target=transcribe_videos, args=(channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username, user_id)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
+    return jsonify({'success': 'Transcription started successfully'}), 200
+
 
 @app.route('/youtube_urls_transcription', methods=['POST'])
 def youtube_urls_transcription():
@@ -77,8 +86,18 @@ def youtube_urls_transcription():
     user_id = request.form['user_id']
     youtube_urls = request.form['youtube_urls'].strip().split('\n')
     youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
+
+    with app.app_context():
+        db = next(get_db())
+        user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+        
+        if user_data_count >= 5:
+            return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
+
     threading.Thread(target=process_youtube_urls, args=(youtube_urls, job_title, company_name, username, user_id)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
+    return jsonify({'success': 'YouTube URLs transcription started successfully'}), 200
+
+
 
 @app.route('/file_upload', methods=['POST'])
 def file_upload():
@@ -87,8 +106,15 @@ def file_upload():
     industry = request.form['industry']
     username = request.form['username']
     user_id = request.form['user_id']
-    
+
     print(f"DEBUG: file_upload - Received data: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
+
+    with app.app_context():
+        db = next(get_db())
+        user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+
+        if user_data_count >= 5:
+            return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
     files = request.files.getlist('files')
 
@@ -99,7 +125,7 @@ def file_upload():
             file.save(file_path)
             threading.Thread(target=process_file, args=(file_path, job_title, company_name, username, user_id)).start()
 
-    return redirect(url_for('progress', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id))
+    return jsonify({'success': 'Files uploaded successfully'}), 200
 
 
 @app.route('/raw_text_submission', methods=['POST'])
@@ -110,8 +136,17 @@ def raw_text_submission():
     username = request.form['username']
     user_id = request.form['user_id']
     raw_text = request.form['raw_text']
+
+    with app.app_context():
+        db = next(get_db())
+        user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+        
+        if user_data_count >= 5:
+            return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
+
     threading.Thread(target=process_raw_text, args=(job_title, company_name, raw_text, username, user_id)).start()
-    return redirect(url_for('progress', job_title=job_title.lower().strip(), company_name=company_name.lower().strip(), industry=industry.lower().strip(), username=username, user_id=user_id))
+    return jsonify({'success': 'Raw text submission started successfully'}), 200
+
 
 @app.route('/progress')
 def progress():

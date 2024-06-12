@@ -39,6 +39,27 @@
 
             // Fetch processed files on page load
             fetchProcessedFiles();
+
+            // Attach event listeners to the forms
+            document.getElementById('file-upload-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                uploadFiles(new FormData(this));
+            });
+
+            document.getElementById('youtube-transcription-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                startYouTubeTranscription(new FormData(this));
+            });
+
+            document.getElementById('youtube-urls-transcription-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                startYouTubeURLsTranscription(new FormData(this));
+            });
+
+            document.getElementById('raw-text-submission-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                submitRawText(new FormData(this));
+            });
         });
 
         function fetchProcessedFiles() {
@@ -76,6 +97,82 @@
                 .catch(error => {
                     console.error('Error fetching files:', error);
                 });
+        }
+
+        function uploadFiles(formData) {
+            fetch('/file_upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert('Files uploaded successfully');
+                    fetchProcessedFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading files:', error);
+            });
+        }
+
+        function startYouTubeTranscription(formData) {
+            fetch('/youtube_transcription', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert('Transcription started successfully');
+                    fetchProcessedFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error starting transcription:', error);
+            });
+        }
+
+        function startYouTubeURLsTranscription(formData) {
+            fetch('/youtube_urls_transcription', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert('YouTube URLs transcription started successfully');
+                    fetchProcessedFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error starting YouTube URLs transcription:', error);
+            });
+        }
+
+        function submitRawText(formData) {
+            fetch('/raw_text_submission', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert('Raw text submission started successfully');
+                    fetchProcessedFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting raw text:', error);
+            });
         }
 
         function deleteSelectedFiles(event) {
@@ -131,7 +228,7 @@
             if (message.includes("It looks like I already have training data on the")) {
                 const buttonContainer = document.createElement('div');
                 buttonContainer.id = 'buttonContainer';
-                
+               
                 const startInterviewButton = document.createElement('button');
                 startInterviewButton.innerText = 'Start Interview!';
                 startInterviewButton.classList.add('actionButton');
@@ -145,7 +242,7 @@
                 };
 
                 buttonContainer.appendChild(startInterviewButton);
-                document.body.appendChild(buttonContainer);
+                document.getElementById('file-list-container').insertBefore(buttonContainer, document.querySelector('h2'));
             }
         }
     </script>
@@ -173,7 +270,7 @@
             </form>
         </div>
         <h2>If you want to extract the text from videos on a youtube channel:</h2>
-        <form method="post" action="/youtube_transcription">
+        <form id="youtube-transcription-form" method="post">
             <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
             <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
             <input type="hidden" name="industry" value="{{ industry.lower() }}">
@@ -191,7 +288,7 @@
         </form>
 
         <h2>Or enter individual YouTube video URLs:</h2>
-        <form method="post" action="/youtube_urls_transcription">
+        <form id="youtube-urls-transcription-form" method="post">
             <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
             <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
             <input type="hidden" name="industry" value="{{ industry.lower() }}">
@@ -205,7 +302,7 @@
 
         <h2>Feel free to upload text files from your computer:</h2>
         <br>
-        <form method="post" action="/file_upload" enctype="multipart/form-data">
+        <form id="file-upload-form" method="post" enctype="multipart/form-data">
             <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
             <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
             <input type="hidden" name="industry" value="{{ industry.lower() }}">
@@ -218,7 +315,7 @@
         </form>
         <br>
         <h2>Or if you prefer paste some text here and submit it:</h2>
-        <form method="post" action="/raw_text_submission">
+        <form id="raw-text-submission-form" method="post">
             <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
             <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
             <input type="hidden" name="industry" value="{{ industry.lower() }}">

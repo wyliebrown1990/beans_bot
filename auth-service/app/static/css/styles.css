@@ -215,18 +215,18 @@ footer div a:hover {
     padding: 20px;
 }
 
-.speech-bubble {
+.container .speech-bubble {
     flex: 2;
     background-color: #f1f1f1;
     border: 2px solid #EFBC9B;
     border-radius: 10px;
     padding: 20px;
-    padding-right: 40px !important; /* Ensure the padding is applied */
+    padding-right: 60px; /* Increase padding on the right */
     position: relative;
     margin-left: 20px;
 }
 
-.speech-bubble:after {
+.container .speech-bubble:after {
     content: '';
     position: absolute;
     top: 20px;
@@ -238,7 +238,7 @@ footer div a:hover {
     border-left-color: #EFBC9B;
 }
 
-#speech-text {
+.container #speech-text {
     padding: 20px;
     font-size: 14px;
     line-height: 1.5;
