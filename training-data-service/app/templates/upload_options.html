@@ -326,6 +326,22 @@
             <br>
             <input type="submit" value="Submit Text">
         </form>
+        <br></br>
+        <br></br>
+        <script>
+            function startInterview() {
+                const jobTitle = "{{ job_title }}".toLowerCase();
+                const companyName = "{{ company_name }}".toLowerCase();
+                const industry = "{{ industry }}".toLowerCase();
+                const username = "{{ username }}".toLowerCase();
+                const userId = "{{ user_id }}";
+                window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}&user_id=${userId}`;
+            }
+        </script>
+        <button onclick="startInterview()">Start Interview</button>
+
+        <br></br>
+
 
         <div id="info-popup" class="info-popup">
             <span id="close-button" class="close-button">&times;</span>

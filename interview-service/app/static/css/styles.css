@@ -180,6 +180,39 @@ button {
     overflow: hidden; /* Hide the scroll bar */
 }
 
+/* Timer CSS */
+#timer-container {
+    position: fixed;
+    top: 5px;  
+    right: 5px;  
+    background-color: #7a918d;
+    text-align: center;
+    padding: 5px;  
+    z-index: 1000;
+    border: 2px solid black;
+}
+
+#timer {
+    font-size: 1em;  
+    color: black;
+}
+
+.pulse {
+    animation: pulse-animation 1s infinite;
+}
+
+@keyframes pulse-animation {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* Media Queries */
 @media (max-width: 768px) {
     form, .chat-block, .image-block {

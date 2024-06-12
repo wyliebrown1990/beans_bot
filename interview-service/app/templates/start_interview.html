@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Start Interview</title>
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Interview</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 <div id="page-container">
@@ -24,6 +24,12 @@
             </div>
             <div id="responses"></div>
         </div>
+
+        <div id="timer-container">
+            <h5>Countdown Timer</h5>
+            <div id="timer">90</div>
+        </div>
+
         <form id="response-form" method="POST">
             <input type="hidden" name="job_title" value="{{ job_title }}">
             <input type="hidden" name="company_name" value="{{ company_name }}">
@@ -78,6 +84,31 @@
     let mediaRecorder;
     let audioChunks = [];
     let recording = false;
+
+    let timerInterval;
+    let timeLeft = 90;
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 90;
+        const timerElement = document.getElementById('timer');
+        timerElement.classList.remove('pulse');
+        timerElement.innerText = timeLeft;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerElement.innerText = "Wrap up answer";
+                timerElement.classList.add('pulse');
+            } else {
+                timerElement.innerText = timeLeft;
+            }
+        }, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        startTimer();
+    });
 
     document.getElementById('generate_audio').addEventListener('change', function() {
         if (this.checked) {
@@ -196,6 +227,7 @@
                 `);
 
                 $('#answer_1').val('');
+                startTimer();  // Reset the timer when a new question is received
             },
             error: function(error) {
                 console.log('Error:', error);
