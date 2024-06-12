@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 from openai import OpenAI
 from .utils import (
-    get_session_history, generate_next_question,
+    get_session_history, generate_second_question, generate_third_question,
     get_resume_question_answer, get_career_experience_answer, extract_score,
     most_recent_question, user_responses, users_training_data, text_to_speech_file,
     setup_database, fetch_interview_data
@@ -56,39 +56,47 @@ def setup_routes(app_instance, session_instance):
 
             # Load user training data
             training_data = users_training_data(session, user_id, job_title, company_name)
-            print("Type of training_data:", type(training_data))
-            print("Contents of training_data:", training_data)
-
             if not training_data:
                 return jsonify({'error': 'No training data found for the given parameters'}), 400
 
             file_summary = training_data.get("file_summary", "")
-            print("file_summary:", file_summary)
-            
-            if user_responses["resume_user_response"] is None:
-                # First response (resume_user_response)
-                results = get_resume_question_answer(session, username, job_title, company_name, industry, user_response, file_summary, session_id)
+
+            # Initialize or update user responses in the session
+            if 'user_responses' not in session:
+                session['user_responses'] = []
+
+            # Determine the response number
+            response_number = len(session['user_responses']) + 1
+
+            # Dynamically call the correct answer function
+            answer_function_name = f"get_answer_{response_number}"
+            answer_function = globals().get(answer_function_name)
+
+            if answer_function:
+                results = answer_function(session, username, job_title, company_name, industry, user_response, file_summary, session_id)
+                session['user_responses'].append(user_response)
             else:
-                # Subsequent responses (career_user_responses)
-                results = get_career_experience_answer(session, username, job_title, company_name, industry, user_response, file_summary, session_id)
+                return jsonify({'error': f'No function defined for response number {response_number}'}), 500
+
+            # Save the updated session
+            session.modified = True
 
             session_history = get_session_history(session_id)
-            session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else ""))
-            session_history.add_message(AIMessage(content=results["next_question"]))
+            session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else "No analysis response"))
+            session_history.add_message(AIMessage(content=results["next_question"] if results["next_question"] else "No next question"))
 
             # Convert text to speech for next question response only if the box is checked
             next_question_audio_path = None
             if generate_audio:
                 next_question_audio_path = text_to_speech_file(results["next_question"], voice_id)
 
-            print(f"Next question audio path: {next_question_audio_path}")
-
             return jsonify({
-                'feedback_response': results["analysis_response"] if results["analysis_response"] else "",
+                'feedback_response': results["analysis_response"] if results["analysis_response"] else "No analysis response",
                 'score_response': results["score"] if results["score"] else "N/A",
-                'next_question_response': results["next_question"],
+                'next_question_response': results["next_question"] if results["next_question"] else "No next question",
                 'next_question_audio': next_question_audio_path if next_question_audio_path else None
             })
+
 
     @app_instance.route('/transcribe_audio', methods=['POST'])
     def transcribe_audio():
