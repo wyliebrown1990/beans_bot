@@ -120,14 +120,13 @@ def fetch_interview_data(session: Session, session_id: str):
         print("No interview data found for the given session_id.")
     return interview_data
 
-
-
-def generate_second_question(job_title, company_name, industry, session_history, session, training_data):
+# Renamed question generation functions
+def generate_question_2(job_title, company_name, industry, session_history, session, training_data):
     global most_recent_question
-    print("Starting generate_second_question")
+    print("Starting generate_question_2")
 
     top_technical_skills = training_data.get("top_technical_skills", "")
-    print(f"Top Technical Skills in generate_second_question: {top_technical_skills}")
+    print(f"Top Technical Skills in generate_question_2: {top_technical_skills}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. Base your question around one or two of the top skills on my resume: {top_technical_skills}."),
@@ -143,19 +142,16 @@ def generate_second_question(job_title, company_name, industry, session_history,
 
     # Explicitly set most_recent_question with the new question
     most_recent_question = response.content  
-    print("Updated most_recent_question in generate_second_question:", most_recent_question)
-    print("generate_second_question completed.")
+    print("Updated most_recent_question in generate_question_2:", most_recent_question)
+    print("generate_question_2 completed.")
     return most_recent_question
 
-
-
-
-def generate_third_question(job_title, company_name, industry, session_history, session, training_data):
+def generate_question_3(job_title, company_name, industry, session_history, session, training_data):
     global most_recent_question
-    print("Starting generate_third_question")
+    print("Starting generate_question_3")
 
     top_technical_skills = training_data.get("top_technical_skills", "")
-    print(f"Top Technical Skills in generate_third_question: {top_technical_skills}")
+    print(f"Top Technical Skills in generate_question_3: {top_technical_skills}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. Base your question around one or two of the top skills on my resume: {top_technical_skills}."),
@@ -171,11 +167,290 @@ def generate_third_question(job_title, company_name, industry, session_history, 
 
     # Explicitly set most_recent_question with the new question
     most_recent_question = response.content  
-    print("Updated most_recent_question in generate_third_question:", most_recent_question)
-    print("generate_third_question completed.")
+    print("Updated most_recent_question in generate_question_3:", most_recent_question)
+    print("generate_question_3 completed.")
     return most_recent_question
 
+def generate_question_4(job_title, company_name, industry, session_history, session, training_data):
+    global most_recent_question
+    print("Starting generate_question_4")
 
+    top_technical_skills = training_data.get("top_technical_skills", "")
+    print(f"Top Technical Skills in generate_question_4: {top_technical_skills}")
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. Base your question around one or two of the top skills on my resume: {top_technical_skills}."),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    chain = prompt | model
+    print("Sending prompt to OpenAI API for generating fourth question...")
+    print(f"Prompt: {prompt}")
+
+    response = chain.invoke({"messages": session_history.messages})
+    print(f"Response from OpenAI API: {response.content}")
+
+    # Explicitly set most_recent_question with the new question
+    most_recent_question = response.content  
+    print("Updated most_recent_question in generate_question_4:", most_recent_question)
+    print("generate_question_4 completed.")
+    return most_recent_question
+
+# Renamed answer functions
+def get_answer_1(session: Session, username: str, job_title: str, company_name: str, industry: str, user_response: str, file_summary: str, session_id: str):
+    global most_recent_question, user_responses
+    print("Starting get_answer_1")
+
+    resume_data = get_user_resume_data(session, username)
+    if not resume_data:
+        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
+
+    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
+
+    # Prompt 1: Analyze the user's answer
+    analysis_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Once I finished my answer did I say something that showed I was finished? Did I answer the question in a reasonable amount of time that lasted no more than 2 minutes? Finally, please give me a recommendation on how I could have presented my experience better. When you are critiquing me please refer to my resume information which you have on a piece of paper in front of you. The resume shows: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. A full summary of my resume: {file_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = analysis_prompt | model
+    print("Sending analysis prompt to OpenAI API...")
+    print(f"Analysis Prompt: {analysis_prompt}")
+
+    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
+    print("Analysis Response from OpenAI API:", analysis_response)
+
+    # Prompt 2: Score the user's answer
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score the answer I am sending you to the question 'tell me about your professional experience and how it relates to this role at {company_name}' from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. When scoring, keep in mind that I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    print("Sending score prompt to OpenAI API...")
+    print(f"Score Prompt: {score_prompt}")
+
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
+    print("Score Response from OpenAI API:", score_response.content)
+
+    score = extract_score(score_response.content)
+
+    # Handle cases where the score response is empty or does not contain a number
+    if not score or not score.isdigit():
+        score = None
+
+    # Generate the next question with career context
+    session_history = get_session_history(os.urandom(24).hex())
+    next_question = generate_question_2(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary})
+
+    # Update most_recent_question with the new question
+    most_recent_question = next_question
+    print("Updated most_recent_question in get_answer_1:", most_recent_question)
+
+    # Store the response in the database
+    new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
+        job_title=job_title,
+        company_name=company_name,
+        industry=industry,
+        question="Tell me about your professional experience and how it relates to this role at {company_name}",  # Last question asked before the user's answer
+        answer=user_response,
+        critique=analysis_response,
+        score=score if score else "N/A"  # Store "N/A" if score is None
+    )
+    session.add(new_answer)
+    session.commit()
+
+    print("get_answer_1 completed.")
+    return {
+        "analysis_response": analysis_response,
+        "score": score if score else "N/A",
+        "next_question": next_question
+    }
+
+def get_answer_2(session: Session, username: str, job_title: str, company_name: str, industry: str, user_response: str, file_summary: str, session_id: str):
+    global most_recent_question, user_responses
+    print("Starting get_answer_2")
+
+    resume_data = get_user_resume_data(session, username)
+    if not resume_data:
+        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
+
+    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
+
+    # Debug print before analysis
+    print("Before analysis - Most Recent Question:", most_recent_question)
+
+    # Prompt 1: Analyze the user's answer
+    analysis_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = analysis_prompt | model
+    print("Sending analysis prompt to OpenAI API...")
+    print(f"Analysis Prompt: {analysis_prompt}")
+
+    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
+    print("Analysis Response from OpenAI API:", analysis_response)
+
+    # Prompt 2: Score the user's answer
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    print("Sending score prompt to OpenAI API...")
+    print(f"Score Prompt: {score_prompt}")
+
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
+    print("Score Response from OpenAI API:", score_response.content)
+
+    score = extract_score(score_response.content)
+
+    # Handle cases where the score response is empty or does not contain a number
+    if not score or not score.isdigit():
+        score = None
+
+    # Debug print before generating the next question
+    print("Before generating next question - Most Recent Question:", most_recent_question)
+
+    # Generate the next question with career context
+    session_history = get_session_history(os.urandom(24).hex())
+    next_question = generate_question_3(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_technical_skills": top_technical_skills})
+
+    # Update most_recent_question with the new question
+    most_recent_question = next_question
+
+    # Debug print after generating the next question
+    print("Updated most_recent_question in get_answer_2:", most_recent_question)
+
+    # Store the career user response
+    user_responses["career_user_responses"].append(user_response)
+    print("Career User Response:", user_response)
+    print("Most Recent Question:", most_recent_question)
+
+    # Store the response in the database
+    new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
+        job_title=job_title,
+        company_name=company_name,
+        industry=industry,
+        question=most_recent_question,  # Last question asked before the user's answer
+        answer=user_response,
+        critique=analysis_response,
+        score=score if score else "N/A"  # Store "N/A" if score is None
+    )
+    session.add(new_answer)
+    session.commit()
+
+    print("get_answer_2 completed.")
+    return {
+        "analysis_response": analysis_response,
+        "score": score if score else "N/A",
+        "next_question": next_question
+    }
+
+def get_answer_3(session: Session, username: str, job_title: str, company_name: str, industry: str, user_response: str, file_summary: str, session_id: str):
+    global most_recent_question, user_responses
+    print("Starting get_answer_3")
+
+    resume_data = get_user_resume_data(session, username)
+    if not resume_data:
+        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
+
+    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
+
+    # Debug print before analysis
+    print("Before analysis - Most Recent Question:", most_recent_question)
+
+    # Prompt 1: Analyze the user's answer
+    analysis_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = analysis_prompt | model
+    print("Sending analysis prompt to OpenAI API...")
+    print(f"Analysis Prompt: {analysis_prompt}")
+
+    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
+    print("Analysis Response from OpenAI API:", analysis_response)
+
+    # Prompt 2: Score the user's answer
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    print("Sending score prompt to OpenAI API...")
+    print(f"Score Prompt: {score_prompt}")
+
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
+    print("Score Response from OpenAI API:", score_response.content)
+
+    score = extract_score(score_response.content)
+
+    # Handle cases where the score response is empty or does not contain a number
+    if not score or not score.isdigit():
+        score = None
+
+    # Debug print before generating the next question
+    print("Before generating next question - Most Recent Question:", most_recent_question)
+
+    # Generate the next question with career context
+    session_history = get_session_history(os.urandom(24).hex())
+    next_question = generate_question_4(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_technical_skills": top_technical_skills})
+
+    # Update most_recent_question with the new question
+    most_recent_question = next_question
+
+    # Debug print after generating the next question
+    print("Updated most_recent_question in get_answer_3:", most_recent_question)
+
+    # Store the career user response
+    user_responses["career_user_responses"].append(user_response)
+    print("Career User Response:", user_response)
+    print("Most Recent Question:", most_recent_question)
+
+    # Store the response in the database
+    new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
+        job_title=job_title,
+        company_name=company_name,
+        industry=industry,
+        question=most_recent_question,  # Last question asked before the user's answer
+        answer=user_response,
+        critique=analysis_response,
+        score=score if score else "N/A"  # Store "N/A" if score is None
+    )
+    session.add(new_answer)
+    session.commit()
+
+    print("get_answer_3 completed.")
+    return {
+        "analysis_response": analysis_response,
+        "score": score if score else "N/A",
+        "next_question": next_question
+    }
+
+def extract_score(feedback):
+    match = re.search(r"\b(\d{1,2})\b", feedback)
+    if match:
+        return match.group(1)
+    else:
+        return "Score not found"
 
 def get_user_resume_data(session: Session, username: str):
     user = session.query(User).filter(func.lower(User.username) == func.lower(username)).first()
@@ -205,180 +480,3 @@ def get_user_resume_data(session: Session, username: str):
     print("Top Soft Skills:", top_soft_skills)
 
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name, most_recent_experience_summary, industry_expertise, top_soft_skills)
-
-
-
-
-def get_resume_question_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, resume_user_response: str, file_summary: str, session_id: str):
-    global most_recent_question, user_responses
-    print("Starting get_resume_question_answer")
-
-    resume_data = get_user_resume_data(session, username)
-    if not resume_data:
-        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
-
-    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
-     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
-
-    # Prompt 1: Analyze the user's answer
-    analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Once I finished my answer did I say something that showed I was finished? Did I answer the question in a reasonable amount of time that lasted no more than 2 minutes? Finally, please give me a recommendation on how I could have presented my experience better. When you are critiquing me please refer to my resume information which you have on a piece of paper in front of you. The resume shows: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. A full summary of my resume: {file_summary}."),
-        ("user", resume_user_response),
-        MessagesPlaceholder(variable_name="messages"),
-    ])
-
-    analysis_chain = analysis_prompt | model
-    print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
-
-    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=resume_user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
-
-    # Prompt 2: Score the user's answer
-    score_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"Score the answer I am sending you to the question 'tell me about your professional experience and how it relates to this role at {company_name}' from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. When scoring, keep in mind that I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
-        ("user", resume_user_response),
-        MessagesPlaceholder(variable_name="messages"),
-    ])
-
-    score_chain = score_prompt | model
-    print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
-
-    score_response = score_chain.invoke({"messages": [HumanMessage(content=resume_user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
-
-    score = extract_score(score_response.content)
-
-    # Handle cases where the score response is empty or does not contain a number
-    if not score or not score.isdigit():
-        score = None
-
-    # Generate the next question with career context
-    session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_second_question(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary})
-
-    # Update most_recent_question with the new question
-    most_recent_question = next_question
-    print("Updated most_recent_question in get_resume_question_answer:", most_recent_question)
-
-    # Store the response in the database
-    new_answer = InterviewAnswer(
-        session_id=session_id,  # Make sure to include session_id
-        job_title=job_title,
-        company_name=company_name,
-        industry=industry,
-        question="Tell me about your professional experience and how it relates to this role at {company_name}",  # Last question asked before the user's answer
-        answer=resume_user_response,
-        critique=analysis_response,
-        score=score if score else "N/A"  # Store "N/A" if score is None
-    )
-    session.add(new_answer)
-    session.commit()
-
-    print("get_resume_question_answer completed.")
-    return {
-        "analysis_response": analysis_response,
-        "score": score if score else "N/A",
-        "next_question": next_question
-    }
-
-
-
-def get_career_experience_answer(session: Session, username: str, job_title: str, company_name: str, industry: str, career_user_response: str, file_summary: str, session_id: str):
-    global most_recent_question, user_responses
-    print("Starting get_career_experience_answer")
-
-    resume_data = get_user_resume_data(session, username)
-    if not resume_data:
-        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
-
-    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
-     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
-
-    # Debug print before analysis
-    print("Before analysis - Most Recent Question:", most_recent_question)
-
-    # Prompt 1: Analyze the user's answer
-    analysis_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
-        ("user", career_user_response),
-        MessagesPlaceholder(variable_name="messages"),
-    ])
-
-    analysis_chain = analysis_prompt | model
-    print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
-
-    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=career_user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
-
-    # Prompt 2: Score the user's answer
-    score_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
-        ("user", career_user_response),
-        MessagesPlaceholder(variable_name="messages"),
-    ])
-
-    score_chain = score_prompt | model
-    print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
-
-    score_response = score_chain.invoke({"messages": [HumanMessage(content=career_user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
-
-    score = extract_score(score_response.content)
-
-    # Handle cases where the score response is empty or does not contain a number
-    if not score or not score.isdigit():
-        score = None
-
-    # Debug print before generating the next question
-    print("Before generating next question - Most Recent Question:", most_recent_question)
-
-    # Generate the next question with career context
-    session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_third_question(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_technical_skills": top_technical_skills})
-
-    # Update most_recent_question with the new question
-    most_recent_question = next_question
-
-    # Debug print after generating the next question
-    print("Updated most_recent_question in get_career_experience_answer:", most_recent_question)
-
-    # Store the career user response
-    user_responses["career_user_responses"].append(career_user_response)
-    print("Career User Response:", career_user_response)
-    print("Most Recent Question:", most_recent_question)
-
-    # Store the response in the database
-    new_answer = InterviewAnswer(
-        session_id=session_id,  # Make sure to include session_id
-        job_title=job_title,
-        company_name=company_name,
-        industry=industry,
-        question=most_recent_question,  # Last question asked before the user's answer
-        answer=career_user_response,
-        critique=analysis_response,
-        score=score if score else "N/A"  # Store "N/A" if score is None
-    )
-    session.add(new_answer)
-    session.commit()
-
-    print("get_career_experience_answer completed.")
-    return {
-        "analysis_response": analysis_response,
-        "score": score if score else "N/A",
-        "next_question": next_question
-    }
-
-
-
-
-def extract_score(feedback):
-    match = re.search(r"\b(\d{1,2})\b", feedback)
-    if match:
-        return match.group(1)
-    else:
-        return "Score not found"
-

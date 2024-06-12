@@ -53,7 +53,10 @@
         <div class="status-container">
             <div id="status-message" class="status-message"></div>
         </div>
-        <div><button id="download-transcript">Download Transcript</button></div>
+        <div>
+            <button id="download-transcript">Download Transcript</button>
+            <button onclick="startNewInterviewSession()">Start New Interview Session</button>
+        </div>
     </div>
     <footer>
         <div>
@@ -227,6 +230,28 @@
         }
     });
 });
+
+    function startNewInterviewSession() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const job_title = urlParams.get('job_title');
+        const company_name = urlParams.get('company_name');
+        const industry = urlParams.get('industry');
+        const username = urlParams.get('username');
+        const user_id = urlParams.get('user_id');
+
+        // Clear Flask session data on the server
+        $.ajax({
+            type: 'POST',
+            url: "{{ url_for('clear_session') }}",
+            success: function() {
+                // Redirect to the same URL to start a new session
+                window.location.href = `{{ url_for('start_interview') }}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}`;
+            },
+            error: function(error) {
+                console.error('Error clearing session:', error);
+            }
+        });
+    }
 </script>
 </body>
 </html>
