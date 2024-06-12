@@ -13,8 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Make port 5010 available to the world outside this container
 EXPOSE 5010
 
-# Define environment variable
-ENV FLASK_APP=app
-
-# Run flask when the container launches
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5010"]
+# Run Gunicorn when the container launches
+CMD ["gunicorn", "-b", "0.0.0.0:5010", "app:app"]

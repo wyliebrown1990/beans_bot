@@ -5,8 +5,15 @@ import os
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from .models import User, SessionLocal
-from .utils import get_user_by_username, get_user_by_email, allowed_file, extract_text_from_file
+from .models import User
+from .utils import (
+    get_user_by_username, 
+    get_user_by_email, 
+    allowed_file, 
+    extract_text_from_file, 
+    SessionLocal, 
+    get_resume_analysis
+)
 from . import login_manager
 import json
 
@@ -94,28 +101,3 @@ def home():
         return render_template('home.html')
     else:
         return redirect(url_for('auth.login'))
-
-def get_resume_analysis(resume_text):
-    openai_api_key = current_app.config['OPENAI_API_KEY']
-    model = ChatOpenAI(openai_api_key=openai_api_key)
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a world class job coach helping me prepare for my job interview. Based on the resume I give you please return JSON formatted summaries of my top 3 technical skills as top_technical_skills TEXT, my most recent job title as most_recent_job_title VARCHAR(255), my most recent company name as most_recent_company_name VARCHAR(255), a short summary of my most recent job experience at my most_recent company as most_recent_experience_summary TEXT, a short summary of my experience in specific job industries as industry_expertise TEXT, and my top 3 soft skills as top_soft_skills TEXT."),
-        ("user", resume_text)
-    ])
-
-    chain = prompt | model
-    response = chain.invoke({"messages": []})
-
-    # Extract response content
-    response_content = response.content.strip()
-    
-    # Print the response content for debugging
-    print("Response Content:", response_content)
-    
-    response_json = json.loads(response_content)  # Ensure response is valid JSON
-    
-    # Print the parsed JSON data for debugging
-    print("Response JSON:", response_json)
-    
-    return response_json

@@ -31,11 +31,9 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 # Import models
 from app import models
 
-# Import routes
-from app import routes
-
 # Create tables if they don't exist
 models.Base.metadata.create_all(bind=engine)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5011)
+# Import routes
+from app.routes import setup_routes
+setup_routes(app, db_session)

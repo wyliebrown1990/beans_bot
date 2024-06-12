@@ -1,9 +1,11 @@
 Flask
+flask-session
 psycopg2-binary
 python-dotenv
 werkzeug
 numpy
 openai
+langchain_openai
 google-api-python-client
 yt-dlp
 openai-whisper
@@ -11,3 +13,4 @@ gunicorn
 langchain
 sqlalchemy
 gevent
+gunicorn
