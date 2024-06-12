@@ -34,22 +34,45 @@
 </script>
 </head>
 <body>
-<div class="navbar">
-    <span class="nav-toggle" onclick="toggleNav()">&#9776;</span>
-    <div id="nav-menu" class="nav-menu">
-        <a href="{{ url_for('auth.home') }}">Home</a>
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
+<div id="page-container">
+    <div id="content-wrap">
+        <div class="navbar">
+            <span class="nav-toggle" onclick="toggleNav()">&#9776;</span>
+            <div id="nav-menu" class="nav-menu">
+                <a href="{{ url_for('auth.home') }}">Home</a>
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+        <h1>Welcome, {{ current_user.username }}!</h1>
+        <div class="container">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
+            <div class="speech-bubble" style="padding-right: 40px; border: 2px solid #7a918d; outline: 2px;">
+                <p id="speech-text"></p>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 50px;">
+            <form action="http://localhost:5011/" method="get" style="display: inline;">
+                <input type="hidden" name="username" value="{{ current_user.username }}">
+                <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                <button type="submit" class="button">Let's Get Started!</button>
+            </form>
+        </div>
     </div>
-</div>
-<h1>Welcome, {{ current_user.username }}!</h1>
-<div class="container">
-    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
-    <div class="speech-bubble" style="padding-right: 40px; border: 2px solid #7a918d; outline: 2px;">
-        <p id="speech-text"></p>
-    </div>
-</div>
-<div style="text-align: center; margin-top: 50px;">
-    <a href="http://localhost:5011/?username={{ current_user.username }}&user_id={{ current_user.id }}" class="button">Let's Get Started!</a>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
 </div>
 </body>
 </html>

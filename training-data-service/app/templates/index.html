@@ -6,22 +6,41 @@
    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-   <h1>Training Data Service</h1>
-   <form method="post" action="/">
-       <label for="job_title">Job Title:</label>
-       <input type="text" id="job_title" name="job_title" required>
-       <br>
-       <label for="company_name">Company Name:</label>
-       <input type="text" id="company_name" name="company_name" required>
-       <br>
-       <label for="industry">Industry:</label>
-       <input type="text" id="industry" name="industry" required>
-       <br>
-       <label for="username">Username:</label>
-       <input type="text" id="username" name="username" value="{{ username }}" required>
-       <br>
-       <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
-       <input type="submit" value="Submit">
-   </form>
+<div id="page-container">
+    <div id="content-wrap">
+        <h1>Training Data Service</h1>
+        <form method="post" action="/">
+            <label for="job_title">Job Title:</label>
+            <input type="text" id="job_title" name="job_title" required>
+            <br>
+            <label for="company_name">Company Name:</label>
+            <input type="text" id="company_name" name="company_name" required>
+            <br>
+            <label for="industry">Industry:</label>
+            <input type="text" id="industry" name="industry" required>
+            <br>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" value="{{ username }}" required>
+            <br>
+            <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
+</div>
 </body>
 </html>

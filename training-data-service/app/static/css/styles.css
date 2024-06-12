@@ -6,6 +6,11 @@ body {
     padding: 20px;
 }
 
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
 h1 {
     color: #7a918d;
     text-align: center;
@@ -35,7 +40,8 @@ form {
 }
 
 input[type="text"],
-input[type="submit"] {
+input[type="submit"],
+button {
     padding: 10px;
     margin: 5px 0;
     border: 1px solid #9CAFAA;
@@ -44,18 +50,17 @@ input[type="submit"] {
     width: 300px;
     margin-left: auto;
     margin-right: auto;
+    font-size: 16px;
 }
 
-input[type="submit"] {
+button, input[type="submit"] {
     background-color: #9CAFAA;
     color: white;
     cursor: pointer;
-    width: 300px;
-    margin-left: auto;
-    margin-right: auto;
+    border: none; /* Remove border */
 }
 
-input[type="submit"]:hover {
+button:hover, input[type="submit"]:hover {
     background-color: #7a918d;
 }
 
@@ -64,8 +69,32 @@ a {
 }
 
 footer {
+    display: flex;
+    justify-content: space-around;
+    background-color: #6d837f;
+    color: white;
     font-size: 14px;
     text-align: center;
+    padding: 20px 0;
+    width: 100%;
+    margin-top: auto; /* Push footer to the bottom */
+}
+
+footer div {
+    flex: 1;
+    text-align: left;
+    padding: 0 10px;
+}
+
+footer div a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    margin: 5px 0;
+}
+
+footer div a:hover {
+    text-decoration: underline;
 }
 
 hr {
@@ -90,20 +119,6 @@ p {
     padding: 0 20px;
 }
 
-button {
-    padding: 10px;
-    margin: 5px 0;
-    border: 1px solid #D6DAC8;
-    border-radius: 4px;
-    display: block;
-    width: 300px;
-    margin-left: auto;
-    margin-right: auto;
-    background-color: #7a918d;
-    color: white;
-    cursor: pointer;
-}
-
 /* Image block specific CSS */
 .image-block {
     background-color: #D6DAC8;
@@ -123,19 +138,13 @@ button {
 
 /* Page Spacing */
 #page-container {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
 }
 
 #content-wrap {
-    padding-bottom: 2.5rem;    /* Footer height */
-}
-
-#footers {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    height: 2.5rem;            /* Footer height */
+    flex: 1;
 }
 
 #user_response {
@@ -154,6 +163,16 @@ button {
 
     input[type="text"], input[type="submit"] {
         width: 90%; /* Makes input fields take up most of the form width */
+    }
+
+    footer {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    footer div {
+        text-align: center;
+        padding: 10px 0;
     }
 }
 
@@ -180,6 +199,7 @@ button {
     color: #CC5500;
     font-weight: bold;
 }
+
 .centered-button {
     display: block;
     margin: 0 auto;
@@ -221,27 +241,6 @@ button {
     max-width: 100px;
     height: auto;
     margin-right: 20px;
-}
-
-/*
-.speech-bubble {
-    background-color: #f1f1f1;
-    border: 2px solid #7a918d;
-    border-radius: 10px;
-    padding: 20px;
-    padding-right: 20px; 
-    position: relative;
-    box-sizing: border-box; 
-}
-*/
-
-.close-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 20px;
-    cursor: pointer;
-    color: #7a918d;
 }
 
 /* Updated container and speech bubble styles */
@@ -289,4 +288,36 @@ button {
     padding: 20px;
     font-size: 14px;
     line-height: 1.5;
+}
+
+#statusLog {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+#buttonContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    visibility: visible; /* Ensure visibility */
+    position: relative; /* Ensure correct positioning */
+    z-index: 1000; /* Ensure they appear above other elements */
+    background-color: #FBF3D5; /* Ensure background color for debugging */
+}
+
+.actionButton {
+    margin: 10px 0;
+    padding: 10px 20px;
+    font-size: 16px;
+    display: block; /* Ensure display */
+    visibility: visible; /* Ensure visibility */
+    position: relative; /* Ensure correct positioning */
+    z-index: 1000; /* Ensure they appear above other elements */
+    background-color: #9CAFAA; /* Ensure background color */
+    color: white; /* Ensure text color */
+    border: 1px solid #9CAFAA; /* Ensure border for debugging */
 }

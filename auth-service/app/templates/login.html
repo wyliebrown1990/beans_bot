@@ -16,30 +16,50 @@
     </script>
 </head>
 <body>
-    <div class="navbar">
-        <span class="nav-toggle" onclick="toggleNav()">&#9776;</span>
-        <div id="nav-menu" class="nav-menu">
-            <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+<div id="page-container">
+    <div id="content-wrap">
+        <div class="navbar">
+            <span class="nav-toggle" onclick="toggleNav()">&#9776;</span>
+            <div id="nav-menu" class="nav-menu">
+                <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+            </div>
+        </div>
+        <h1>Login</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form method="POST">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <div class="center">
+            <form action="{{ url_for('auth.signup') }}" method="get" style="display: inline;">
+                <button type="submit" class="button">or you can signup here</button>
+            </form>
         </div>
     </div>
-    <h1>Login</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class="flashes">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-    <form method="POST">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-    </form>
-    <div style="text-align: center; margin-top: 20px;">
-        <a href="{{ url_for('auth.signup') }}">or you can signup here</a>
-    </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
+</div>
 </body>
 </html>
-

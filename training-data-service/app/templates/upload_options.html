@@ -151,97 +151,116 @@
     </script>
 </head>
 <body>
-    <h1>Select Your Method(s) For Uploading Training Data</h1>
-    <div class="container">
-        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
-        <div class="speech-bubble" style="border-color: #EFBC9B;">
-            <p id="message-text" class="centered-message"></p>
+<div id="page-container">
+    <div id="content-wrap">
+        <h1>Select Your Method(s) For Uploading Training Data</h1>
+        <div class="container">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
+            <div class="speech-bubble" style="border-color: #EFBC9B;">
+                <p id="message-text" class="centered-message"></p>
+            </div>
         </div>
-    </div>
-    <div id="file-list-container">
-        <h2>Processed Files:</h2>
-        <form id="delete-selected-form" onsubmit="deleteSelectedFiles(event)">
+        <div id="file-list-container">
+            <h2>Processed Files:</h2>
+            <form id="delete-selected-form" onsubmit="deleteSelectedFiles(event)">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <div id="files-list"></div>
+                <input type="submit" value="Delete Selected Files">
+            </form>
+            <form id="delete-all-form" onsubmit="deleteAllFiles(event)">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <input type="submit" value="Delete All Files">
+            </form>
+        </div>
+        <h2>If you want to extract the text from videos on a youtube channel:</h2>
+        <form method="post" action="/youtube_transcription">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
-            <div id="files-list"></div>
-            <input type="submit" value="Delete Selected Files">
+            <label for="channel_id">YouTube Channel ID:
+                <span id="info-button" class="info-button">?</span>
+            </label>
+            <input type="text" id="channel_id" name="channel_id" required>
+            <br>
+            <label for="num_videos">Number of Videos:</label>
+            <input type="number" id="num_videos" name="num_videos" required>
+            <br>
+            <input type="submit" value="Start Transcription">
         </form>
-        <form id="delete-all-form" onsubmit="deleteAllFiles(event)">
+
+        <h2>Or enter individual YouTube video URLs:</h2>
+        <form method="post" action="/youtube_urls_transcription">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
-            <input type="submit" value="Delete All Files">
+            <label for="youtube_urls">YouTube URLs:</label>
+            <textarea id="youtube_urls" name="youtube_urls" rows="5" cols="50" placeholder="Enter one URL per line"></textarea>
+            <br>
+            <input type="submit" value="Start Transcription">
         </form>
-    </div>
-    <h2>If you want to extract the text from videos on a youtube channel:</h2>
-    <form method="post" action="/youtube_transcription">
-        <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-        <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-        <input type="hidden" name="industry" value="{{ industry.lower() }}">
-        <input type="hidden" name="username" value="{{ username.lower() }}">
-        <input type="hidden" name="user_id" value="{{ user_id }}">
-        <label for="channel_id">YouTube Channel ID:
-            <span id="info-button" class="info-button">?</span>
-        </label>
-        <input type="text" id="channel_id" name="channel_id" required>
-        <br>
-        <label for="num_videos">Number of Videos:</label>
-        <input type="number" id="num_videos" name="num_videos" required>
-        <br>
-        <input type="submit" value="Start Transcription">
-    </form>
 
-    <h2>Or enter individual YouTube video URLs:</h2>
-    <form method="post" action="/youtube_urls_transcription">
-        <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-        <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-        <input type="hidden" name="industry" value="{{ industry.lower() }}">
-        <input type="hidden" name="username" value="{{ username.lower() }}">
-        <input type="hidden" name="user_id" value="{{ user_id }}">
-        <label for="youtube_urls">YouTube URLs:</label>
-        <textarea id="youtube_urls" name="youtube_urls" rows="5" cols="50" placeholder="Enter one URL per line"></textarea>
+        <h2>Feel free to upload text files from your computer:</h2>
         <br>
-        <input type="submit" value="Start Transcription">
-    </form>
+        <form method="post" action="/file_upload" enctype="multipart/form-data">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="files">File Upload:</label>
+            <input type="file" id="files" name="files" multiple required>
+            <br>
+            <input type="submit" value="Upload Files">
+        </form>
+        <br>
+        <h2>Or if you prefer paste some text here and submit it:</h2>
+        <form method="post" action="/raw_text_submission">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="raw_text">Raw Text:</label>
+            <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
+            <br>
+            <input type="submit" value="Submit Text">
+        </form>
 
-    <h2>Feel free to upload text files from your computer:</h2>
-    <br>
-    <form method="post" action="/file_upload" enctype="multipart/form-data">
-        <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-        <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-        <input type="hidden" name="industry" value="{{ industry.lower() }}">
-        <input type="hidden" name="username" value="{{ username.lower() }}">
-        <input type="hidden" name="user_id" value="{{ user_id }}">
-        <label for="files">File Upload:</label>
-        <input type="file" id="files" name="files" multiple required>
-        <br>
-        <input type="submit" value="Upload Files">
-    </form>
-    <br>
-    <h2>Or if you prefer paste some text here and submit it:</h2>
-    <form method="post" action="/raw_text_submission">
-        <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-        <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-        <input type="hidden" name="industry" value="{{ industry.lower() }}">
-        <input type="hidden" name="username" value="{{ username.lower() }}">
-        <input type="hidden" name="user_id" value="{{ user_id }}">
-        <label for="raw_text">Raw Text:</label>
-        <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
-        <br>
-        <input type="submit" value="Submit Text">
-    </form>
-
-    <div id="info-popup" class="info-popup">
-        <span id="close-button" class="close-button">&times;</span>
-        <div class="info-content">
-            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="popup-image">
-            <div class="speech-bubble">
-                <p>If you want to extract the text from multiple videos on a specific youtube channel:</p>
-                <ul>
-                    <li>Navigate to the channel's homepage on Youtube</li>
-                    <li>Right click on the page and "view page source"</li>
-                    <li>CTRL+F search for "channelid" and copy the preceding value</li>
-                    <li>For example: "UC4X9DZim5FK94v5ZflRZszQ" (my pal grumpy cat's channel)</li>
-                </ul>
+        <div id="info-popup" class="info-popup">
+            <span id="close-button" class="close-button">&times;</span>
+            <div class="info-content">
+                <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="popup-image">
+                <div class="speech-bubble">
+                    <p>If you want to extract the text from multiple videos on a specific youtube channel:</p>
+                    <ul>
+                        <li>Navigate to the channel's homepage on Youtube</li>
+                        <li>Right click on the page and "view page source"</li>
+                        <li>CTRL+F search for "channelid" and copy the preceding value</li>
+                        <li>For example: "UC4X9DZim5FK94v5ZflRZszQ" (my pal grumpy cat's channel)</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
+</div>
 </body>
 </html>

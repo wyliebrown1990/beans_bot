@@ -278,9 +278,6 @@ def get_career_experience_answer(session: Session, username: str, job_title: str
         "next_question": next_question
     }
 
-
-
-
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)
     if match:

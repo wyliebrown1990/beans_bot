@@ -6,23 +6,46 @@
    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-   <h1>Sign Up</h1>
-   {% with messages = get_flashed_messages(with_categories=true) %}
-       {% if messages %}
-           <ul class="flashes">
-               {% for category, message in messages %}
-                   <li class="{{ category }}">{{ message }}</li>
-               {% endfor %}
-           </ul>
-       {% endif %}
-   {% endwith %}
-   <form method="POST" enctype="multipart/form-data">
-       <input type="text" name="username" placeholder="Username" required>
-       <input type="email" name="email" placeholder="Email" required>
-       <input type="password" name="password" placeholder="Password" required>
-       <input type="file" name="resume" accept=".txt,.pdf,.docx" required>
-       <button type="submit">Sign Up</button>
-   </form>
-   <a href="{{ url_for('auth.login') }}">Login</a>
+<div id="page-container">
+    <div id="content-wrap">
+        <h1>Sign Up</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form method="POST" enctype="multipart/form-data">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="file" name="resume" accept=".txt,.pdf,.docx" required>
+            <button type="submit">Sign Up</button>
+        </form>
+        <div class="center">
+            <form action="{{ url_for('auth.login') }}" method="get" style="display: inline;">
+                <button type="submit" class="button">Login</button>
+            </form>
+        </div>
+    </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
+</div>
 </body>
 </html>
