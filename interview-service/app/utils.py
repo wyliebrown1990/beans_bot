@@ -88,30 +88,63 @@ def get_session_history(session_id: str) -> ChatMessageHistory:
         chat_histories[session_id] = ChatMessageHistory()
     return chat_histories[session_id]
 
-def users_training_data(session: Session, user_id: int, job_title: str, company_name: str):
-    # Query all rows for the given user_id, job_title, and company_name, ordered by updated_at in descending order
-    training_data_rows = session.query(TrainingData).filter_by(user_id=user_id, job_title=job_title, company_name=company_name).order_by(TrainingData.updated_at.desc()).all()
-    
-    data_dict = {}
-    
-    if training_data_rows:
-        for i, training_data in enumerate(training_data_rows):
-            suffix = "" if i == 0 else f"_{i + 1}"
-            
-            data_dict[f"file_summary{suffix}"] = str(training_data.file_summary)
-            data_dict[f"top_topics{suffix}"] = str(training_data.top_topics)
-            data_dict[f"primary_products_and_services{suffix}"] = str(training_data.primary_products_and_services)
-            data_dict[f"target_market{suffix}"] = str(training_data.target_market)
-            data_dict[f"market_position{suffix}"] = str(training_data.market_position)
-            data_dict[f"required_skills{suffix}"] = str(training_data.required_skills)
-            data_dict[f"unique_selling_proposition{suffix}"] = str(training_data.unique_selling_proposition)
 
-    if not data_dict:
-        print("No training data found for the given user_id, job_title, and company_name.")
-    else:
-        print("Successfully retrieved data.")
-    
-    return data_dict
+def users_training_data(session, user_id, job_title, company_name):
+    try:
+        logging.debug(f"Fetching training data for user_id: {user_id}, job_title: {job_title}, company_name: {company_name}")
+        
+        # Fetch the User object
+        user = session.query(User).filter_by(id=user_id).one_or_none()
+        if not user:
+            logging.error(f"User not found for user_id: {user_id}")
+            return {}
+
+        # Fetch the TrainingData object
+        training_data = session.query(TrainingData).filter_by(user_id=user_id, job_title=job_title, company_name=company_name).one_or_none()
+        if not training_data:
+            logging.error(f"Training data not found for user_id: {user_id}, job_title: {job_title}, company_name: {company_name}")
+            return {}
+
+        resume_data = get_user_resume_data(session, user.username)
+        if not resume_data:
+            logging.error(f"No resume data found for user: {user.username}")
+            return {}
+
+        (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+         most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
+
+        # Log the resume data fetched
+        logging.debug(f"Resume data fetched for user: {user.username}")
+        logging.debug(f"Resume Text Full: {resume_text_full}")
+        logging.debug(f"Top Technical Skills: {top_technical_skills}")
+        logging.debug(f"Most Recent Job Title: {most_recent_job_title}")
+        logging.debug(f"Most Recent Company Name: {most_recent_company_name}")
+        logging.debug(f"Most Recent Experience Summary: {most_recent_experience_summary}")
+        logging.debug(f"Industry Expertise: {industry_expertise}")
+        logging.debug(f"Top Soft Skills: {top_soft_skills}")
+
+        # Construct the training data dictionary from the TrainingData object
+        training_data_dict = {
+            "file_summary": training_data.file_summary,
+            "top_topics": training_data.top_topics,
+            "primary_products_and_services": training_data.primary_products_and_services,
+            "target_market": training_data.target_market,
+            "market_position": training_data.market_position,
+            "required_skills": training_data.required_skills,
+            "unique_selling_proposition": training_data.unique_selling_proposition,
+            "industry_expertise": industry_expertise  # Include industry expertise from resume data
+        }
+
+        # Log the constructed training data
+        logging.debug(f"Constructed training data: {training_data_dict}")
+
+        return training_data_dict
+    except Exception as e:
+        logging.error(f"Error in users_training_data: {e}", exc_info=True)
+        return {}
+
+
+
 
 # used to download csv transcript
 def fetch_interview_data(session: Session, session_id: str):
@@ -149,14 +182,16 @@ def generate_question_2(job_title, company_name, industry, session_history, sess
 def generate_question_3(job_title, company_name, industry, session_history, session, training_data):
     global most_recent_question
     print("Starting generate_question_3")
+    print(f"Training data received: {training_data}")
 
-    top_technical_skills = training_data.get("top_technical_skills", "")
-    print(f"Top Technical Skills in generate_question_3: {top_technical_skills}")
+    industry_expertise = training_data.get("industry_expertise", "")
+    print(f"Industry Expertise in generate_question_3: {industry_expertise}")
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. Base your question around one or two of the top skills on my resume: {top_technical_skills}."),
+        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. You have my resume in front of you and you can see that I have industry expertise in: {industry_expertise}. Start your next question with, \"based on your resume,\" and then ask me how I keep up with the industry that I know most about."),
         MessagesPlaceholder(variable_name="messages"),
     ])
+    print(f"Prompt created: {prompt}")
 
     chain = prompt | model
     print("Sending prompt to OpenAI API for generating third question...")
@@ -175,11 +210,11 @@ def generate_question_4(job_title, company_name, industry, session_history, sess
     global most_recent_question
     print("Starting generate_question_4")
 
-    top_technical_skills = training_data.get("top_technical_skills", "")
-    print(f"Top Technical Skills in generate_question_4: {top_technical_skills}")
+    top_soft_skills = training_data.get("top_soft_skills", "")
+    print(f"Top Soft Skills in generate_question_4: {top_soft_skills}")
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. Base your question around one or two of the top skills on my resume: {top_technical_skills}."),
+        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. Ask me a question that you haven’t already asked in this chat session. You have my resume in front of you and you can see that my top soft skills are: {top_soft_skills}. Start your next question with, \"Based on your resume,\" and then mention one or more of my top skills. Then ask me a behavioral question that would push me to demonstrate that I am really able to apply those soft skills in the workplace."),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
@@ -191,7 +226,7 @@ def generate_question_4(job_title, company_name, industry, session_history, sess
     print(f"Response from OpenAI API: {response.content}")
 
     # Explicitly set most_recent_question with the new question
-    most_recent_question = response.content  
+    most_recent_question = response.content
     print("Updated most_recent_question in generate_question_4:", most_recent_question)
     print("generate_question_4 completed.")
     return most_recent_question
@@ -324,7 +359,11 @@ def get_answer_2(session: Session, username: str, job_title: str, company_name: 
 
     # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_question_3(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_technical_skills": top_technical_skills})
+    next_question = generate_question_3(job_title, company_name, industry, session_history, session, training_data={
+        "file_summary": file_summary, 
+        "top_technical_skills": top_technical_skills,
+        "industry_expertise": industry_expertise  # Add this line
+    })
 
     # Update most_recent_question with the new question
     most_recent_question = next_question
@@ -358,9 +397,94 @@ def get_answer_2(session: Session, username: str, job_title: str, company_name: 
         "next_question": next_question
     }
 
-def get_answer_3(session: Session, username: str, job_title: str, company_name: str, industry: str, user_response: str, file_summary: str, session_id: str):
+def get_answer_3(session, username, job_title, company_name, industry, user_response, file_summary, session_id):
     global most_recent_question, user_responses
     print("Starting get_answer_3")
+
+    resume_data = get_user_resume_data(session, username)
+    if not resume_data:
+        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
+
+    (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+     most_recent_experience_summary, industry_expertise, top_soft_skills) = resume_data
+
+    # Debug print to confirm data retrieval
+    print(f"Retrieved resume data: {resume_data}")
+
+    # Prompt 1: Analyze the user's answer
+    analysis_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = analysis_prompt | model
+    print("Sending analysis prompt to OpenAI API...")
+    print(f"Analysis Prompt: {analysis_prompt}")
+
+    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
+    print("Analysis Response from OpenAI API:", analysis_response)
+
+    # Prompt 2: Score the user's answer
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {most_recent_job_title} at {most_recent_company_name} company. I have experience in: {most_recent_experience_summary}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    print("Sending score prompt to OpenAI API...")
+    print(f"Score Prompt: {score_prompt}")
+
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
+    print("Score Response from OpenAI API:", score_response.content)
+
+    score = extract_score(score_response.content)
+
+    # Handle cases where the score response is empty or does not contain a number
+    if not score or not score.isdigit():
+        score = None
+
+    # Generate the next question with career context
+    session_history = get_session_history(os.urandom(24).hex())
+    next_question = generate_question_3(job_title, company_name, industry, session_history, session, training_data={
+        "file_summary": file_summary,
+        "industry_expertise": industry_expertise
+    })
+
+    # Update most_recent_question with the new question
+    most_recent_question = next_question
+
+    # Store the career user response
+    user_responses["career_user_responses"].append(user_response)
+    print("Career User Response:", user_response)
+    print("Most Recent Question:", most_recent_question)
+
+    # Store the response in the database
+    new_answer = InterviewAnswer(
+        session_id=session_id,  # Make sure to include session_id
+        job_title=job_title,
+        company_name=company_name,
+        industry=industry,
+        question=most_recent_question,  # Last question asked before the user's answer
+        answer=user_response,
+        critique=analysis_response,
+        score=score if score else "N/A"  # Store "N/A" if score is None
+    )
+    session.add(new_answer)
+    session.commit()
+
+    print("get_answer_3 completed.")
+    return {
+        "analysis_response": analysis_response,
+        "score": score if score else "N/A",
+        "next_question": next_question
+    }
+
+
+def get_answer_4(session: Session, username: str, job_title: str, company_name: str, industry: str, user_response: str, file_summary: str, session_id: str):
+    global most_recent_question, user_responses
+    print("Starting get_answer_4")
 
     resume_data = get_user_resume_data(session, username)
     if not resume_data:
@@ -411,13 +535,13 @@ def get_answer_3(session: Session, username: str, job_title: str, company_name: 
 
     # Generate the next question with career context
     session_history = get_session_history(os.urandom(24).hex())
-    next_question = generate_question_4(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_technical_skills": top_technical_skills})
+    next_question = generate_question_5(job_title, company_name, industry, session_history, session, training_data={"file_summary": file_summary, "top_soft_skills": top_soft_skills})
 
     # Update most_recent_question with the new question
     most_recent_question = next_question
 
     # Debug print after generating the next question
-    print("Updated most_recent_question in get_answer_3:", most_recent_question)
+    print("Updated most_recent_question in get_answer_4:", most_recent_question)
 
     # Store the career user response
     user_responses["career_user_responses"].append(user_response)
@@ -438,12 +562,13 @@ def get_answer_3(session: Session, username: str, job_title: str, company_name: 
     session.add(new_answer)
     session.commit()
 
-    print("get_answer_3 completed.")
+    print("get_answer_4 completed.")
     return {
         "analysis_response": analysis_response,
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 def extract_score(feedback):
     match = re.search(r"\b(\d{1,2})\b", feedback)
@@ -452,34 +577,38 @@ def extract_score(feedback):
     else:
         return "Score not found"
 
-def get_user_resume_data(session: Session, username: str):
-    user = session.query(User).filter(func.lower(User.username) == func.lower(username)).first()
-    if not user:
-        print(f"No user found for username: {username}")
+def get_user_resume_data(session, username):
+    print(f"Fetching resume data for user: {username}")
+    try:
+        user = session.query(User).filter_by(username=username).first()
+        if not user:
+            print("No user found with the given username.")
+            return None
+        
+        print("User found, retrieving resume data...")
+        
+        resume_text_full = user.resume_text_full
+        top_technical_skills = user.top_technical_skills
+        most_recent_job_title = user.most_recent_job_title
+        most_recent_company_name = user.most_recent_company_name
+        most_recent_experience_summary = user.most_recent_experience_summary
+        industry_expertise = user.industry_expertise
+        top_soft_skills = user.top_soft_skills
+
+        print(f"Resume Text Full: {resume_text_full}")
+        print(f"Top Technical Skills: {top_technical_skills}")
+        print(f"Most Recent Job Title: {most_recent_job_title}")
+        print(f"Most Recent Company Name: {most_recent_company_name}")
+        print(f"Most Recent Experience Summary: {most_recent_experience_summary}")
+        print(f"Industry Expertise: {industry_expertise}")
+        print(f"Top Soft Skills: {top_soft_skills}")
+
+        return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name,
+                most_recent_experience_summary, industry_expertise, top_soft_skills)
+
+    except Exception as e:
+        print(f"An error occurred while fetching resume data: {e}")
         return None
-
-    resume_text_full = user.resume_text_full
-    top_technical_skills = user.top_technical_skills
-    if top_technical_skills:
-        # Clean the top_technical_skills string
-        top_technical_skills = top_technical_skills.strip('{}').replace('"', '').replace("'", "")
-    
-    most_recent_job_title = user.most_recent_job_title
-    most_recent_company_name = user.most_recent_company_name
-    most_recent_experience_summary = user.most_recent_experience_summary
-    industry_expertise = user.industry_expertise
-    top_soft_skills = user.top_soft_skills
-
-    print("Retrieved Resume Data:")
-    print("Resume Text Full:", resume_text_full)
-    print("Top Technical Skills:", top_technical_skills)
-    print("Most Recent Job Title:", most_recent_job_title)
-    print("Most Recent Company Name:", most_recent_company_name)
-    print("Most Recent Experience Summary:", most_recent_experience_summary)
-    print("Industry Expertise:", industry_expertise)
-    print("Top Soft Skills:", top_soft_skills)
-
-    return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name, most_recent_experience_summary, industry_expertise, top_soft_skills)
 
 def create_table_if_not_exists(engine):
     try:

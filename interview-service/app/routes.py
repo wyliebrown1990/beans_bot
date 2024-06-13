@@ -8,7 +8,7 @@ from pydub import AudioSegment
 from openai import OpenAI
 from .utils import (
     get_session_history, generate_question_2, generate_question_3, generate_question_4,  # Import dynamically named functions
-    get_answer_1, get_answer_2, get_answer_3,  # Import dynamically named functions
+    get_answer_1, get_answer_2, get_answer_3, get_answer_4, # Import dynamically named functions
     extract_score, most_recent_question, user_responses, users_training_data, text_to_speech_file,
     setup_database, fetch_interview_data
 )
@@ -16,7 +16,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from .models import TrainingData, InterviewAnswer, User, VideoRecordingLog
+from app.models import TrainingData, InterviewAnswer, User, VideoRecordingLog
 
 # Initialize the OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -94,8 +94,8 @@ def setup_routes(app_instance, session_instance):
                 flask_session.modified = True
 
                 session_history = get_session_history(session_id)
-                session_history.add_message(AIMessage(content=results["analysis_response"] if results["analysis_response"] else "No analysis response"))
-                session_history.add_message(AIMessage(content=results["next_question"] if results["next_question"] else "No next question"))
+                session_history.add_message(AIMessage(content=results.get("analysis_response", "No analysis response")))
+                session_history.add_message(AIMessage(content=results.get("next_question", "No next question")))
 
                 # Convert text to speech for next question response only if the box is checked
                 next_question_audio_path = None
@@ -103,15 +103,14 @@ def setup_routes(app_instance, session_instance):
                     next_question_audio_path = text_to_speech_file(results["next_question"], voice_id)
 
                 return jsonify({
-                    'feedback_response': results["analysis_response"] if results["analysis_response"] else "No analysis response",
-                    'score_response': results["score"] if results["score"] else "N/A",
-                    'next_question_response': results["next_question"] if results["next_question"] else "No next question",
+                    'feedback_response': results.get("analysis_response", "No analysis response"),
+                    'score_response': results.get("score", "N/A"),
+                    'next_question_response': results.get("next_question", "No next question"),
                     'next_question_audio': next_question_audio_path if next_question_audio_path else None
                 })
         except Exception as e:
             logging.error(f"Error in start_interview: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
-
 
     @app_instance.route('/transcribe_audio', methods=['POST'])
     def transcribe_audio():
@@ -238,4 +237,3 @@ def setup_routes(app_instance, session_instance):
         except Exception as e:
                 print(f"Error saving video: {e}")
                 return jsonify({'error': str(e)}), 500
-
