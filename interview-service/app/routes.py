@@ -16,6 +16,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from .models import TrainingData, InterviewAnswer, User, VideoRecordingLog
 
 # Initialize the OpenAI client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -198,4 +199,43 @@ def setup_routes(app_instance, session_instance):
     def clear_session():
         flask_session.clear()
         return jsonify({'status': 'session cleared'}), 200
+    
+    @app_instance.route('/save_video', methods=['POST'])
+    def save_video():
+        try:
+            print("Received video file for saving...")
+            if 'video' not in request.files:
+                print("No video file uploaded.")
+                return jsonify({'error': 'No video file uploaded'}), 400
+
+            video_file = request.files['video']
+            session_id = request.form['session_id']
+            user_id = request.form['user_id']
+            job_role = request.form['job_title']  # Change job_title to job_role
+            company_name = request.form['company_name']
+
+            filename = secure_filename(video_file.filename)
+            file_path = os.path.join('/tmp', filename)
+            print(f"Saving video file to {file_path}...")
+            video_file.save(file_path)
+
+            with open(file_path, "rb") as video:
+                video_data = video.read()
+
+            new_video_recording = VideoRecordingLog(
+                user_id=user_id,
+                job_role=job_role,  # Change job_title to job_role
+                company_name=company_name,
+                session_id=session_id,
+                video_data=video_data
+            )
+            sqlalchemy_session.add(new_video_recording)
+            sqlalchemy_session.commit()
+            print(f"Video recording saved to database for session_id: {session_id}, user_id: {user_id}, job_role: {job_role}, company_name: {company_name}")
+
+            os.remove(file_path)
+            return jsonify({'message': 'Video saved successfully'})
+        except Exception as e:
+                print(f"Error saving video: {e}")
+                return jsonify({'error': str(e)}), 500
 

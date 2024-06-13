@@ -11,8 +11,11 @@ def create_app():
 
     # Setup database
     engine, session = setup_database(DATABASE_URL)
+    print("Database engine created.")
     Base.metadata.create_all(engine)  # Create tables based on models
+    print("Database tables created.")
     create_table_if_not_exists(engine)
+    print("Tables checked/created if not exist.")
 
     # Setup routes
     setup_routes(app, session)

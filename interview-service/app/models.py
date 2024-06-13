@@ -52,3 +52,13 @@ class User(UserMixin, Base):
     industry_expertise = Column(Text, nullable=True)
     top_soft_skills = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class VideoRecordingLog(Base):
+    __tablename__ = 'video_recording_log'
+    id = Column(Integer, primary_key=True)
+    session_id = Column(String(255), nullable=False)
+    user_id = Column(Integer, nullable=False)
+    job_role = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=False)
+    video_data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -336,8 +336,21 @@ button {
     text-align: center;
     display: none;
 }
+/* Ensure the status-message is always above the response-form */
 .status-container {
     display: flex;
     justify-content: center;
     width: 100%;
+    margin-bottom: 20px; /* Add margin-bottom to create space between status message and response form */
+}
+
+#status-message {
+    background-color: #CC5500;
+    color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    width: 50%;
+    text-align: center;
+    display: none;
+    margin-top: 20px; /* Add margin-top to create space between chat responses and status message */
 }

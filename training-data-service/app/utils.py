@@ -111,10 +111,13 @@ def store_training_data(db_session, training_data):
         try:
             db_session.commit()  # Ensure the session is committed
             logging.debug(f"Stored training data with ID: {training_data.id}")
+            print(f"DEBUG: Training data stored with ID: {training_data.id}")
         except Exception as e:
             logging.error(f"Error committing training data to the database: {str(e)}")
+            print(f"ERROR: Error committing training data to the database: {str(e)}")
             db_session.rollback()
             raise e
+
 
 
 def process_file(app, file_path, job_title, company_name, username, user_id):
@@ -127,9 +130,11 @@ def process_file(app, file_path, job_title, company_name, username, user_id):
             update_process_status(app, username, job_title, company_name, f'Processing file: {filename}')
             with open(file_path, "r") as f:
                 file_content = f.read()
+                print(f"DEBUG: File content loaded, length: {len(file_content)}")
 
             # Generate summary using ChatGPT
             summary = generate_summary(file_content)
+            print(f"DEBUG: Generated summary: {summary}")
 
             db = next(get_db())
             job_title = job_title.lower().strip()

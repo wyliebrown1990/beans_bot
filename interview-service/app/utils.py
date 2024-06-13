@@ -18,7 +18,7 @@ from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs, ApiError
 
 # Import models from app package
-from app.models import TrainingData, InterviewAnswer, User
+from app.models import TrainingData, InterviewAnswer, User, VideoRecordingLog
 
 load_dotenv()
 
@@ -480,3 +480,12 @@ def get_user_resume_data(session: Session, username: str):
     print("Top Soft Skills:", top_soft_skills)
 
     return (resume_text_full, top_technical_skills, most_recent_job_title, most_recent_company_name, most_recent_experience_summary, industry_expertise, top_soft_skills)
+
+def create_table_if_not_exists(engine):
+    try:
+        TrainingData.__table__.create(engine, checkfirst=True)
+        InterviewAnswer.__table__.create(engine, checkfirst=True)
+        User.__table__.create(engine, checkfirst=True)
+        VideoRecordingLog.__table__.create(engine, checkfirst=True)
+    except ProgrammingError:
+        pass
