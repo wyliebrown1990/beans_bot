@@ -162,7 +162,8 @@ def process_file(app, file_path, job_title, company_name, username, user_id):
             logging.error(f"Error processing file {filename}: {str(e)}")
             print(f"ERROR: Error processing file {filename}: {str(e)}")
             update_process_status(app, username, job_title, company_name, f'Error processing file: {filename}')
-
+        finally:
+            cleanup_uploads_folder(app)
 
 
 def process_raw_text(app, job_title, company_name, raw_text, username, user_id):
@@ -200,7 +201,9 @@ def process_raw_text(app, job_title, company_name, raw_text, username, user_id):
         except Exception as e:
             logging.error(f"Error processing raw text: {str(e)}")
             update_process_status(app, username, job_title, company_name, 'Error processing raw text')
-        cleanup_uploads_folder(app)
+        finally:
+            cleanup_uploads_folder(app)
+
 
 
 
@@ -271,6 +274,8 @@ def download_and_transcribe(app, video, job_title, company_name, username, user_
         except Exception as e:
             logging.error(f"Error downloading and transcribing video {video_title}: {str(e)}")
             update_process_status(app, username, job_title, company_name, f'Error downloading/transcribing video: {video_title}')
+        finally:
+            cleanup_uploads_folder(app)
 
 
 def transcribe_videos(app, channel_id, num_videos, job_title, company_name, username, user_id):
@@ -284,6 +289,8 @@ def transcribe_videos(app, channel_id, num_videos, job_title, company_name, user
     except Exception as e:
         logging.error(f"Error transcribing videos: {str(e)}")
         update_process_status(app, username, job_title, company_name, 'Error transcribing videos')
+    finally:
+        cleanup_uploads_folder(app)
 
 def process_youtube_urls(app, youtube_urls, job_title, company_name, username, user_id):
     try:
@@ -306,10 +313,15 @@ def process_youtube_urls(app, youtube_urls, job_title, company_name, username, u
     except Exception as e:
         logging.error(f"Error processing YouTube URLs: {str(e)}")
         update_process_status(app, username, job_title, company_name, 'Error processing YouTube URLs')
+    finally:
+        cleanup_uploads_folder(app)
+
 
 
 def cleanup_uploads_folder(app):
-    save_dir, _ = get_save_dir(app)
+    save_dir, transcription_dir = get_save_dir(app)
+
+    # Remove all .txt files in the uploads folder
     txt_files = glob.glob(os.path.join(save_dir, '*.txt'))
     for txt_file in txt_files:
         try:
@@ -317,6 +329,16 @@ def cleanup_uploads_folder(app):
             logging.info(f"Deleted file: {txt_file}")
         except Exception as e:
             logging.error(f"Error deleting file {txt_file}: {e}")
+
+    # Remove all .txt files in the uploads/youtube folder
+    youtube_txt_files = glob.glob(os.path.join(transcription_dir, '*.txt'))
+    for youtube_txt_file in youtube_txt_files:
+        try:
+            os.remove(youtube_txt_file)
+            logging.info(f"Deleted file: {youtube_txt_file}")
+        except Exception as e:
+            logging.error(f"Error deleting file {youtube_txt_file}: {e}")
+
 
 
 def get_video_urls_from_channel(channel_id, num_videos):

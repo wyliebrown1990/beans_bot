@@ -321,3 +321,12 @@ p {
     color: white; /* Ensure text color */
     border: 1px solid #9CAFAA; /* Ensure border for debugging */
 }
+
+/* Styles for the dropdown */
+.dropdown select {
+    padding: 10px;
+    border: 1px solid #9CAFAA;
+    border-radius: 4px;
+    width: 300px;
+    margin-bottom: 20px; /* Add some space below the dropdown */
+ }

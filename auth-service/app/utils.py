@@ -134,7 +134,6 @@ def get_resume_analysis(resume_text):
 
     return response_json
 
-
 def output_checker(response_json):
     global missing_json
     missing_json = [key for key, value in response_json.items() if not value]

@@ -78,7 +78,7 @@ def setup_routes(app, db_session):
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=transcribe_videos, args=(current_app._get_current_object(), channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username, user_id)).start()
-        return jsonify({'success': 'Transcription started successfully'}), 200
+        return jsonify({'pending': 'Transcription started successfully'}), 202
 
 
     @app.route('/youtube_urls_transcription', methods=['POST'])
@@ -99,7 +99,7 @@ def setup_routes(app, db_session):
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=process_youtube_urls, args=(current_app._get_current_object(), youtube_urls, job_title, company_name, username, user_id)).start()
-        return jsonify({'success': 'YouTube URLs transcription started successfully'}), 200
+        return jsonify({'pending': 'YouTube URLs transcription started successfully'}), 202
 
 
     @app.route('/file_upload', methods=['POST'])
@@ -134,7 +134,7 @@ def setup_routes(app, db_session):
             else:
                 print(f"DEBUG: Skipping file {file.filename} - not a .txt file")
 
-        return jsonify({'success': 'Files uploaded successfully'}), 200
+        return jsonify({'pending': 'File processing started'}), 202
 
 
     @app.route('/raw_text_submission', methods=['POST'])
@@ -154,7 +154,7 @@ def setup_routes(app, db_session):
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=process_raw_text, args=(current_app._get_current_object(), job_title, company_name, raw_text, username, user_id)).start()
-        return jsonify({'success': 'Raw text submission started successfully'}), 200
+        return jsonify({'pending': 'Raw text submission started successfully'}), 202
 
 
     @app.route('/progress')
@@ -183,14 +183,13 @@ def setup_routes(app, db_session):
         with app.app_context():
             db = next(get_db())
             training_data_exists = db.query(TrainingData).filter(
-                func.lower(TrainingData.job_title) == job_title,
-                func.lower(TrainingData.company_name) == company_name
+                TrainingData.user_id == user_id
             ).first() is not None
 
         if training_data_exists:
-            message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
+            message = "Looks like I have some data you uploaded in a previous session. Feel free to use this or delete it and upload more. We have a 5 file limit for free users."
         else:
-            message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
+            message = f"Looks like I don’t have any data uploaded about being a {job_title} at {company_name}. Please upload at least 1 file of data so that our interview is relevant to your job search. We have a max upload limit of 5 but you can always delete uploaded data and then add more."
 
         return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id, message=message)
 

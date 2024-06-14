@@ -18,6 +18,11 @@ from .utils import (
 )
 from . import login_manager
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -46,7 +51,7 @@ def login():
 def signup():
     if request.method == 'POST':
         try:
-            username = request.form['username']
+            username = request.form['username'].lower()  # Convert to lowercase
             email = request.form['email']
             password = request.form['password']
             file = request.files['resume']
@@ -73,7 +78,7 @@ def signup():
                 response_data = get_resume_analysis(resume_text)
 
                 # Print the response data for debugging
-                print("Response Data:", response_data)
+                logger.info("Response Data: %s", response_data)
 
                 if not output_checker(response_data):
                     response_data = get_resume_analysis_2(resume_text)
@@ -108,10 +113,11 @@ def signup():
             else:
                 flash('Invalid file format. Please upload a .docx, .pdf, or .txt file.')
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error("Error processing signup: %s", e)
             flash('We encountered an error. Try uploading your resume in a different format please.')
             return redirect(url_for('auth.signup'))
     return render_template('signup.html')
+
 
 
 @auth_bp.route('/logout')
