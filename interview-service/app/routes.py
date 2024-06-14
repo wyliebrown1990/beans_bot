@@ -7,8 +7,8 @@ from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 from openai import OpenAI
 from .utils import (
-    get_session_history, generate_question_2, generate_question_3, generate_question_4,  # Import dynamically named functions
-    get_answer_1, get_answer_2, get_answer_3,  # Import dynamically named functions
+    get_session_history, generate_question_2, generate_question_3, generate_question_4, generate_question_5, generate_infinite_questions, # Import dynamically named functions
+    get_answer_1, get_answer_2, get_answer_3, get_answer_4, get_infinite_answers, # Import dynamically named functions
     extract_score, most_recent_question, user_responses, users_training_data, text_to_speech_file,
     setup_database, fetch_interview_data
 )
@@ -79,7 +79,10 @@ def setup_routes(app_instance, session_instance):
                 logging.debug(f"Response Number: {response_number}")
 
                 # Dynamically call the correct answer function
-                answer_function_name = f"get_answer_{response_number}"
+                if response_number <= 4:
+                    answer_function_name = f"get_answer_{response_number}"
+                else:
+                    answer_function_name = "get_infinite_answers"
                 logging.debug(f"Answer Function Name: {answer_function_name}")
                 answer_function = globals().get(answer_function_name)
                 logging.debug(f"Answer Function: {answer_function}")

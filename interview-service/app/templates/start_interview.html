@@ -1,373 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Start Interview</title>
-   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Start Interview</title>
+ <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+ <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 <div id="page-container">
-   <div id="content-wrap">
-       <header>
-           <div>
-               <h1>Interview Chat for {{ username }}</h1>
-           </div>
-       </header>
-       <div id="chat" class="chat-container">
-           <div class="chat-block">
-               <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image" id="bot-image">
-               <div class="speech-bubble">
-                   <p>Beans-bot: {{ question }}</p>
-               </div>
-           </div>
-           <div id="responses"></div>
-       </div>
+ <div id="content-wrap">
+     <header>
+         <div>
+             <h1>Interview Chat for {{ username }}</h1>
+         </div>
+     </header>
+     <div id="chat" class="chat-container">
+         <div class="chat-block">
+             <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image" id="bot-image">
+             <div class="speech-bubble">
+                 <p>Beans-bot: {{ question }}</p>
+             </div>
+         </div>
+         <div id="responses" data-username="{{ username }}"></div>
+     </div>
 
-       <div id="timer-container">
-           <h5>Countdown Timer</h5>
-           <div id="timer">90</div>
-       </div>
+     <div id="answer-timer-container">
+         <h5>Countdown to Recommended Answer Submission</h5>
+         <div id="answer-timer">90</div>
+     </div>
 
-       <div class="status-container">
-           <div id="status-message" class="status-message"></div>
-       </div>
+     <div id="interview-timer-container">
+         <h5>Time Left in Interview</h5>
+         <div id="interview-timer">2700</div> <!-- 45 minutes in seconds -->
+     </div>
 
-       <form id="response-form" method="POST">
-           <input type="hidden" name="job_title" value="{{ job_title }}">
-           <input type="hidden" name="company_name" value="{{ company_name }}">
-           <input type="hidden" name="industry" value="{{ industry }}">
-           <input type="hidden" name="username" value="{{ username }}">
-           <input type="hidden" name="user_id" value="{{ user_id }}">
-           <input type="hidden" name="session_id" value="{{ session_id }}">
-           <label for="answer_1">Your Response:</label>
-           <textarea id="answer_1" name="answer_1" rows="5" style="width: 100%;" required></textarea>
-           <div>
-               <input type="checkbox" id="generate_audio" name="generate_audio">
-               <label for="generate_audio">Generate Audio For Next Question</label>
-           </div>
-           <div id="voice-selection" style="display:none;">
-               <label for="voice">Choose Voice:</label>
-               <select id="voice" name="voice">
-                   <option value="WBPMIeOib7vXJnT2Iibp">Knightley</option>
-                   <option value="P9OzYIULscDISblYABOC">Raj </option>
-                   <option value="tnSpp4vdxKPjI9w0GnoV">Hope</option>
-                   <option value="kBag1HOZlaVBH7ICPE8x">Sally</option>
-                   <option value="aTxZrSrp47xsP6Ot4Kgd">Kayla</option>
-               </select>
-           </div>
-           <button type="submit">Send</button>
-       </form>
-       <button id="record-answer">Record Answer</button>
-       <button id="record-video">Record Video of This Session</button>
-       <div>
-           <button id="download-transcript">Download Transcript</button>
-           <button onclick="startNewInterviewSession()">Start New Interview Session</button>
-       </div>
-   </div>
-   <footer>
-       <div>
-           <a href="#">About us</a><br>
-           <a href="#">Privacy Policy</a><br>
-           <a href="#">Contact us</a>
-       </div>
-       <div>
-           <a href="#">Pricing</a><br>
-           <a href="#">Github</a>
-       </div>
-       <div>
-           <a href="#">Blog</a><br>
-           <a href="#">Forum</a>
-       </div>
-   </footer>
+     <div class="status-container">
+         <div id="status-message" class="status-message"></div>
+     </div>
+
+     <form id="response-form" method="POST">
+         <input type="hidden" name="job_title" value="{{ job_title }}">
+         <input type="hidden" name="company_name" value="{{ company_name }}">
+         <input type="hidden" name="industry" value="{{ industry }}">
+         <input type="hidden" name="username" value="{{ username }}">
+         <input type="hidden" name="user_id" value="{{ user_id }}">
+         <input type="hidden" name="session_id" value="{{ session_id }}">
+         <label for="answer_1">Your Response:</label>
+         <textarea id="answer_1" name="answer_1" rows="5" style="width: 100%;" required></textarea>
+         <div>
+             <input type="checkbox" id="generate_audio" name="generate_audio">
+             <label for="generate_audio">Generate Audio For Next Question</label>
+         </div>
+         <div id="voice-selection" style="display:none;">
+             <label for="voice">Choose Voice:</label>
+             <select id="voice" name="voice">
+                 <option value="WBPMIeOib7vXJnT2Iibp">Knightley</option>
+                 <option value="P9OzYIULscDISblYABOC">Raj</option>
+                 <option value="tnSpp4vdxKPjI9w0GnoV">Hope</option>
+                 <option value="kBag1HOZlaVBH7ICPE8x">Sally</option>
+                 <option value="aTxZrSrp47xsP6Ot4Kgd">Kayla</option>
+             </select>
+         </div>
+         <button type="submit">Send</button>
+     </form>
+     <button id="record-answer">Record Answer</button>
+     <button id="record-video">Record Video of This Session</button>
+     <div>
+         <button id="download-transcript">Download Transcript</button>
+         <button onclick="startNewInterviewSession()">Start New Interview Session</button>
+     </div>
+ </div>
+ <footer>
+     <div>
+         <a href="#">About us</a><br>
+         <a href="#">Privacy Policy</a><br>
+         <a href="#">Contact us</a>
+     </div>
+     <div>
+         <a href="#">Pricing</a><br>
+         <a href="#">Github</a>
+     </div>
+     <div>
+         <a href="#">Blog</a><br>
+         <a href="#">Forum</a>
+     </div>
+ </footer>
 </div>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
-   let mediaRecorder;
-   let audioChunks = [];
-   let recording = false;
-
-   let videoRecorder;
-   let videoChunks = [];
-   let videoRecording = false;
-
-   let timerInterval;
-   let timeLeft = 90;
-
-   let currentAudio = null;
-   let playButton = null;
-
-   function startTimer() {
-       clearInterval(timerInterval);
-       timeLeft = 90;
-       const timerElement = document.getElementById('timer');
-       timerElement.classList.remove('pulse');
-       timerElement.innerText = timeLeft;
-       timerInterval = setInterval(() => {
-           timeLeft--;
-           if (timeLeft <= 0) {
-               clearInterval(timerInterval);
-               timerElement.innerText = "Wrap up answer";
-               timerElement.classList.add('pulse');
-           } else {
-               timerElement.innerText = timeLeft;
-           }
-       }, 1000);
-   }
-
-   document.addEventListener('DOMContentLoaded', (event) => {
-       startTimer();
-   });
-
-   document.getElementById('generate_audio').addEventListener('change', function() {
-       if (this.checked) {
-           document.getElementById('voice-selection').style.display = 'block';
-       } else {
-           document.getElementById('voice-selection').style.display = 'none';
-       }
-   });
-
-   document.getElementById('record-answer').addEventListener('click', function() {
-       if (!recording) {
-           startRecording();
-       } else {
-           stopRecording();
-       }
-   });
-
-   function startRecording() {
-       console.log("Starting recording...");
-       $('#status-message').text("Recording...").fadeIn();
-       $('#record-answer').text("Stop Recording");
-       recording = true;
-
-       navigator.mediaDevices.getUserMedia({ audio: true })
-           .then(stream => {
-               mediaRecorder = new MediaRecorder(stream);
-               mediaRecorder.start();
-
-               mediaRecorder.ondataavailable = function(event) {
-                   audioChunks.push(event.data);
-               };
-
-               mediaRecorder.onstart = function() {
-                   console.log("Recording started.");
-               };
-
-               mediaRecorder.onerror = function(event) {
-                   console.error("Recording error:", event.error);
-               };
-           })
-           .catch(error => {
-               console.error('Error accessing microphone:', error);
-           });
-   }
-
-   function stopRecording() {
-       console.log("Stopping recording...");
-       $('#status-message').text("Transcribing answer. This can take a while... Sit tight.").fadeIn();
-       $('#record-answer').text("Record Answer");
-       recording = false;
-
-       mediaRecorder.stop();
-       mediaRecorder.onstop = function() {
-           console.log("Recording stopped.");
-           const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-           const formData = new FormData();
-           formData.append('audio', audioBlob);
-
-           console.log("Sending audio blob to server...");
-           $.ajax({
-               type: 'POST',
-               url: "{{ url_for('transcribe_audio') }}",
-               data: formData,
-               processData: false,
-               contentType: false,
-               success: function(response) {
-                   console.log("Server response:", response);
-                   $('#status-message').fadeOut();
-                   $('#answer_1').val(response.transcription);
-               },
-               error: function(error) {
-                   console.error('Error:', error);
-                   $('#status-message').text("An error occurred during transcription. Please try again.").fadeIn().delay(3000).fadeOut();
-               }
-           });
-
-           audioChunks = [];
-       };
-   }
-
-   document.getElementById('record-video').addEventListener('click', function() {
-       if (!videoRecording) {
-           startVideoRecording();
-       } else {
-           stopVideoRecording();
-       }
-   });
-
-   function startVideoRecording() {
-       console.log("Starting video recording...");
-       $('#status-message').text("Video recording...").fadeIn();
-       $('#record-video').text("Press to Stop Video Recording");
-       videoRecording = true;
-
-       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-           .then(stream => {
-               videoRecorder = new MediaRecorder(stream);
-               videoRecorder.start();
-
-               videoRecorder.ondataavailable = function(event) {
-                   videoChunks.push(event.data);
-               };
-
-               videoRecorder.onstart = function() {
-                   console.log("Video recording started.");
-               };
-
-               videoRecorder.onerror = function(event) {
-                   console.error("Video recording error:", event.error);
-               };
-           })
-           .catch(error => {
-               console.error('Error accessing camera:', error);
-           });
-   }
-
-   function stopVideoRecording() {
-       console.log("Stopping video recording...");
-       $('#status-message').text("Processing video...").fadeIn();
-       $('#record-video').text("Record Video of This Session");
-       videoRecording = false;
-
-       videoRecorder.stop();
-       videoRecorder.onstop = function() {
-           console.log("Video recording stopped.");
-           const videoBlob = new Blob(videoChunks, { type: 'video/webm' });
-           const videoUrl = URL.createObjectURL(videoBlob);
-           const a = document.createElement("a");
-           a.style.display = 'none';
-           a.href = videoUrl;
-           a.download = 'interview_recording.webm';
-           document.body.appendChild(a);
-           a.click();
-           document.body.removeChild(a);
-
-           $('#status-message').text("Download of recording complete").fadeIn().delay(3000).fadeOut();
-
-           videoChunks = [];
-       };
-   }
-
-   $('#response-form').on('submit', function(event) {
-       event.preventDefault();
-       const form = $(this);
-       const userResponse = $('#answer_1').val();
-       console.log("User response:", userResponse);
-
-       // Show status message
-       $('#status-message').text("Processing your response...").fadeIn();
-
-       $.ajax({
-           type: 'POST',
-           url: "{{ url_for('start_interview') }}",
-           data: form.serialize(),
-           success: function(response) {
-               console.log("Server response:", response);
-
-               // Hide status message
-               $('#status-message').fadeOut();
-
-               $('#responses').append(`
-                   <div class="chat-block">
-                       <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User Image" class="chat-image">
-                       <div class="speech-bubble">
-                           <p>{{ username }}: ${userResponse}</p>
-                       </div>
-                   </div>
-                   <div class="chat-block">
-                       <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
-                       <div class="speech-bubble">
-                           <p>Beans-bot Feedback: ${response.feedback_response}</p>
-                           <p>Beans-bot Score: ${response.score_response}</p>
-                           <p>Beans-bot: ${response.next_question_response}</p>
-                           ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
-                       </div>
-                   </div>
-               `);
-
-               $('#answer_1').val('');
-               startTimer();  // Reset the timer when a new question is received
-           },
-           error: function(error) {
-               console.log('Error:', error);
-
-               // Show error message
-               $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
-           }
-       });
-   });
-
-   function toggleAudio(audioPath, button) {
-       if (currentAudio && !currentAudio.paused) {
-           currentAudio.pause();
-           button.style.backgroundColor = '';
-           button.innerText = 'Play Next Question';
-           return;
-       }
-
-       currentAudio = new Audio(audioPath);
-       currentAudio.play();
-       button.style.backgroundColor = 'burnt orange';
-       button.innerText = 'Stop Audio';
-
-       currentAudio.onended = () => {
-           button.style.backgroundColor = '';
-           button.innerText = 'Play Next Question';
-       };
-   }
-
-   document.getElementById('download-transcript').addEventListener('click', function() {
-       $.ajax({
-           type: 'GET',
-           url: "{{ url_for('download_transcript', session_id=session_id) }}",
-           success: function(response) {
-               const blob = new Blob([response], { type: 'text/csv;charset=utf-8;' });
-               const downloadUrl = URL.createObjectURL(blob);
-               const a = document.createElement("a");
-               a.href = downloadUrl;
-               a.download = "interview_transcript.csv";
-               document.body.appendChild(a);
-               a.click();
-               document.body.removeChild(a);
-           },
-           error: function(error) {
-               console.error('Error downloading transcript:', error);
-           }
-       });
-   });
-
-   function startNewInterviewSession() {
-       const urlParams = new URLSearchParams(window.location.search);
-       const job_title = urlParams.get('job_title');
-       const company_name = urlParams.get('company_name');
-       const industry = urlParams.get('industry');
-       const username = urlParams.get('username');
-       const user_id = urlParams.get('user_id');
-
-       // Clear Flask session data on the server
-       $.ajax({
-           type: 'POST',
-           url: "{{ url_for('clear_session') }}",
-           success: function() {
-               // Redirect to the same URL to start a new session
-               window.location.href = `{{ url_for('start_interview') }}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}`;
-           },
-           error: function(error) {
-               console.error('Error clearing session:', error);
-           }
-       });
-   }
+   const transcribeAudioUrl = "{{ url_for('transcribe_audio') }}";
+   const startInterviewUrl = "{{ url_for('start_interview') }}";
+   const downloadTranscriptUrl = "{{ url_for('download_transcript', session_id=session_id) }}";
+   const clearSessionUrl = "{{ url_for('clear_session') }}";
 </script>
 </body>
 </html>

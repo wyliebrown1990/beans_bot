@@ -4,27 +4,27 @@ body {
     color: #333;
     margin: 0;
     padding: 20px;
-}
-
-html, body {
+ }
+ 
+ html, body {
     height: 100%;
     margin: 0;
-}
-
-h1 {
+ }
+ 
+ h1 {
     color: #7a918d;
     text-align: center;
     margin-top: -5px;
-}
-
-header {
+ }
+ 
+ header {
     padding: 10px 20px;
     text-align: center;
     display: flex;
     justify-content: center;
-}
-
-.header-block {
+ }
+ 
+ .header-block {
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
@@ -34,9 +34,9 @@ header {
     max-width: 800px;
     width: 100%;
     box-sizing: border-box;
-}
-
-form {
+ }
+ 
+ form {
     background-color: #D6DAC8;
     padding: 20px;
     margin-top: 20px;
@@ -45,10 +45,10 @@ form {
     width: 500px;
     margin-left: auto;
     margin-right: auto;
-}
-
-input[type="text"],
-input[type="submit"] {
+ }
+ 
+ input[type="text"],
+ input[type="submit"] {
     padding: 10px;
     margin: 5px 0;
     border: 1px solid #9CAFAA;
@@ -57,26 +57,26 @@ input[type="submit"] {
     width: 300px;
     margin-left: auto;
     margin-right: auto;
-}
-
-input[type="submit"] {
+ }
+ 
+ input[type="submit"] {
     background-color: #9CAFAA;
     color: white;
     cursor: pointer;
     width: 300px;
     margin-left: auto;
     margin-right: auto;
-}
-
-input[type="submit"]:hover {
+ }
+ 
+ input[type="submit"]:hover {
     background-color: #7a918d;
-}
-
-a {
+ }
+ 
+ a {
     color: #333;
-}
-
-footer {
+ }
+ 
+ footer {
     display: flex;
     justify-content: space-around;
     background-color: #6d837f;
@@ -86,48 +86,48 @@ footer {
     padding: 20px 0;
     width: 100%;
     margin-top: auto; /* Push footer to the bottom */
-}
-
-footer div {
+ }
+ 
+ footer div {
     flex: 1;
     text-align: left;
     padding: 0 10px;
-}
-
-footer div a {
+ }
+ 
+ footer div a {
     color: white;
     text-decoration: none;
     display: block;
     margin: 5px 0;
-}
-
-footer div a:hover {
+ }
+ 
+ footer div a:hover {
     text-decoration: underline;
-}
-
-hr {
+ }
+ 
+ hr {
     border: 0;
     height: 1px;
     background-color: #333;
     margin: 20px 0;
-}
-
-/* Chat block specific CSS */
-.chat-block {
+ }
+ 
+ /* Chat block specific CSS */
+ .chat-block {
     background-color: #7a918d;
     padding: 20px;
     margin: 10px auto;
     border-radius: 8px;
     width: 500px;
     color: white; /* Ensures text is readable on dark background */
-}
-
-p {
+ }
+ 
+ p {
     text-align: left;
     padding: 0 20px;
-}
-
-button {
+ }
+ 
+ button {
     padding: 10px;
     margin: 5px 0;
     border: 1px solid #D6DAC8;
@@ -139,10 +139,10 @@ button {
     background-color: #7a918d;
     color: white;
     cursor: pointer;
-}
-
-/* Image block specific CSS */
-.image-block {
+ }
+ 
+ /* Image block specific CSS */
+ .image-block {
     background-color: #D6DAC8;
     padding: 20px;
     margin-top: 20px;
@@ -151,53 +151,83 @@ button {
     width: 500px;
     margin-left: auto;
     margin-right: auto;
-}
-
-.image-block img {
+ }
+ 
+ .image-block img {
     max-width: 100%;
     height: auto;
-}
-
-/* Page Spacing */
-#page-container {
+ }
+ 
+ /* Page Spacing */
+ #page-container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-}
-
-#content-wrap {
+ }
+ 
+ #content-wrap {
     flex: 1;
-}
-
-#user_response {
+ }
+ 
+ #user_response {
     width: 100%;
     box-sizing: border-box;
     resize: none; /* Disable manual resizing to ensure the auto-resize works properly */
     overflow: hidden; /* Hide the scroll bar */
-}
-
-/* Timer CSS */
-#timer-container {
+ }
+ 
+ /* Timer CSS */
+ #answer-timer-container, #interview-timer-container {
     position: fixed;
-    top: 5px;  
-    right: 5px;  
+    top: 5px; 
     background-color: #7a918d;
     text-align: center;
-    padding: 5px;  
+    padding: 5px; 
     z-index: 1000;
     border: 2px solid black;
+    max-width: 120px; /* Adjust this value as needed */
+    word-wrap: break-word; /* Ensures the text wraps within the container */
 }
 
-#timer {
-    font-size: 1em;  
+#answer-timer-container {
+    right: 5px; /* Position the answer timer in the top-right corner */
+}
+
+#interview-timer-container {
+    left: 5px; /* Position the interview timer in the top-left corner */
+}
+
+#answer-timer, #interview-timer {
+    font-size: 1em; 
     color: black;
 }
 
-.pulse {
-    animation: pulse-animation 1s infinite;
+h5 {
+    font-size: 1em; /* Adjust the font size if needed */
+    margin: 0; /* Remove default margin */
 }
 
-@keyframes pulse-animation {
+ #interview-timer-container {
+    position: fixed;
+    top: 5px; 
+    left: 5px; 
+    background-color: #7a918d;
+    text-align: center;
+    padding: 5px; 
+    z-index: 1000;
+    border: 2px solid black;
+ }
+ 
+ #interview-timer {
+    font-size: 1em; 
+    color: black;
+ }
+ 
+ .pulse {
+    animation: pulse-animation 1s infinite;
+ }
+ 
+ @keyframes pulse-animation {
     0% {
         transform: scale(1);
     }
@@ -207,57 +237,57 @@ button {
     100% {
         transform: scale(1);
     }
-}
-
-/* Media Queries */
-@media (max-width: 768px) {
+ }
+ 
+ /* Media Queries */
+ @media (max-width: 768px) {
     form, .chat-block, .image-block {
         width: 100%; /* Makes the form, chat blocks, and image block full width */
         padding: 10px; /* Reduces padding */
     }
-
+ 
     input[type="text"], input[type="submit"] {
         width: 90%; /* Makes input fields take up most of the form width */
     }
-
+ 
     footer {
         flex-direction: column;
         text-align: center;
     }
-
+ 
     footer div {
         text-align: center;
         padding: 10px 0;
     }
-}
-
-@media (max-width: 480px) {
+ }
+ 
+ @media (max-width: 480px) {
     body, header, footer {
         padding: 10px; /* Reduces padding for smaller screens */
     }
-
+ 
     h1 {
         font-size: 24px; /* Adjusts the size of the heading */
     }
-}
-
-.chat-container {
+ }
+ 
+ .chat-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-bottom: 20px;
-}
-.chat-block {
+ }
+ .chat-block {
     display: flex;
     align-items: flex-start;
     margin-bottom: 10px;
     width: 50%; /* Ensure the chat block takes up 80% of the container width */
-}
-.chat-image {
+ }
+ .chat-image {
     max-width: 100px;
     margin-right: 10px;
-}
-.speech-bubble {
+ }
+ .speech-bubble {
     background-color: #f1f1f1;
     border: 2px solid #7a918d;
     border-radius: 10px;
@@ -265,8 +295,8 @@ button {
     position: relative;
     max-width: 70%;
     color: #7a918d; /* Updated text color to dark green */
-}
-.speech-bubble:after {
+ }
+ .speech-bubble:after {
     content: '';
     position: absolute;
     top: 20px;
@@ -276,44 +306,8 @@ button {
     border: 10px solid transparent;
     border-right-color: #f1f1f1;
     border-left-color: #7a918d;
-}
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-}
-.chat-block {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 10px;
-    width: 50%; /* Ensure the chat block takes up 50% of the container width */
-}
-.chat-image {
-    max-width: 100px;
-    margin-right: 10px;
-}
-.speech-bubble {
-    background-color: #f1f1f1;
-    border: 2px solid #7a918d;
-    border-radius: 10px;
-    padding: 20px;
-    position: relative;
-    max-width: 70%;
-    color: #7a918d; /* Updated text color to dark green */
-}
-.speech-bubble:after {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: -20px;
-    width: 0;
-    height: 0;
-    border: 10px solid transparent;
-    border-right-color: #f1f1f1;
-    border-left-color: #7a918d;
-}
-.play-button {
+ }
+ .play-button {
     background-color: #7a918d;
     color: #ffffff;
     border: none;
@@ -321,8 +315,8 @@ button {
     cursor: pointer;
     border-radius: 5px;
     margin-top: 10px;
-}
-.status-message {
+ }
+ .status-message {
     background-color: #CC5500;
     color: #ffffff;
     padding: 20px;
@@ -331,16 +325,16 @@ button {
     width: 50%;
     text-align: center;
     display: none;
-}
-/* Ensure the status-message is always above the response-form */
-.status-container {
+ }
+ /* Ensure the status-message is always above the response-form */
+ .status-container {
     display: flex;
     justify-content: center;
     width: 100%;
     margin-bottom: 20px; /* Add margin-bottom to create space between status message and response form */
-}
-
-#status-message {
+ }
+ 
+ #status-message {
     background-color: #CC5500;
     color: #ffffff;
     padding: 20px;
@@ -349,4 +343,5 @@ button {
     text-align: center;
     display: none;
     margin-top: 20px; /* Add margin-top to create space between chat responses and status message */
-}
+ }
+ 
