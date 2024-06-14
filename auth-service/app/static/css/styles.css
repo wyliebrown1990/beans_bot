@@ -243,3 +243,13 @@ footer div a:hover {
     font-size: 14px;
     line-height: 1.5;
 }
+
+.status-block {
+    background-color: #CC5500;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    margin-top: 20px;
+    border-radius: 4px;
+ }
+ 

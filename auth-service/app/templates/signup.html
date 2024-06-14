@@ -1,54 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <title>Sign Up</title>
-   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script>
+    function showStatusBlock() {
+        document.getElementById('status-block').style.display = 'block';
+        document.getElementById('status-block').innerText = 'Processing your resume. This can take up to a minute...';
+    }
+
+    function showErrorStatusBlock() {
+        document.getElementById('status-block').style.display = 'block';
+        document.getElementById('status-block').innerText = 'We encountered an error. Try uploading your resume in a different format please.';
+    }
+  </script>
 </head>
 <body>
 <div id="page-container">
-    <div id="content-wrap">
-        <h1>Sign Up</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-        <form method="POST" enctype="multipart/form-data">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="file" name="resume" accept=".txt,.pdf,.docx" required>
-            <button type="submit">Sign Up</button>
-        </form>
-        <div class="center">
-            <form action="{{ url_for('auth.login') }}" method="get" style="display: inline;">
-                <button type="submit" class="button">Login</button>
-            </form>
-        </div>
-    </div>
-    <div style="background-color: #CC5500; color: white; padding: 10px; text-align: center;">
-        Disclaimer: We use your resume data to refine the output of our interview bot. Resume data is never shared with third parties. Your interview answers are stored in order to continue to improve our interview bot services but are not shared with third parties. If you ever want your data removed from our systems email wyliedeveloper@gmail.com
-    </div>
-    <footer>
-        <div>
-            <a href="#">About us</a><br>
-            <a href="#">Privacy Policy</a><br>
-            <a href="#">Contact us</a>
-        </div>
-        <div>
-            <a href="#">Pricing</a><br>
-            <a href="#">Github</a>
-        </div>
-        <div>
-            <a href="#">Blog</a><br>
-            <a href="#">Forum</a>
-        </div>
-    </footer>
+   <div id="content-wrap">
+       <h1>Sign Up</h1>
+       {% with messages = get_flashed_messages(with_categories=true) %}
+           {% if messages %}
+               <ul class="flashes">
+                   {% for category, message in messages %}
+                       <li class="{{ category }}">{{ message }}</li>
+                   {% endfor %}
+               </ul>
+           {% endif %}
+       {% endwith %}
+       <form method="POST" enctype="multipart/form-data" onsubmit="showStatusBlock()">
+           <input type="text" name="username" placeholder="Username" required>
+           <input type="email" name="email" placeholder="Email" required>
+           <input type="password" name="password" placeholder="Password" required>
+           <input type="file" name="resume" accept=".txt,.pdf,.docx" required>
+           <button type="submit">Sign Up</button>
+       </form>
+       <div id="status-block" style="display: none;" class="status-block">
+           Processing your resume. This can take up to a minute...
+       </div>
+       <div class="center">
+           <form action="{{ url_for('auth.login') }}" method="get" style="display: inline;">
+               <button type="submit" class="button">Login</button>
+           </form>
+       </div>
+   </div>
+   <div style="background-color: #CC5500; color: white; padding: 10px; text-align: center;">
+       Disclaimer: We use your resume data to refine the output of our interview bot. Resume data is never shared with third parties. Your interview answers are stored in order to continue to improve our interview bot services but are not shared with third parties. If you ever want your data removed from our systems email wyliedeveloper@gmail.com
+   </div>
+   <footer>
+       <div>
+           <a href="#">About us</a><br>
+           <a href="#">Privacy Policy</a><br>
+           <a href="#">Contact us</a>
+       </div>
+       <div>
+           <a href="#">Pricing</a><br>
+           <a href="#">Github</a>
+       </div>
+       <div>
+           <a href="#">Blog</a><br>
+           <a href="#">Forum</a>
+       </div>
+   </footer>
 </div>
 </body>
 </html>

@@ -12,7 +12,9 @@ from .utils import (
     allowed_file, 
     extract_text_from_file, 
     SessionLocal, 
-    get_resume_analysis
+    get_resume_analysis,
+    output_checker,
+    get_resume_analysis_2
 )
 from . import login_manager
 import json
@@ -43,49 +45,72 @@ def login():
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-        file = request.files['resume']
-        session = SessionLocal()
-        existing_user_by_username = get_user_by_username(username)
-        existing_user_by_email = get_user_by_email(email)
-        if existing_user_by_email:
-            flash('That email is already registered. Would you like to login?')
+        try:
+            username = request.form['username']
+            email = request.form['email']
+            password = request.form['password']
+            file = request.files['resume']
+            session = SessionLocal()
+            existing_user_by_username = get_user_by_username(username)
+            existing_user_by_email = get_user_by_email(email)
+            if existing_user_by_email:
+                flash('That email is already registered. Would you like to login?')
+                return redirect(url_for('auth.signup'))
+            if existing_user_by_username:
+                flash('That username is already registered. Please try something new.')
+                return redirect(url_for('auth.signup'))
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                resume_text = extract_text_from_file(file_path)
+                user = User(username=username, email=email, resume_text_full=resume_text)
+                user.set_password(password)
+                session.add(user)
+                session.commit()
+
+                # Send resume text to ChatGPT and update user record with the response
+                response_data = get_resume_analysis(resume_text)
+
+                # Print the response data for debugging
+                print("Response Data:", response_data)
+
+                if not output_checker(response_data):
+                    response_data = get_resume_analysis_2(resume_text)
+                
+                user.key_technical_skills = ', '.join(response_data.get("key_technical_skills", []))
+                user.key_soft_skills = ', '.join(response_data.get("key_soft_skills", []))
+                user.most_recent_job_title = response_data.get("most_recent_job_title", "")
+                user.second_most_recent_job_title = response_data.get("second_most_recent_job_title", "")
+                user.most_recent_job_title_summary = response_data.get("most_recent_job_title_summary", "")
+                user.second_most_recent_job_title_summary = response_data.get("second_most_recent_job_title_summary", "")
+                user.top_listed_skill_keyword = response_data.get("top_listed_skill_keyword", "")
+                user.second_most_top_listed_skill_keyword = response_data.get("second_most_top_listed_skill_keyword", "")
+                user.third_most_top_listed_skill_keyword = response_data.get("third_most_top_listed_skill_keyword", "")
+                user.fourth_most_top_listed_skill_keyword = response_data.get("fourth_most_top_listed_skill_keyword", "")
+                user.educational_background = response_data.get("educational_background", "")
+                user.certifications_and_awards = ', '.join(response_data.get("certifications_and_awards", []))
+                user.most_recent_successful_project = response_data.get("most_recent_successful_project", "")
+                user.areas_for_improvement = response_data.get("areas_for_improvement", "")
+                user.questions_about_experience = response_data.get("questions_about_experience", "")
+                user.resume_length = response_data.get("resume_length", "")
+                user.top_challenge = response_data.get("top_challenge", "")
+
+                session.add(user)
+                session.commit()
+
+                # Delete the resume file after successfully writing data to the database
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+                flash('User registered successfully')
+                return redirect(url_for('auth.login'))
+            else:
+                flash('Invalid file format. Please upload a .docx, .pdf, or .txt file.')
+        except Exception as e:
+            print(f"Error: {e}")
+            flash('We encountered an error. Try uploading your resume in a different format please.')
             return redirect(url_for('auth.signup'))
-        if existing_user_by_username:
-            flash('That username is already registered. Please try something new.')
-            return redirect(url_for('auth.signup'))
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            resume_text = extract_text_from_file(file_path)
-            user = User(username=username, email=email, resume_text_full=resume_text)
-            user.set_password(password)
-            session.add(user)
-            session.commit()
-
-            # Send resume text to ChatGPT and update user record with the response
-            response_data = get_resume_analysis(resume_text)
-            
-            # Print the response data for debugging
-            print("Response Data:", response_data)
-            
-            user.top_technical_skills = response_data.get("top_technical_skills", "")
-            user.most_recent_job_title = response_data.get("most_recent_job_title", "")
-            user.most_recent_company_name = response_data.get("most_recent_company_name", "")
-            user.most_recent_experience_summary = response_data.get("most_recent_experience_summary", "")
-            user.industry_expertise = response_data.get("industry_expertise", "")
-            user.top_soft_skills = response_data.get("top_soft_skills", "")
-
-            session.add(user)
-            session.commit()
-
-            flash('User registered successfully')
-            return redirect(url_for('auth.login'))
-        else:
-            flash('Invalid file format. Please upload a .docx, .pdf, or .txt file.')
     return render_template('signup.html')
 
 
