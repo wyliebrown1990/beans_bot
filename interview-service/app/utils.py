@@ -322,6 +322,18 @@ def generate_infinite_questions(job_title, company_name, industry, session_histo
     print("generate_infinite_questions completed.")
     return most_recent_question
 
+def generate_last_question(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
+    global most_recent_question
+    print("Starting generate_last_question")
+
+    # Set the last question text
+    most_recent_question = f"It looks like we’re almost out of time and I want to give you a chance to ask me some questions. Please go ahead and ask me whatever questions you have about {company_name}, the {job_title} role or anything that has come up during this interview. I will then give you feedback on your questions."
+    
+    # Add the last question to the session history
+    session_history.add_message(AIMessage(content=most_recent_question))
+    
+    print("generate_last_question completed.")
+    return most_recent_question
 
 
 # Renamed answer functions
@@ -763,6 +775,81 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
         "next_question": next_question
     }
 
+def get_last_answer(session, username, job_title, company_name, industry, user_response, file_summary: str, session_id, training_data: dict, keys_to_include: list):
+    global most_recent_question, user_responses
+    print("Starting get_last_answer")
+
+    resume_data = get_user_resume_data(session, username)
+    if not resume_data:
+        return {"response": "No resume data found for user.", "score": "N/A", "next_question": "N/A"}
+
+    # Convert the resume_data tuple to a dictionary using keys
+    resume_keys = [
+        "resume_text_full", "key_technical_skills", "key_soft_skills", "most_recent_job_title",
+        "second_most_recent_job_title", "most_recent_job_title_summary", "second_most_recent_job_title_summary",
+        "top_listed_skill_keyword", "second_most_top_listed_skill_keyword", "third_most_top_listed_skill_keyword",
+        "fourth_most_top_listed_skill_keyword", "educational_background", "certifications_and_awards",
+        "most_recent_successful_project", "areas_for_improvement", "questions_about_experience",
+        "resume_length", "top_challenge"
+    ]
+    resume_data_dict = dict(zip(resume_keys, resume_data))
+
+    # Combine resume_data_dict and training_data
+    combined_data = {**resume_data_dict, **training_data}
+
+    # Extract relevant data based on keys_to_include
+    data_to_include = {key: combined_data.get(key, "") for key in keys_to_include}
+
+    # Prepare the analysis prompt with included data
+    analysis_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. If you aren’t completely satisfied with how I answered the question then give me a couple of examples of how I could have answered the question better."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = analysis_prompt | model
+    print("Sending analysis prompt to OpenAI API...")
+
+    analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
+
+    # Prepare the score prompt with included data
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"Score the answer I am sending you to the question {most_recent_question} from 0 to 10. It should be incredibly hard to score an 8, 9 or 10 unless you decide the answer was very good. Keep in mind I was most recently a {data_to_include.get('most_recent_job_title')}. I have experience in: {data_to_include.get('key_soft_skills')} and {data_to_include.get('key_technical_skills')}."),
+        ("user", user_response),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    print("Sending score prompt to OpenAI API...")
+
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
+
+    score = extract_score(score_response.content)
+
+    # Handle cases where the score response is empty or does not contain a number
+    if not score or not score.isdigit():
+        score = None
+
+    # Store the response in the database
+    new_answer = InterviewAnswer(
+        session_id=session_id,
+        job_title=job_title,
+        company_name=company_name,
+        industry=industry,
+        question=most_recent_question,  # Last question asked before the user's answer
+        answer=user_response,
+        critique=analysis_response,
+        score=score if score else "N/A"  # Store "N/A" if score is None
+    )
+    session.add(new_answer)
+    session.commit()
+
+    print("get_last_answer completed.")
+    return {
+        "analysis_response": analysis_response,
+        "score": score if score else "N/A",
+        "next_question": "Thank you for your questions! We will end the interview here."
+    }
 
 
 
