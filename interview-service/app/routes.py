@@ -314,3 +314,60 @@ def setup_routes(app_instance, session_instance):
         except Exception as e:
             logging.error(f"Error in last_question: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
+
+    @app_instance.route('/wrap_up_interview', methods=['POST'])
+    def wrap_up_interview():
+        try:
+            job_title = request.form['job_title']
+            company_name = request.form['company_name']
+            industry = request.form['industry']
+            username = request.form['username']
+            session_id = request.form['session_id']
+            user_response = request.form['answer_1']  # Add this line to retrieve the user's last answer
+            user_id = request.form['user_id']
+            generate_audio = 'generate_audio' in request.form
+            voice_id = request.form.get('voice', 'WBPMIeOib7vXJnT2Iibp')  # Default to Knightley if no voice is selected
+
+            logging.debug(f"Job Title: {job_title}, Company Name: {company_name}, Industry: {industry}, Username: {username}, Session ID: {session_id}, User Response: {user_response}, User ID: {user_id}, Generate Audio: {generate_audio}, Voice ID: {voice_id}")
+
+            # Load user training data
+            training_data = users_training_data(sqlalchemy_session, user_id, job_title, company_name)
+            logging.debug(f"Training Data: {training_data}")
+
+            if not training_data:
+                return jsonify({'error': 'No training data found for the given parameters'}), 400
+
+            file_summary = training_data.get("file_summary", "")
+
+            # Define keys_to_include variable
+            keys_to_include = [
+                "resume_text_full", "key_technical_skills", "key_soft_skills", "most_recent_job_title",
+                "second_most_recent_job_title", "most_recent_job_title_summary", "second_most_recent_job_title_summary",
+                "top_listed_skill_keyword", "second_most_top_listed_skill_keyword", "third_most_top_listed_skill_keyword",
+                "fourth_most_top_listed_skill_keyword", "educational_background", "certifications_and_awards",
+                "most_recent_successful_project", "areas_for_improvement", "questions_about_experience",
+                "resume_length", "top_challenge"
+            ]
+
+            # Generate the last question
+            session_history = get_session_history(session_id)
+            last_question_text = generate_last_question(job_title, company_name, industry, session_history, sqlalchemy_session, training_data, keys_to_include)
+
+            # Save the updated Flask session
+            flask_session.modified = True
+            flask_session['last_question_served'] = True
+
+            session_history.add_message(AIMessage(content=last_question_text))
+
+            # Convert text to speech for next question response only if the box is checked
+            next_question_audio_path = None
+            if generate_audio:
+                next_question_audio_path = text_to_speech_file(last_question_text, voice_id)
+
+            return jsonify({
+                'next_question_response': last_question_text,
+                'next_question_audio': next_question_audio_path if next_question_audio_path else None
+            })
+        except Exception as e:
+            logging.error(f"Error in wrap_up_interview: {e}", exc_info=True)
+            return jsonify({'error': str(e)}), 500

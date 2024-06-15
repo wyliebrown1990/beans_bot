@@ -1,41 +1,21 @@
-function toggleSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    if (sidebar.style.transform === 'translateX(0px)') {
-        sidebar.style.transform = 'translateX(-250px)';
-    } else {
-        sidebar.style.transform = 'translateX(0px)';
-    }
-}
-
-function showMenu(li) {
-    li.querySelector('.menu').style.display = 'block';
-}
-
-function hideMenu(li) {
-    li.querySelector('.menu').style.display = 'none';
-}
-
-document.querySelectorAll('.chat-list li').forEach(li => {
+ document.querySelectorAll('.chat-list li').forEach(li => {
     li.addEventListener('click', function() {
         this.querySelector('.options').style.display = (this.querySelector('.options').style.display === 'none' || this.querySelector('.options').style.display === '') ? 'block' : 'none';
     });
-});
-
-let mediaRecorder;
-let audioChunks = [];
-let recording = false;
-let videoRecorder;
-let videoChunks = [];
-let videoRecording = false;
-let answerTimerInterval;
-let answerTimeLeft = 90;
-let interviewTimerInterval;
-let interviewTimeLeft = 2700; // 45 minutes in seconds
-let currentAudio = null;
-let playButton = null;
-let interviewTimeout;
-
-function startAnswerTimer() {
+ });
+ let mediaRecorder;
+ let audioChunks = [];
+ let recording = false;
+ let videoRecorder;
+ let videoChunks = [];
+ let videoRecording = false;
+ let answerTimerInterval;
+ let answerTimeLeft = 90;
+ let interviewTimerInterval;
+ let interviewTimeLeft = 2700; // 45 minutes in seconds
+ let currentAudio = null;
+ let playButton = null;
+ function startAnswerTimer() {
     clearInterval(answerTimerInterval);
     answerTimeLeft = 90;
     const timerElement = document.getElementById('answer-timer');
@@ -51,9 +31,8 @@ function startAnswerTimer() {
             timerElement.innerText = answerTimeLeft;
         }
     }, 1000);
-}
-
-function startInterviewTimer() {
+ }
+ function startInterviewTimer() {
     clearInterval(interviewTimerInterval);
     const timerElement = document.getElementById('interview-timer');
     timerElement.classList.remove('pulse');
@@ -68,42 +47,41 @@ function startInterviewTimer() {
             timerElement.innerText = formatTime(interviewTimeLeft);
         }
     }, 1000);
-
-    // Set a timeout to trigger the last question at 5 minutes remaining (300 seconds)
-    interviewTimeout = setTimeout(triggerLastQuestion, (interviewTimeLeft - 300) * 1000);
-}
-
-function formatTime(seconds) {
+ }
+ function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-}
-
-document.addEventListener('DOMContentLoaded', (event) => {
+ }
+ document.addEventListener('DOMContentLoaded', (event) => {
     startAnswerTimer();
     startInterviewTimer();
-});
+ });
+ document.getElementById('generate_audio').addEventListener('click', function() {
+    document.getElementById('voice-selection').style.display = 'block';
+    const generateAudioInput = document.createElement('input');
+    generateAudioInput.type = 'hidden';
+    generateAudioInput.name = 'generate_audio';
+    generateAudioInput.value = 'true';
+    document.getElementById('response-form').appendChild(generateAudioInput);
 
-document.getElementById('generate_audio').addEventListener('change', function() {
-    if (this.checked) {
-        document.getElementById('voice-selection').style.display = 'block';
-    } else {
-        document.getElementById('voice-selection').style.display = 'none';
+    const selectedVoice = document.getElementById('voice').value;
+    if (selectedVoice === 'none') {
+        generateAudioInput.value = 'false';
     }
+    console.log("Selected voice:", selectedVoice); // Verify the selected value
 });
-
-document.getElementById('record-answer').addEventListener('click', function() {
+ document.getElementById('record-answer').addEventListener('click', function() {
     if (!recording) {
         startRecording();
     } else {
         stopRecording();
     }
-});
-
-function startRecording() {
+ });
+ function startRecording() {
     console.log("Starting recording...");
     $('#status-message').text("Recording...").fadeIn();
-    $('#record-answer').text("Stop Recording");
+    $('#record-answer').html("⏹");
     recording = true;
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
@@ -122,12 +100,11 @@ function startRecording() {
         .catch(error => {
             console.error('Error accessing microphone:', error);
         });
-}
-
-function stopRecording() {
+ }
+ function stopRecording() {
     console.log("Stopping recording...");
     $('#status-message').text("Transcribing answer. This can take a while... Sit tight.").fadeIn();
-    $('#record-answer').text("Record Answer");
+    $('#record-answer').html("🎙");
     recording = false;
     mediaRecorder.stop();
     mediaRecorder.onstop = function() {
@@ -154,17 +131,15 @@ function stopRecording() {
         });
         audioChunks = [];
     };
-}
-
-document.getElementById('record-video').addEventListener('click', function() {
+ }
+ document.getElementById('record-video').addEventListener('click', function() {
     if (!videoRecording) {
         startVideoRecording();
     } else {
         stopVideoRecording();
     }
-});
-
-function startVideoRecording() {
+ });
+ function startVideoRecording() {
     console.log("Starting video recording...");
     $('#status-message').text("Video recording...").fadeIn();
     $('#record-video').text("Press to Stop Video Recording");
@@ -186,9 +161,8 @@ function startVideoRecording() {
         .catch(error => {
             console.error('Error accessing camera:', error);
         });
-}
-
-function stopVideoRecording() {
+ }
+ function stopVideoRecording() {
     console.log("Stopping video recording...");
     $('#status-message').text("Processing video...").fadeIn();
     $('#record-video').text("Record Video of This Session");
@@ -208,9 +182,8 @@ function stopVideoRecording() {
         $('#status-message').text("Download of recording complete").fadeIn().delay(3000).fadeOut();
         videoChunks = [];
     };
-}
-
-$('#response-form').on('submit', function(event) {
+ }
+ $('#response-form').on('submit', function(event) {
     event.preventDefault();
     const form = $(this);
     const userResponse = $('#answer_1').val();
@@ -252,9 +225,8 @@ $('#response-form').on('submit', function(event) {
             $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
         }
     });
-});
-
-function toggleAudio(audioPath, button) {
+ });
+ function toggleAudio(audioPath, button) {
     if (currentAudio && !currentAudio.paused) {
         currentAudio.pause();
         button.style.backgroundColor = '';
@@ -269,9 +241,8 @@ function toggleAudio(audioPath, button) {
         button.style.backgroundColor = '';
         button.innerText = 'Play Next Question';
     };
-}
-
-document.getElementById('download-transcript').addEventListener('click', function() {
+ }
+ document.getElementById('download-transcript').addEventListener('click', function() {
     $.ajax({
         type: 'GET',
         url: downloadTranscriptUrl,
@@ -289,9 +260,8 @@ document.getElementById('download-transcript').addEventListener('click', functio
             console.error('Error downloading transcript:', error);
         }
     });
-});
-
-function startNewInterviewSession() {
+ });
+ function startNewInterviewSession() {
     const urlParams = new URLSearchParams(window.location.search);
     const job_title = urlParams.get('job_title');
     const company_name = urlParams.get('company_name');
@@ -310,74 +280,44 @@ function startNewInterviewSession() {
             console.error('Error clearing session:', error);
         }
     });
-}
+ }
+ document.getElementById('nav-toggle').addEventListener('click', function() {
+    const navLinks = document.getElementById('nav-links');
+    navLinks.classList.toggle('hidden');
+ });
+ 
+ document.getElementById('wrap-up-interview').addEventListener('click', function() {
+    const form = document.getElementById('response-form');
+    const sessionId = document.querySelector('input[name="session_id"]').value;
+    const jobTitle = document.querySelector('input[name="job_title"]').value;
+    const companyName = document.querySelector('input[name="company_name"]').value;
+    const industry = document.querySelector('input[name="industry"]').value;
+    const username = document.querySelector('input[name="username"]').value;
+    const userId = document.querySelector('input[name="user_id"]').value;
+    const userResponse = document.getElementById('answer_1').value;
+    const generateAudio = document.getElementById('generate_audio').checked;
+    const voiceId = document.querySelector('select[name="voice"]').value;
 
-function triggerLastQuestion() {
-    const form = $('#response-form');
-    const job_title = form.find('input[name="job_title"]').val();
-    const company_name = form.find('input[name="company_name"]').val();
-    const industry = form.find('input[name="industry"]').val();
-    const username = form.find('input[name="username"]').val();
-    const session_id = form.find('input[name="session_id"]').val();
-
-    const lastQuestion = `It looks like we’re almost out of time and I want to give you a chance to ask me some questions. Please go ahead and ask me whatever questions you have about ${company_name}, the ${job_title} role or anything that has come up during this interview. I will then give you feedback on your questions.`;
+    // Show the processing message
+    $('#status-message').text("Processing your response...").fadeIn();
 
     $.ajax({
         type: 'POST',
-        url: getLastAnswerUrl,
+        url: wrapUpInterviewUrl,
         data: {
-            job_title: job_title,
-            company_name: company_name,
+            session_id: sessionId,
+            job_title: jobTitle,
+            company_name: companyName,
             industry: industry,
             username: username,
-            session_id: session_id,
-            answer_1: '',  // No user response required for the last question
-            generate_audio: false
+            user_id: userId,
+            answer_1: userResponse,  // Include the user's last answer
+            generate_audio: generateAudio,
+            voice: voiceId
         },
         success: function(response) {
             console.log("Server response:", response);
             $('#status-message').fadeOut();
-            $('#responses').append(`
-                <div class="chat-block">
-                    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
-                    <div class="speech-bubble">
-                        <p>Beans-bot: ${lastQuestion}</p>
-                    </div>
-                </div>
-            `);
-            $('#answer_1').val('');
-            clearInterval(answerTimerInterval);  // Clear the answer timer when the last question is triggered
-        },
-        error: function(error) {
-            console.log('Error:', error);
-            $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
-        }
-    });
-}
-
-document.getElementById('wrap-up-interview').addEventListener('click', function() {
-    const form = document.getElementById('response-form');
-    const formData = new FormData(form);
-    
-    // Add all necessary fields to formData
-    formData.append('job_title', form.job_title.value);
-    formData.append('company_name', form.company_name.value);
-    formData.append('industry', form.industry.value);
-    formData.append('username', form.username.value);
-    formData.append('user_id', form.user_id.value);
-    formData.append('session_id', form.session_id.value);
-    formData.append('answer_1', form.answer_1.value);
-    formData.append('generate_audio', form.generate_audio.checked ? 'on' : '');
-    formData.append('voice', form.voice.value);
-
-    $.ajax({
-        type: 'POST',
-        url: getLastAnswerUrl,
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            console.log("Server response:", response);
             $('#responses').append(`
                 <div class="chat-block">
                     <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
@@ -389,9 +329,8 @@ document.getElementById('wrap-up-interview').addEventListener('click', function(
             `);
         },
         error: function(error) {
-            console.log('Error:', error);
+            console.error('Error wrapping up interview:', error);
             $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
         }
     });
 });
-

@@ -65,6 +65,8 @@ button, input[type="submit"] {
     color: white;
     cursor: pointer;
     border: none; /* Remove border */
+    width: auto; /* Ensure width is auto */
+    height: auto; /* Ensure height is auto */
 }
 
 button:hover, input[type="submit"]:hover {
