@@ -10,7 +10,7 @@ from .utils import (
     get_session_history, generate_question_2, generate_question_3, generate_question_4, generate_question_5, generate_infinite_questions, # Import dynamically named functions
     get_answer_1, get_answer_2, get_answer_3, get_answer_4, get_infinite_answers, # Import dynamically named functions
     extract_score, most_recent_question, user_responses, users_training_data, text_to_speech_file,
-    setup_database, fetch_interview_data
+    setup_database, fetch_interview_data, interview_answers_question_history  # Include interview_answers_question_history
 )
 from .resume_utils import get_user_resume_data  # Correct import statement
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -99,6 +99,7 @@ def setup_routes(app_instance, session_instance):
                     ]
                     results = answer_function(sqlalchemy_session, username, job_title, company_name, industry, user_response, file_summary, session_id, training_data, keys_to_include)
                     flask_session['user_responses'].append(user_response)
+                    print(f"Updated user_responses: {flask_session['user_responses']}")
                 else:
                     logging.error(f"No function defined for response number {response_number}")
                     return jsonify({'error': f'No function defined for response number {response_number}'}), 500
@@ -147,7 +148,7 @@ def setup_routes(app_instance, session_instance):
 
             # Transcribe audio using OpenAI API
             print("Starting transcription with OpenAI Whisper API...")
-            with open(wav_path, "rb") as audio_file:
+            with open(wav_path, "rb") as audio_file):
                 response = openai_client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,

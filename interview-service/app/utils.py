@@ -83,6 +83,7 @@ model = ChatOpenAI(model="gpt-3.5-turbo", api_key=openai_api_key, temperature=0.
 chat_histories = {}
 most_recent_question = ""
 user_responses = {"resume_user_response": None, "career_user_responses": []}
+interview_answers_question_history = ""  # New global variable for question history
 
 def get_session_history(session_id: str) -> ChatMessageHistory:
     if session_id not in chat_histories:
@@ -178,17 +179,12 @@ def fetch_interview_data(session: Session, session_id: str):
 
 # Renamed question generation functions
 def generate_question_2(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
-    global most_recent_question
+    global most_recent_question, interview_answers_question_history
     print("Starting generate_question_2")
 
-    # Ensure specific keys like key_technical_skills are included in the prompt
     key_technical_skills = training_data.get("key_technical_skills", "")
-
-    # Dynamically construct the prompt based on provided keys
     prompt_variables = {key: training_data.get(key, "") for key in keys_to_include}
     prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
-
-    print(f"Prompt Variables in generate_question_2: {prompt_variables}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You can see from my resume that my top technical skills are: {key_technical_skills}. Choose a relevant skill from my list of top technical skills and ask me to explain how I have used that skill in the past."),
@@ -200,17 +196,16 @@ def generate_question_2(job_title, company_name, industry, session_history, sess
     print(f"Prompt: {prompt}")
 
     response = chain.invoke({"messages": session_history.messages})
-    print(f"Response from OpenAI API: {response.content}")
 
-    # Explicitly set most_recent_question with the new question
-    most_recent_question = response.content 
+    most_recent_question = response.content
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Updated most_recent_question in generate_question_2:", most_recent_question)
+    print("Updated interview_answers_question_history in generate_question_2:", interview_answers_question_history)
     print("generate_question_2 completed.")
     return most_recent_question
 
-
 def generate_question_3(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
-    global most_recent_question
+    global most_recent_question, interview_answers_question_history
     print("Starting generate_question_3")
 
     # Ensure specific keys like key_soft_skills and most_recent_job_title are included in the prompt
@@ -220,8 +215,6 @@ def generate_question_3(job_title, company_name, industry, session_history, sess
     # Dynamically construct the prompt based on provided keys
     prompt_variables = {key: training_data.get(key, "") for key in keys_to_include}
     prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
-
-    print(f"Prompt Variables in generate_question_3: {prompt_variables}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You have my resume in front of you where you can see that my top soft skills are: {key_soft_skills}. My most recent job title is {most_recent_job_title}. Ask me a question about how I have used some of my soft skills listed in my resume as a {most_recent_job_title}."),
@@ -234,18 +227,16 @@ def generate_question_3(job_title, company_name, industry, session_history, sess
     print(f"Prompt: {prompt}")
 
     response = chain.invoke({"messages": session_history.messages})
-    print(f"Response from OpenAI API: {response.content}")
 
     # Explicitly set most_recent_question with the new question
     most_recent_question = response.content
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Updated most_recent_question in generate_question_3:", most_recent_question)
     print("generate_question_3 completed.")
     return most_recent_question
 
-
-
 def generate_question_4(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
-    global most_recent_question
+    global most_recent_question, interview_answers_question_history
     print("Starting generate_question_4")
 
     # Ensure specific key like most_recent_successful_project is included in the prompt
@@ -254,8 +245,6 @@ def generate_question_4(job_title, company_name, industry, session_history, sess
     # Dynamically construct the prompt based on provided keys
     prompt_variables = {key: training_data.get(key, "") for key in keys_to_include}
     prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
-
-    print(f"Prompt Variables in generate_question_4: {prompt_variables}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You have my resume in front of you and you can see that my most successful project was: {most_recent_successful_project}. Start your next question with, \"I noticed from your resume that a recent accomplishment was {most_recent_successful_project}\". Follow that up by asking me to explain how I contributed and helped lead the team to the success of that project."),
@@ -267,16 +256,16 @@ def generate_question_4(job_title, company_name, industry, session_history, sess
     print(f"Prompt: {prompt}")
 
     response = chain.invoke({"messages": session_history.messages})
-    print(f"Response from OpenAI API: {response.content}")
 
     # Explicitly set most_recent_question with the new question
     most_recent_question = response.content
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Updated most_recent_question in generate_question_4:", most_recent_question)
     print("generate_question_4 completed.")
     return most_recent_question
 
 def generate_question_5(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
-    global most_recent_question
+    global most_recent_question, interview_answers_question_history
     print("Starting generate_question_5")
 
     # Ensure specific key like top_challenge is included in the prompt
@@ -285,8 +274,6 @@ def generate_question_5(job_title, company_name, industry, session_history, sess
     # Dynamically construct the prompt based on provided keys
     prompt_variables = {key: training_data.get(key, "") for key in keys_to_include}
     prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
-
-    print(f"Prompt Variables in generate_question_5: {prompt_variables}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You have my resume in front of you and you can see that a really challenging project I worked on is: {top_challenge}. Start your next question with, \"I noticed from your resume that a really interesting project you worked on was: {top_challenge}\". Follow that up by asking me to explain what challenges I faced while working on this project."),
@@ -298,39 +285,27 @@ def generate_question_5(job_title, company_name, industry, session_history, sess
     print(f"Prompt: {prompt}")
 
     response = chain.invoke({"messages": session_history.messages})
-    print(f"Response from OpenAI API: {response.content}")
 
     # Explicitly set most_recent_question with the new question
     most_recent_question = response.content
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Updated most_recent_question in generate_question_5:", most_recent_question)
     print("generate_question_5 completed.")
     return most_recent_question
 
 def generate_infinite_questions(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
-    global most_recent_question
+    global most_recent_question, interview_answers_question_history
     print("Starting generate_infinite_questions")
 
-    # Ensure specific key like most_recent_successful_project is included in the prompt
-    most_recent_successful_project = training_data.get("most_recent_successful_project", "")
-
-    # Dynamically construct the prompt based on provided keys
-    prompt_variables = {key: training_data.get(key, "") for key in keys_to_include}
-    prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
-
-    # Retrieve and format the chat history
     chat_history_messages = session_history.messages
-    chat_history = ""
-    for message in chat_history_messages:
-        if isinstance(message, HumanMessage):
-            chat_history += f"Human: {message.content}\n"
-        elif isinstance(message, AIMessage):
-            chat_history += f"AI: {message.content}\n"
+    chat_history = "\n".join([f"{message.__class__.__name__}: {message.content}" for message in chat_history_messages])
 
     print(f"Chat History for prompt: {chat_history}")
+    print(f"Interview Answers Question History for prompt: {interview_answers_question_history}")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. I’m interviewing to be a {job_title} at {company_name} company. Please ask me a relevant question that would be asked in a job interview with someone who wants to get hired as a {job_title} at {company_name}. Do not ask me a question that is similar to one you have asked before. I’m going to be sending you our interview we’ve had so far. Again, do not ask a question similar to one that is in our interview history I send to you now."),
-        ("user", chat_history),
+        ("user", f"{interview_answers_question_history}"),
         MessagesPlaceholder(variable_name="messages"),
     ])
 
@@ -339,11 +314,11 @@ def generate_infinite_questions(job_title, company_name, industry, session_histo
     print(f"Prompt: {prompt}")
 
     response = chain.invoke({"messages": session_history.messages})
-    print(f"Response from OpenAI API: {response.content}")
 
-    # Explicitly set most_recent_question with the new question
     most_recent_question = response.content
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Updated most_recent_question in generate_infinite_questions:", most_recent_question)
+    print("Updated interview_answers_question_history in generate_infinite_questions:", interview_answers_question_history)
     print("generate_infinite_questions completed.")
     return most_recent_question
 
@@ -384,10 +359,8 @@ def get_answer_1(session: Session, username: str, job_title: str, company_name: 
 
     analysis_chain = analysis_prompt | model
     print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
 
     analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
 
     # Prepare the score prompt with included data
     score_prompt = ChatPromptTemplate.from_messages([
@@ -398,10 +371,8 @@ def get_answer_1(session: Session, username: str, job_title: str, company_name: 
 
     score_chain = score_prompt | model
     print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
 
     score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
 
     score = extract_score(score_response.content)
 
@@ -473,10 +444,8 @@ def get_answer_2(session: Session, username: str, job_title: str, company_name: 
 
     analysis_chain = analysis_prompt | model
     print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
 
     analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
 
     # Prepare the score prompt with included data
     score_prompt = ChatPromptTemplate.from_messages([
@@ -487,10 +456,8 @@ def get_answer_2(session: Session, username: str, job_title: str, company_name: 
 
     score_chain = score_prompt | model
     print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
 
     score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
 
     score = extract_score(score_response.content)
 
@@ -557,9 +524,6 @@ def get_answer_3(session, username, job_title, company_name, industry, user_resp
     # Extract relevant data based on keys_to_include
     data_to_include = {key: combined_data.get(key, "") for key in keys_to_include}
 
-    # Debug print to confirm data retrieval
-    print(f"Retrieved resume data: {resume_data}")
-
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {data_to_include.get('most_recent_job_title')}. I have experience in: {data_to_include.get('key_technical_skills')} and {data_to_include.get('key_soft_skills')}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
@@ -569,10 +533,8 @@ def get_answer_3(session, username, job_title, company_name, industry, user_resp
 
     analysis_chain = analysis_prompt | model
     print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
 
     analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
 
     # Prepare the score prompt with included data
     score_prompt = ChatPromptTemplate.from_messages([
@@ -583,10 +545,8 @@ def get_answer_3(session, username, job_title, company_name, industry, user_resp
 
     score_chain = score_prompt | model
     print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
 
     score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
 
     score = extract_score(score_response.content)
 
@@ -652,9 +612,6 @@ def get_answer_4(session, username, job_title, company_name, industry, user_resp
     # Extract relevant data based on keys_to_include
     data_to_include = {key: combined_data.get(key, "") for key in keys_to_include}
 
-    # Debug print to confirm data retrieval
-    print(f"Retrieved resume data: {resume_data}")
-
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {data_to_include.get('most_recent_job_title')}. I have experience in: {data_to_include.get('key_technical_skills')} and {data_to_include.get('key_soft_skills')}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
@@ -664,10 +621,8 @@ def get_answer_4(session, username, job_title, company_name, industry, user_resp
 
     analysis_chain = analysis_prompt | model
     print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
 
     analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
 
     # Prepare the score prompt with included data
     score_prompt = ChatPromptTemplate.from_messages([
@@ -678,10 +633,8 @@ def get_answer_4(session, username, job_title, company_name, industry, user_resp
 
     score_chain = score_prompt | model
     print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
 
     score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
 
     score = extract_score(score_response.content)
 
@@ -723,7 +676,7 @@ def get_answer_4(session, username, job_title, company_name, industry, user_resp
     }
 
 def get_infinite_answers(session, username, job_title, company_name, industry, user_response, file_summary: str, session_id, training_data: dict, keys_to_include: list):
-    global most_recent_question, user_responses
+    global most_recent_question, user_responses, interview_answers_question_history
     print("Starting get_infinite_answers")
 
     resume_data = get_user_resume_data(session, username)
@@ -747,9 +700,6 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
     # Extract relevant data based on keys_to_include
     data_to_include = {key: combined_data.get(key, "") for key in keys_to_include}
 
-    # Debug print to confirm data retrieval
-    print(f"Retrieved resume data: {resume_data}")
-
     # Prompt 1: Analyze the user's answer
     analysis_prompt = ChatPromptTemplate.from_messages([
         ("system", f"You are helping me land a new job by conducting realistic interviews with me. I'm interviewing to be a {job_title} at {company_name} company in the {industry} industry. You just asked me the question: {most_recent_question}. I am going to answer you and I want you to give me a very critical critique of how well I answered the question. Specifically, check that my answer followed these best practices: Is there an opening, middle and closing? Did my opening answer the question, without adding extra ideas or unnecessary words? Did the middle of my answer give details that support my opening sentence? Did I give one, two, or three details? Did I follow the STAR format (situation, task, action, result)? Did I keep my answer under 3 minutes long? Once I finished my answer did I say something that showed I was finished? Did I keep my answer under 3 minutes long? For more context: I was most recently a {data_to_include.get('most_recent_job_title')}. I have experience in: {data_to_include.get('key_technical_skills')} and {data_to_include.get('key_soft_skills')}. Here is more context about the company {company_name} I'm interviewing to work at: {file_summary}."),
@@ -759,10 +709,8 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
 
     analysis_chain = analysis_prompt | model
     print("Sending analysis prompt to OpenAI API...")
-    print(f"Analysis Prompt: {analysis_prompt}")
 
     analysis_response = analysis_chain.invoke({"messages": [HumanMessage(content=user_response)]}).content
-    print("Analysis Response from OpenAI API:", analysis_response)
 
     # Prepare the score prompt with included data
     score_prompt = ChatPromptTemplate.from_messages([
@@ -773,10 +721,8 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
 
     score_chain = score_prompt | model
     print("Sending score prompt to OpenAI API...")
-    print(f"Score Prompt: {score_prompt}")
 
     score_response = score_chain.invoke({"messages": [HumanMessage(content=user_response)]})
-    print("Score Response from OpenAI API:", score_response.content)
 
     score = extract_score(score_response.content)
 
@@ -785,7 +731,7 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
         score = None
 
     # Generate the next question with career context
-    session_history = get_session_history(session_id)
+    session_history = get_session_history(os.urandom(24).hex())
     next_question = generate_infinite_questions(job_title, company_name, industry, session_history, session, combined_data, keys_to_include)
 
     # Update most_recent_question with the new question
@@ -816,6 +762,7 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 
 
