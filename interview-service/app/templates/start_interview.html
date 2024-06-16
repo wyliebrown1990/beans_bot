@@ -6,6 +6,8 @@
    <title>Start Interview</title>
    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <style>
+   </style>
 </head>
 <body>
 <div id="page-container">
@@ -24,6 +26,9 @@
                <button id="download-transcript">Download Transcript</button>
                <button onclick="startNewInterviewSession()">Start New Interview Session</button>
                <button id="wrap-up-interview">Wrap up interview early</button>
+               <p>Previous Chat Sessions:</p>
+               <button>June 12th 2024</button>
+               <button>June 10th 2024</button>
            </div>
        </div>
    </div>
@@ -62,7 +67,6 @@
        <div class="status-container">
            <div id="status-message" class="status-message"></div>
        </div>
-
        <form id="response-form" method="POST">
            <input type="hidden" name="job_title" value="{{ job_title }}">
            <input type="hidden" name="company_name" value="{{ company_name }}">
@@ -73,9 +77,9 @@
            <label for="answer_1">Your Response:</label>
            <textarea id="answer_1" name="answer_1" rows="5" required></textarea>
            <div class="submit-button-container">
-               <button type="submit" class="form-button">&#9654;</button>
-               <button type="button" id="record-answer" class="form-button">🎙</button>
-               <button type="button" id="generate_audio" class="form-button">🗣️</button>
+               <button type="submit" class="form-button" data-tooltip="Click to submit your answers">&#9654;</button>
+               <button type="button" id="record-answer" class="form-button" title="Click to record your answer">🎙</button>
+               <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">🗣️</button>
            </div>
            <div id="voice-selection" style="display:none;">
                <label for="voice">Choose Voice:</label>

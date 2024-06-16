@@ -58,7 +58,12 @@
     startInterviewTimer();
  });
  document.getElementById('generate_audio').addEventListener('click', function() {
-    document.getElementById('voice-selection').style.display = 'block';
+    const voiceSelection = document.getElementById('voice-selection');
+    if (voiceSelection.style.display === 'none' || voiceSelection.style.display === '') {
+        voiceSelection.style.display = 'block';
+    } else {
+        voiceSelection.style.display = 'none';
+    }
     const generateAudioInput = document.createElement('input');
     generateAudioInput.type = 'hidden';
     generateAudioInput.name = 'generate_audio';

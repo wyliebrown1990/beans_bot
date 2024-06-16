@@ -79,11 +79,13 @@ body {
     color: white; /* Ensure text is readable on the dark background */
     position: fixed;
     bottom: 0;
-    width: 100%;
+    width: calc(100% - 260px) !important; /* Adjust width to match chat-block */
     box-sizing: border-box; /* Ensure padding and border are included in the element's total width and height */
     padding: 10px; /* Reduce padding for a smaller height */
-    padding-right: 60px !important; /* Ensure the padding is applied */
+    padding-right: 40px !important; /* Ensure the padding is applied */
     border: 1px solid black; /* Add black border */
+    margin: 0; /* Override generic form margin */
+    left: 250px; /* Adjust to match the nav bar width + padding */
 }
 form#response-form label,
 form#response-form textarea,
@@ -166,12 +168,19 @@ form#response-form button:hover {
  }
  /* Chat block specific CSS */
  .chat-block {
+   display: flex;
+   align-items: flex-start; /* Align items to the top */
    background-color: #7a918d;
    padding: 20px;
    margin: 10px 0;
    border-radius: 8px;
-   width: calc(100% - 40px); /* Adjust width to account for padding */
-   color: white; /* Ensures text is readable on dark background */
+   width: calc(100% - 40px);
+   color: white;
+ }
+ .chat-image {
+   max-width: 100px;
+   margin-right: 10px;
+   align-self: flex-start; /* Ensure the image stays at the top */
  }
  p {
    text-align: left;
@@ -215,7 +224,8 @@ form#response-form button:hover {
    flex: 1;
    margin-left: 220px; /* Adjust this value to match the sidebar width + padding */
    padding: 20px; /* Add padding for better appearance */
-   padding-bottom: 100px; /* Add padding to the bottom to account for the response form */
+   padding-bottom: 100px;
+   position: relative; /* Add padding to the bottom to account for the response form */
  }
  #user_response {
    width: 100%;
@@ -302,7 +312,7 @@ form#response-form button:hover {
  }
  .chat-image {
    max-width: 100px;
-   margin-right: 10px;
+   margin-right: 10px; /* Ensure there's space between the image and the speech bubble */
  }
  .speech-bubble {
    background-color: #f1f1f1;
@@ -349,7 +359,7 @@ form#response-form button:hover {
    justify-content: center;
    width: 100%;
    position: fixed;
-   bottom: 60px; /* Adjust this value to ensure it is above the response form */
+   bottom: 100px; /* Adjust this value to ensure it is above the response form */
    left: 0;
    z-index: 1000; /* Ensure it is on top of other elements */
  }
@@ -449,4 +459,29 @@ select#voice option {
 
 .nav-menu a:hover {
     background-color: #D6DAC8;
+}
+
+.form-button {
+  position: relative;
+  display: inline-block;
+}
+
+.form-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 5px;
+  border-radius: 5px;
+  white-space: nowrap;
+  z-index: 1; /* Ensure it is on top of other elements */
+  opacity: 0;
+  transition: none;
+}
+
+.form-button:hover::after {
+  opacity: 1;
 }
