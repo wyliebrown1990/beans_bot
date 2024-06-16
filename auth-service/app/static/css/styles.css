@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #FBF3D5;
-    color: #333;
+    background-color: #d4f0fc;
+    color: #01303f;
     margin: 0;
     padding: 20px;
 }
@@ -22,20 +22,19 @@ html, body {
 }
 
 h1 {
-    color: #7a918d;
+    color: #02577a;
     text-align: center;
     margin-top: -5px;
 }
 
 header {
-    background-color: #EFBC9B;
-    color: #333;
+    background-color: #89d6fb;
+    color: #01303f;
     padding: 10px 20px;
     text-align: center;
 }
 
 form {
-    background-color: #D6DAC8;
     padding: 20px;
     margin-top: 20px;
     border-radius: 8px;
@@ -51,7 +50,7 @@ input[type="submit"],
 button {
     padding: 10px;
     margin: 5px 0;
-    border: 1px solid #9CAFAA;
+    border: 1px solid #89d6fb;
     border-radius: 4px;
     display: block;
     width: 300px;
@@ -61,7 +60,7 @@ button {
 }
 
 button, input[type="submit"] {
-    background-color: #9CAFAA;
+    background-color: #02577a;
     color: white;
     cursor: pointer;
     border: none; /* Remove border */
@@ -70,7 +69,7 @@ button, input[type="submit"] {
 }
 
 button:hover, input[type="submit"]:hover {
-    background-color: #7a918d;
+    background-color: #01303f;
 }
 
 .button {
@@ -79,13 +78,13 @@ button:hover, input[type="submit"]:hover {
 }
 
 a {
-    color: #333;
+    color: #01303f;
 }
 
 hr {
     border: 0;
     height: 1px;
-    background-color: #333;
+    background-color: #01303f;
     margin: 20px 0;
 }
 
@@ -104,7 +103,7 @@ hr {
 footer {
     display: flex;
     justify-content: space-around;
-    background-color: #6d837f !important;
+    background-color: #02577a !important;
     color: white !important;
     font-size: 14px;
     text-align: center;
@@ -182,7 +181,7 @@ footer div a:hover {
 
 .nav-menu {
     display: none;
-    background-color: #FBF3D5;
+    background-color: #d4f0fc;
     position: absolute;
     right: 20px;
     top: 40px;
@@ -192,14 +191,14 @@ footer div a:hover {
 }
 
 .nav-menu a {
-    color: #333;
+    color: #01303f;
     padding: 12px 16px;
     text-decoration: none;
     display: block;
 }
 
 .nav-menu a:hover {
-    background-color: #D6DAC8;
+    background-color: #89d6fb;
 }
 
 /* Updated container and speech bubble styles */
@@ -220,7 +219,7 @@ footer div a:hover {
 .container .speech-bubble {
     flex: 2;
     background-color: #f1f1f1;
-    border: 2px solid #EFBC9B;
+    border: 2px solid #89d6fb;
     border-radius: 10px;
     padding: 20px;
     padding-right: 60px; /* Increase padding on the right */
@@ -237,7 +236,7 @@ footer div a:hover {
     height: 0;
     border: 10px solid transparent;
     border-right-color: #f1f1f1;
-    border-left-color: #EFBC9B;
+    border-left-color: #89d6fb;
 }
 
 .container #speech-text {
@@ -247,12 +246,10 @@ footer div a:hover {
 }
 
 .status-block {
-    background-color: #CC5500;
+    background-color: #02577a;
     color: white;
     padding: 10px;
     text-align: center;
     margin-top: 20px;
     border-radius: 4px;
- }
- 
- 
+}

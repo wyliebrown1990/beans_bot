@@ -26,9 +26,11 @@
                <button id="download-transcript">Download Transcript</button>
                <button onclick="startNewInterviewSession()">Start New Interview Session</button>
                <button id="wrap-up-interview">Wrap up interview early</button>
-               <p>Previous Chat Sessions:</p>
-               <button>June 12th 2024</button>
-               <button>June 10th 2024</button>
+               <div class="previous-sessions-container">
+                   <p>Previous Chat Sessions:</p>
+                   <button>June 12th 2024</button>
+                   <button>June 10th 2024</button>
+               </div>
            </div>
        </div>
    </div>
@@ -78,8 +80,8 @@
            <textarea id="answer_1" name="answer_1" rows="5" required></textarea>
            <div class="submit-button-container">
                <button type="submit" class="form-button" data-tooltip="Click to submit your answers">&#9654;</button>
-               <button type="button" id="record-answer" class="form-button" title="Click to record your answer">🎙</button>
-               <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">🗣️</button>
+               <button type="button" id="record-answer" class="form-button" data-tooltip="Click to record your answer">🎙</button>
+               <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">😮</button>
            </div>
            <div id="voice-selection" style="display:none;">
                <label for="voice">Choose Voice:</label>

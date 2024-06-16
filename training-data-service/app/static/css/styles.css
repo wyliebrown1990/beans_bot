@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #FBF3D5;
-    color: #333;
+    background-color: #d4f0fc;
+    color: #01303f;
     margin: 0;
     padding: 20px;
 }
@@ -12,24 +12,29 @@ html, body {
 }
 
 h1 {
-    color: #7a918d;
+    color: #02577a;
     text-align: center;
     margin-top: -5px;
 }
 
 header {
-    background-color: #EFBC9B;
-    color: #333;
+    background-color: #89d6fb;
+    color: #01303f;
     padding: 10px 20px;
     text-align: center;
 }
 
 h2 {
-    text-align: center;
+    padding: 20px; /* Match the form padding */
+    width: 500px; /* Match the form width */
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center; /* Center the text */
+    word-wrap: break-word; /* Ensure long text wraps */
 }
 
 form {
-    background-color: #D6DAC8;
+    background-color: #02a9f7;
     padding: 20px;
     margin-top: 20px;
     border-radius: 8px;
@@ -44,7 +49,7 @@ input[type="submit"],
 button {
     padding: 10px;
     margin: 5px 0;
-    border: 1px solid #9CAFAA;
+    border: 1px solid #89d6fb;
     border-radius: 4px;
     display: block;
     width: 300px;
@@ -54,24 +59,24 @@ button {
 }
 
 button, input[type="submit"] {
-    background-color: #9CAFAA;
+    background-color: #02577a;
     color: white;
     cursor: pointer;
     border: none; /* Remove border */
 }
 
 button:hover, input[type="submit"]:hover {
-    background-color: #7a918d;
+    background-color: #01303f;
 }
 
 a {
-    color: #333;
+    color: #01303f;
 }
 
 footer {
     display: flex;
     justify-content: space-around;
-    background-color: #6d837f;
+    background-color: #02577a;
     color: white;
     font-size: 14px;
     text-align: center;
@@ -100,13 +105,13 @@ footer div a:hover {
 hr {
     border: 0;
     height: 1px;
-    background-color: #333;
+    background-color: #01303f;
     margin: 20px 0;
 }
 
 /* Chat block specific CSS */
 .chat-block {
-    background-color: #7a918d;
+    background-color: #02577a;
     padding: 20px;
     margin: 10px auto;
     border-radius: 8px;
@@ -121,7 +126,7 @@ p {
 
 /* Image block specific CSS */
 .image-block {
-    background-color: #D6DAC8;
+    background-color: #89d6fb;
     padding: 20px;
     margin-top: 20px;
     border-radius: 8px;
@@ -188,7 +193,7 @@ p {
 
 .centered-message {
     text-align: center;
-    color: #CC5500;
+    color: #02577a;
     font-weight: bold;
     margin-left: 100px;
     margin-right: 100px;
@@ -196,7 +201,7 @@ p {
 
 .centered-text {
     text-align: center;
-    color: #CC5500;
+    color: #02577a;
     font-weight: bold;
 }
 
@@ -208,7 +213,7 @@ p {
 
 /* Info button specific CSS */
 .info-button {
-    background-color: #9CAFAA;
+    background-color: #02577a;
     color: white;
     border-radius: 50%;
     padding: 5px;
@@ -224,8 +229,8 @@ p {
     transform: translate(-50%, -50%);
     width: 80%;
     max-width: 500px;
-    background-color: #FBF3D5;
-    border: 2px solid #7a918d;
+    background-color: #d4f0fc;
+    border: 2px solid #02577a;
     border-radius: 10px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1000;
@@ -261,12 +266,13 @@ p {
 .speech-bubble {
     flex: 2;
     background-color: #f1f1f1;
-    border: 2px solid #EFBC9B;
+    border: 2px solid #89d6fb;
     border-radius: 10px;
     padding: 20px;
     padding-right: 50px; /* Significantly increase right padding */
     position: relative;
     margin-left: 20px;
+    margin-right: 235px;
     box-sizing: border-box; /* Ensure padding is applied correctly */
     width: auto; /* Adjust width to be more flexible */
     max-width: 90%; /* Prevent it from getting too wide */
@@ -281,7 +287,7 @@ p {
     height: 0;
     border: 10px solid transparent;
     border-right-color: #f1f1f1;
-    border-left-color: #EFBC9B;
+    border-left-color: #89d6fb;
 }
 
 #speech-text {
@@ -306,7 +312,7 @@ p {
     visibility: visible; /* Ensure visibility */
     position: relative; /* Ensure correct positioning */
     z-index: 1000; /* Ensure they appear above other elements */
-    background-color: #FBF3D5; /* Ensure background color for debugging */
+    background-color: #d4f0fc; /* Ensure background color for debugging */
 }
 
 .actionButton {
@@ -317,19 +323,19 @@ p {
     visibility: visible; /* Ensure visibility */
     position: relative; /* Ensure correct positioning */
     z-index: 1000; /* Ensure they appear above other elements */
-    background-color: #9CAFAA; /* Ensure background color */
+    background-color: #02577a; /* Ensure background color */
     color: white; /* Ensure text color */
-    border: 1px solid #9CAFAA; /* Ensure border for debugging */
+    border: 1px solid #02577a; /* Ensure border for debugging */
 }
 
 /* Styles for the dropdown */
 .dropdown select {
     padding: 10px;
-    border: 1px solid #9CAFAA;
+    border: 1px solid #02577a;
     border-radius: 4px;
     width: 300px;
     margin-bottom: 20px; /* Add some space below the dropdown */
- }
+}
 
 .submit-button-container button {
     display: inline-block;

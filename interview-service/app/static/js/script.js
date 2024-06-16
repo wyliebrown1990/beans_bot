@@ -61,8 +61,10 @@
     const voiceSelection = document.getElementById('voice-selection');
     if (voiceSelection.style.display === 'none' || voiceSelection.style.display === '') {
         voiceSelection.style.display = 'block';
+        this.innerHTML = '🤫';
     } else {
         voiceSelection.style.display = 'none';
+        this.innerHTML = '😮';
     }
     const generateAudioInput = document.createElement('input');
     generateAudioInput.type = 'hidden';
