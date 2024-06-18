@@ -6,6 +6,7 @@
    <title>Start Interview</title>
    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
    <style>
    </style>
 </head>
@@ -22,10 +23,10 @@
                <div id="answer-timer">90</div>
            </div>
            <div class="button-container">
-               <button id="record-video">Record Video of This Session</button>
-               <button id="download-transcript">Download Transcript</button>
-               <button onclick="startNewInterviewSession()">Start New Interview Session</button>
-               <button id="wrap-up-interview">Wrap up interview early</button>
+               <button id="record-video">Record Video of Interview<i class="fa-file-video-o" aria-hidden="true"></i></button>
+               <button id="download-transcript">Download Transcript <i class="fa fa-download" aria-hidden="true"></i></button>
+               <button onclick="startNewInterviewSession()">Start New Session <i class="fa fa-redo" aria-hidden="true"></i></button>
+               <button id="wrap-up-interview">End interview early <i class="fa fa-stop-circle" aria-hidden="true"></i></button>
                <div class="previous-sessions-container">
                    <p>Previous Chat Sessions:</p>
                    <button>June 12th 2024</button>
@@ -81,7 +82,7 @@
            <div class="submit-button-container">
                <button type="submit" class="form-button" data-tooltip="Click to submit your answers">&#9654;</button>
                <button type="button" id="record-answer" class="form-button" data-tooltip="Click to record your answer">🎙</button>
-               <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">😮</button>
+               <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">💬</button>
            </div>
            <div id="voice-selection" style="display:none;">
                <label for="voice">Choose Voice:</label>

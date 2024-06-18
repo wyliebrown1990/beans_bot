@@ -19,6 +19,5 @@ opentelemetry-instrumentation-psycopg2
 pydub==0.25.1
 openai-whisper
 elevenlabs
-ffmpeg
-flask_login
-flask_session
+Flask-Login
+Flask-Session

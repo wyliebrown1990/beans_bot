@@ -1,25 +1,41 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_USER: wyliebrown
+      POSTGRES_PASSWORD: test123
+      POSTGRES_DB: interview_bot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - beans_bot_network
+
   auth-service:
     image: wyliebrown1990/auth-service
     command: gunicorn -b 0.0.0.0:5010 app:app
     ports:
-      - "5001:5010"
+      - "5010:5010"
     env_file:
       - .env
     depends_on:
       - postgres
+    networks:
+      - beans_bot_network
 
   interview-service:
     image: wyliebrown1990/interview-service
     command: gunicorn -b 0.0.0.0:5013 app:app
     ports:
-      - "5002:5013"
+      - "5013:5013"
     env_file:
       - .env
     depends_on:
       - postgres
+    networks:
+      - beans_bot_network
 
   training-data-service:
     image: wyliebrown1990/training-data-service
@@ -30,6 +46,26 @@ services:
       - .env
     depends_on:
       - postgres
+    networks:
+      - beans_bot_network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - interview-service
+      - training-data-service
+    networks:
+      - beans_bot_network
 
 volumes:
   pgdata:
+
+networks:
+  beans_bot_network:
+    driver: bridge

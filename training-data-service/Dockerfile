@@ -7,11 +7,14 @@ WORKDIR /app
 # Install build dependencies
 RUN apt-get update && apt-get install -y build-essential gcc
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy the requirements.txt file into the container
+COPY requirements.txt .
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
 
 # Make port 5011 available to the world outside this container
 EXPOSE 5011

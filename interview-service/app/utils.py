@@ -187,7 +187,7 @@ def generate_question_2(job_title, company_name, industry, session_history, sess
     prompt_str = " ".join([f"{key}: {value}" for key, value in prompt_variables.items()])
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You can see from my resume that my top technical skills are: {key_technical_skills}. Choose a relevant skill from my list of top technical skills and ask me to explain how I have used that skill in the past."),
+        ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager. You have my resume in front of you. You can see from my resume that my top technical skills are: {key_technical_skills}. Choose a relevant skill from my list of top technical skills and ask me to explain how I have used that skill in the past."),
         MessagesPlaceholder(variable_name="messages"),
     ])
 

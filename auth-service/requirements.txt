@@ -1,10 +1,11 @@
-Flask
-Flask-Login
+Flask==3.0.3
+Flask-Login==0.6.3
 gunicorn
 psycopg2-binary
 SQLAlchemy
-langchain_openai
+langchain_openai==0.1.7
 langchain_community
 numpy
 python-docx
 PyMuPDF
+python-dotenv==0.21.0

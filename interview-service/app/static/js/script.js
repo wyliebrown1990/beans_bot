@@ -64,7 +64,7 @@
         this.innerHTML = '🤫';
     } else {
         voiceSelection.style.display = 'none';
-        this.innerHTML = '😮';
+        this.innerHTML = '💬';
     }
     const generateAudioInput = document.createElement('input');
     generateAudioInput.type = 'hidden';

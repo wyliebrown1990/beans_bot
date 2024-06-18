@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   background-color: #ffffff;
   color: #01303f;
   margin: 0;
@@ -359,19 +361,20 @@ h5 {
   justify-content: center;
   width: 100%;
   position: fixed;
-  bottom: 100px; /* Adjust this value to ensure it is above the response form */
+  bottom: 120px !important; /* Adjust this value to move the status message 20px higher */
   left: 0;
   z-index: 1000; /* Ensure it is on top of other elements */
+  margin-top: -20px;
 }
 #status-message {
-  background-color: #02577a;
+  background-color: #CC5500;
   color: #ffffff;
   padding: 20px;
   border-radius: 10px;
   width: 50%;
   text-align: center;
   display: none;
-  margin-top: 20px; /* Add margin-top to create space between chat responses and status message */
+  margin-top: -20px; /* Add margin-top to create space between chat responses and status message */
 }
 #sidebar {
    width: 200px;
@@ -407,8 +410,7 @@ h5 {
    width: auto;
    height: 100%;
    margin-left: 0;
-   padding: 20px; /* Increase padding to make the button larger */
-   font-size: 2em; /* Increase font size to make the emojis larger */
+   padding: 10px;
    background-color: #02577a;
    color: white;
    border: none;
@@ -453,24 +455,28 @@ select#voice option {
    background-color: #89d6fb;
 }
 .form-button {
- position: relative;
- display: inline-block;
+    position: relative;
+    display: inline-block;
+    font-size: 24px; /* Ensure the emoji size remains the same */
 }
+
 .form-button::after {
- content: attr(data-tooltip);
- position: absolute;
- bottom: 100%;
- left: 50%;
- transform: translateX(-50%);
- background-color: #01303f;
- color: #fff;
- padding: 5px;
- border-radius: 5px;
- white-space: nowrap;
- z-index: 1; /* Ensure it is on top of other elements */
- opacity: 0;
- transition: none;
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #01303f;
+    color: #fff;
+    padding: 5px;
+    border-radius: 5px;
+    white-space: nowrap;
+    z-index: 1;
+    opacity: 0;
+    transition: none;
+    font-size: 10px; /* Reduce the tooltip text size */
 }
+
 .form-button:hover::after {
- opacity: 1;
+    opacity: 1;
 }
