@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     networks:
       - beans_bot_network
+    restart: always
 
   auth-service:
     image: wyliebrown1990/auth-service
@@ -20,10 +21,14 @@ services:
       - "5010:5010"
     env_file:
       - .env
+    environment:
+      - ENV=production
+      - DOCKER_DATABASE_URL=postgresql://wyliebrown:test123@postgres:5432/interview_bot
     depends_on:
       - postgres
     networks:
       - beans_bot_network
+    restart: always
 
   interview-service:
     image: wyliebrown1990/interview-service
@@ -32,10 +37,14 @@ services:
       - "5013:5013"
     env_file:
       - .env
+    environment:
+      - ENV=production
+      - DOCKER_DATABASE_URL=postgresql://wyliebrown:test123@postgres:5432/interview_bot
     depends_on:
       - postgres
     networks:
       - beans_bot_network
+    restart: always
 
   training-data-service:
     image: wyliebrown1990/training-data-service
@@ -44,10 +53,14 @@ services:
       - "5011:5011"
     env_file:
       - .env
+    environment:
+      - ENV=production
+      - DOCKER_DATABASE_URL=postgresql://wyliebrown:test123@postgres:5432/interview_bot
     depends_on:
       - postgres
     networks:
       - beans_bot_network
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -62,6 +75,7 @@ services:
       - training-data-service
     networks:
       - beans_bot_network
+    restart: always
 
 volumes:
   pgdata:

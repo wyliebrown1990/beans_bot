@@ -16,3 +16,4 @@ sqlalchemy
 gevent
 gunicorn
 elevenlabs
+ffmpeg

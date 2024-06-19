@@ -1,5 +1,7 @@
 import os
 import uuid
+from pydub import AudioSegment
+from pydub.utils import which
 from io import BytesIO
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
@@ -25,6 +27,10 @@ load_dotenv()
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+# Ensure ffmpeg is found
+ffmpeg_location = os.getenv('FFMPEG_LOCATION')
+AudioSegment.converter = which("ffmpeg") or ffmpeg_location
 
 def text_to_speech_file(text: str, voice_id: str) -> str:
     if not text.strip():

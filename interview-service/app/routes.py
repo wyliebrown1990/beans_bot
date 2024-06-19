@@ -4,6 +4,7 @@ import os
 import logging
 from io import StringIO
 from werkzeug.utils import secure_filename
+from shutil import which
 from pydub import AudioSegment
 from openai import OpenAI
 from .utils import (
@@ -24,6 +25,10 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Ensure you have the session setup globally in the routes file
 engine, sqlalchemy_session = setup_database(os.getenv("DATABASE_URL"))
+
+# Ensure ffmpeg is found
+ffmpeg_location = os.getenv('FFMPEG_LOCATION')
+AudioSegment.converter = which("ffmpeg") or ffmpeg_location
 
 def setup_routes(app_instance, session_instance):
     global sqlalchemy_session
@@ -132,8 +137,13 @@ def setup_routes(app_instance, session_instance):
             logging.error(f"Error in start_interview: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
+
+
     @app_instance.route('/transcribe_audio', methods=['POST'])
     def transcribe_audio():
+        file_path = None
+        wav_path = None  # Initialize wav_path here
+        text = None  # Initialize text here
         try:
             print("Received audio file for transcription...")
             if 'audio' not in request.files:
@@ -176,15 +186,18 @@ def setup_routes(app_instance, session_instance):
             return jsonify({'error': str(e)}), 500
         finally:
             print("Removing temporary audio files...")
-            os.remove(file_path)
-            os.remove(wav_path)
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+            if wav_path and os.path.exists(wav_path):
+                os.remove(wav_path)
 
-        return jsonify({'transcription': text})
+            return jsonify({'transcription': text})
+
 
     @app_instance.route('/get_user_training_data', methods=['GET'])
     def get_user_training_data():
         try:
-            user_id = current_user.id  # Assuming you have a way to get the current user's ID
+            user_id = current_user.id  
             job_title = request.args.get('job_title')
             company_name = request.args.get('company_name')
             data = users_training_data(sqlalchemy_session, user_id, job_title, company_name)

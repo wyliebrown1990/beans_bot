@@ -21,3 +21,4 @@ openai-whisper
 elevenlabs
 Flask-Login
 Flask-Session
+ffmpeg
