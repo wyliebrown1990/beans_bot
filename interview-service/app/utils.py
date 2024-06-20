@@ -328,6 +328,7 @@ def generate_infinite_questions(job_title, company_name, industry, session_histo
     print("generate_infinite_questions completed.")
     return most_recent_question
 
+
 def generate_last_question(job_title, company_name, industry, session_history, session, training_data, keys_to_include):
     global most_recent_question
     print("Starting generate_last_question")
@@ -757,6 +758,7 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
 
     # Store the career user response
     user_responses["career_user_responses"].append(user_response)
+    interview_answers_question_history += f"\n{most_recent_question}"  # Update the question history
     print("Career User Response:", user_response)
     print("Most Recent Question:", most_recent_question)
 
@@ -780,6 +782,7 @@ def get_infinite_answers(session, username, job_title, company_name, industry, u
         "score": score if score else "N/A",
         "next_question": next_question
     }
+
 
 def get_last_answer(session, username, job_title, company_name, industry, user_response, file_summary: str, session_id, training_data: dict, keys_to_include: list):
     global most_recent_question, user_responses

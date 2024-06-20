@@ -1,0 +1,61 @@
+id,user_id,job_title,is role specific?,is resume specific?,question_type,question,description,Answer Prompt,Answer Function,Scoring Prompt,Scoring Function,company_name,created_at,updated_at
+1,,product manager,Yes,No,role specific questions,Can you describe your experience with product lifecycles?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+2,,product manager,Yes,No,role specific questions,Can you explain how you gather and analyze information to be used for product development?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+3,,product manager,Yes,No,role specific questions,How do you prioritize your product backlog?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+4,,product manager,Yes,No,role specific questions,How do you work with cross-functional teams?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+5,,product manager,Yes,No,role specific questions,How have you handled a product failure?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+6,,product manager,Yes,No,role specific questions,What strategies do you use to keep up with market trends?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+7,,product manager,Yes,No,role specific questions,Can you describe a time when you helped to launch a new product?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+8,,product manager,Yes,No,role specific questions,How would you assess the usability of our current products?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+9,,product manager,Yes,No,role specific questions,What is your process for developing user personas?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+10,,product manager,Yes,No,role specific questions,How do you bridge the gap between the technical team and business stakeholders?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+11,,product manager,Yes,No,role specific questions,How do you make a business case for a new product or feature?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+12,,product manager,Yes,No,role specific questions,Can you provide an example of a product roadmap you've developed and executed?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+13,,product manager,Yes,No,role specific questions,How do you handle disagreements with stakeholders?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+14,,product manager,Yes,No,role specific questions,What is your experience with Agile methodology?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+15,,product manager,Yes,No,role specific questions,How do you balance short-term needs with long-term product strategy?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+16,,product manager,Yes,No,role specific questions,How do you measure product success?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+17,,product manager,Yes,No,role specific questions,Describe a time when you needed to pivot a product strategy.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+18,,product manager,Yes,No,role specific questions,How do you ensure the voice of the customer is heard within the team?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+19,,product manager,Yes,No,role specific questions,How do you build relationships with key stakeholders?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+20,,product manager,Yes,No,role specific questions,Tell me about your experience using data to drive product decisions.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+21,,product manager,Yes,No,role specific questions,How do you handle scope creep during product development?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+22,,product manager,Yes,No,role specific questions,Can you talk about your experience with competitive analysis?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+23,,product manager,Yes,No,role specific questions,Describe how you have worked with sales and marketing functions to drive product adoption.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+24,,product manager,Yes,No,role specific questions,How do you mitigate risks during product development?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+25,,product manager,Yes,No,role specific questions,Can you talk about a time when you had to make a tough decision regarding a product's feature?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+26,,product manager,Yes,No,role specific questions,How do you communicate product strategy to the team and stakeholders?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+27,,product manager,Yes,No,role specific questions,How do you validate market needs before starting a new product or feature?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+28,,product manager,Yes,No,role specific questions,Talk about a time when you had to manage a hard deadline with a team.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+29,,product manager,Yes,No,role specific questions,"How do you manage and deliver trade-offs between cost, time and scope?",,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+30,,product manager,Yes,No,role specific questions,What is your strategy for pricing products?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+31,,sales engineer,Yes,No,role specific questions,Can you tell us a little about your background and why you've chosen to apply for a Sales Engineer role?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+32,,sales engineer,Yes,No,role specific questions,How did your education prepare you for this role?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+33,,sales engineer,Yes,No,role specific questions,What is your level of technical expertise in our industry?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+34,,sales engineer,Yes,No,role specific questions,Can you describe a time when you had to convince a customer to use your product?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+35,,sales engineer,Yes,No,role specific questions,What strategies do you use to explain complex technical concepts to non-technical clients?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+36,,sales engineer,Yes,No,role specific questions,Describe your experience with CRM software.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+37,,sales engineer,Yes,No,role specific questions,"How do you ensure a positive customer experience, especially in dealing with complaints or technical issues?",,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+38,,sales engineer,Yes,No,role specific questions,Give an example of a time when you turned a potential customer into a committed customer.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+39,,sales engineer,Yes,No,role specific questions,Can you explain how you would prepare for a product demonstration?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+40,,sales engineer,Yes,No,role specific questions,How do you handle rejection or failure in sales?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+41,,sales engineer,Yes,No,role specific questions,What type of sales approach do you usually adopt and why?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+42,,sales engineer,Yes,No,role specific questions,Can you describe your experience with sales forecasting?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+43,,sales engineer,Yes,No,role specific questions,How do you approach a situation where a customer has technical objections to our product?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+44,,sales engineer,Yes,No,role specific questions,Give an example of a time when you improved the sales process in a significant way.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+45,,sales engineer,Yes,No,role specific questions,How do you stay updated on industry trends and technological advancements?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+46,,sales engineer,Yes,No,role specific questions,How do you typically handle customer objections and questions regarding our product?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+47,,sales engineer,Yes,No,role specific questions,Can you describe how you would conduct a competitive analysis of our market?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+48,,sales engineer,Yes,No,role specific questions,Have you ever contributed to the development or improvement of a product based on customer feedback?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+49,,sales engineer,Yes,No,role specific questions,How have you collaborated with marketing teams in the past to achieve sales objectives?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+50,,sales engineer,Yes,No,role specific questions,Can you explain how you would establish long-term relationships with key clients?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+51,,sales engineer,Yes,No,role specific questions,How do you typically prepare for client meetings?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+52,,sales engineer,Yes,No,role specific questions,Describe a time when you had to adjust your communication style to suit different customers.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+53,,sales engineer,Yes,No,role specific questions,What methods do you employ to identify and target potential leads?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+54,,sales engineer,Yes,No,role specific questions,Can you discuss some tools or techniques you use to analyze sales data?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+55,,sales engineer,Yes,No,role specific questions,How do you showcase value to a customer hesitant to make a significant investment?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+56,,sales engineer,Yes,No,role specific questions,Describe a time where you had to leverage your technical skills to close a sale.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+57,,sales engineer,Yes,No,role specific questions,Discuss your experience with product launch strategies.,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+58,,sales engineer,Yes,No,role specific questions,How do you negotiate contracts and agreements ensuring both company and customer satisfaction?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+59,,sales engineer,Yes,No,role specific questions,Can you describe a time when you worked with a challenging client and how you handled it?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
+60,,sales engineer,Yes,No,role specific questions,How would you assist a client who does not see the immediate benefit of our product?,,,,,,,2024-06-20 10:32:56,2024-06-20 10:32:56
