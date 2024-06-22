@@ -1,346 +1,158 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
-
 body {
     font-family: 'Roboto', Arial, sans-serif;
     background-color: #d4f0fc;
     color: #01303f;
     margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+#sidebar {
+    background-color: #f1f1f1;
+    width: 250px;
     padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-html, body {
-    height: 100%;
+#logo-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#logo-container img {
+    width: 90px;
+    height: 90px;
+    margin-right: 10px;
+}
+
+#logo-container h1 {
     margin: 0;
+    font-size: 1.5rem;
+    color: #02577a;
 }
 
-h1 {
+#sidebar nav ul {
+    list-style-type: none;
+    padding: 0;
+    width: 100%;
+}
+
+#sidebar nav ul li {
+    margin: 10px 0;
+}
+
+#sidebar nav ul li a {
+    text-decoration: none;
     color: #02577a;
+    display: block;
     text-align: center;
-    margin-top: -5px;
+    padding: 15px; /* Increase padding for better appearance */
+    border-radius: 5px;
+    background-color: #89d6fb;
+    width: 100%; /* Adjust the width to 100% */
+    margin: 0 auto; /* Center the buttons */
+    box-sizing: border-box; /* Ensure padding is included in the width */
+}
+
+#sidebar nav ul li a:hover {
+    background-color: #02577a;
+    color: white;
+}
+
+#main-content {
+    flex: 1;
+    padding: 20px;
 }
 
 header {
-    background-color: #89d6fb;
-    color: #01303f;
+    background-color: #CC5500;
+    color: white;
     padding: 10px 20px;
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-h2 {
-    padding: 20px; /* Match the form padding */
-    width: 500px; /* Match the form width */
-    margin-left: auto;
-    margin-right: auto;
-    text-align: center; /* Center the text */
-    word-wrap: break-word; /* Ensure long text wraps */
+header h1 {
+    margin: 0;
 }
 
-form {
-    background-color: #02a9f7;
+#version {
+    font-size: 14px;
+}
+
+.hamburger-menu {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.hamburger-menu .bar {
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    margin: 4px 0;
+}
+
+#welcome-message, #job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
+    background-color: white;
+    border: 1px solid #89d6fb;
+    border-radius: 5px;
     padding: 20px;
     margin-top: 20px;
-    border-radius: 8px;
-    text-align: center;
-    width: 500px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-input[type="text"],
-input[type="submit"],
-button {
+#job-listings-manager h2, #interview-details h2 {
+    color: #02577a;
+}
+
+form label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+form input[type="text"], form select, form button, form textarea {
+    width: 100%;
     padding: 10px;
-    margin: 5px 0;
+    margin-bottom: 10px;
+    border: 1px solid #89d6fb;
+    border-radius: 5px;
+}
+
+form button, form input[type="submit"] {
+    background-color: #02577a;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+form button:hover, form input[type="submit"]:hover {
+    background-color: #01303f;
+}
+
+.centered-button-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.start-interview-button {
+    width: 100%; /* Set the width to 100% */
+    padding: 10px;
     border: 1px solid #89d6fb;
     border-radius: 4px;
-    display: block;
-    width: 300px;
-    margin-left: auto;
-    margin-right: auto;
-    font-size: 16px;
-}
-
-button, input[type="submit"] {
     background-color: #02577a;
     color: white;
     cursor: pointer;
     border: none; /* Remove border */
 }
 
-button:hover, input[type="submit"]:hover {
+.start-interview-button:hover {
     background-color: #01303f;
-}
-
-a {
-    color: #01303f;
-}
-
-footer {
-    display: flex;
-    justify-content: space-around;
-    background-color: #02577a;
-    color: white;
-    font-size: 14px;
-    text-align: center;
-    padding: 20px 0;
-    width: 100%;
-    margin-top: auto; /* Push footer to the bottom */
-}
-
-footer div {
-    flex: 1;
-    text-align: left;
-    padding: 0 10px;
-}
-
-footer div a {
-    color: white;
-    text-decoration: none;
-    display: block;
-    margin: 5px 0;
-}
-
-footer div a:hover {
-    text-decoration: underline;
-}
-
-hr {
-    border: 0;
-    height: 1px;
-    background-color: #01303f;
-    margin: 20px 0;
-}
-
-/* Chat block specific CSS */
-.chat-block {
-    background-color: #02577a;
-    padding: 20px;
-    margin: 10px auto;
-    border-radius: 8px;
-    width: 500px;
-    color: white; /* Ensures text is readable on dark background */
-}
-
-p {
-    text-align: left;
-    padding: 0 20px;
-}
-
-/* Image block specific CSS */
-.image-block {
-    background-color: #89d6fb;
-    padding: 20px;
-    margin-top: 20px;
-    border-radius: 8px;
-    text-align: center;
-    width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.image-block img {
-    max-width: 100%;
-    height: auto;
-}
-
-/* Page Spacing */
-#page-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-#content-wrap {
-    flex: 1;
-}
-
-#user_response {
-    width: 100%;
-    box-sizing: border-box;
-    resize: none; /* Disable manual resizing to ensure the auto-resize works properly */
-    overflow: hidden; /* Hide the scroll bar */
-}
-
-/* Media Queries */
-@media (max-width: 768px) {
-    form, .chat-block, .image-block {
-        width: 100%; /* Makes the form, chat blocks, and image block full width */
-        padding: 10px; /* Reduces padding */
-    }
-
-    input[type="text"], input[type="submit"] {
-        width: 90%; /* Makes input fields take up most of the form width */
-    }
-
-    footer {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    footer div {
-        text-align: center;
-        padding: 10px 0;
-    }
-}
-
-@media (max-width: 480px) {
-    body, header, footer {
-        padding: 10px; /* Reduces padding for smaller screens */
-    }
-
-    h1 {
-        font-size: 24px; /* Adjusts the size of the heading */
-    }
-}
-
-.centered-message {
-    text-align: center;
-    color: #02577a;
-    font-weight: bold;
-    margin-left: 100px;
-    margin-right: 100px;
-}
-
-.centered-text {
-    text-align: center;
-    color: #02577a;
-    font-weight: bold;
-}
-
-.centered-button {
-    display: block;
-    margin: 0 auto;
-    text-align: center;
-}
-
-/* Info button specific CSS */
-.info-button {
-    background-color: #02577a;
-    color: white;
-    border-radius: 50%;
-    padding: 5px;
-    cursor: pointer;
-    margin-left: 5px;
-}
-
-.info-popup {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80%;
-    max-width: 500px;
-    background-color: #d4f0fc;
-    border: 2px solid #02577a;
-    border-radius: 10px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    padding: 20px;
-}
-
-.info-content {
-    display: flex;
-    align-items: flex-start;
-}
-
-.popup-image {
-    max-width: 100px;
-    height: auto;
-    margin-right: 20px;
-}
-
-/* Updated container and speech bubble styles */
-.container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 50px;
-    padding: 20px;
-}
-
-.image {
-    flex: 1;
-    max-width: 200px;
-    padding: 20px;
-}
-
-.speech-bubble {
-    flex: 2;
-    background-color: #f1f1f1;
-    border: 2px solid #89d6fb;
-    border-radius: 10px;
-    padding: 20px;
-    padding-right: 50px; /* Significantly increase right padding */
-    position: relative;
-    margin-left: 20px;
-    margin-right: 235px;
-    box-sizing: border-box; /* Ensure padding is applied correctly */
-    width: auto; /* Adjust width to be more flexible */
-    max-width: 90%; /* Prevent it from getting too wide */
-}
-
-.speech-bubble:after {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: -20px;
-    width: 0;
-    height: 0;
-    border: 10px solid transparent;
-    border-right-color: #f1f1f1;
-    border-left-color: #89d6fb;
-}
-
-#speech-text {
-    padding: 20px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-#statusLog {
-    margin-top: 20px;
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
-}
-
-#buttonContainer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20px;
-    visibility: visible; /* Ensure visibility */
-    position: relative; /* Ensure correct positioning */
-    z-index: 1000; /* Ensure they appear above other elements */
-    background-color: #d4f0fc; /* Ensure background color for debugging */
-}
-
-.actionButton {
-    margin: 10px 0;
-    padding: 10px 20px;
-    font-size: 16px;
-    display: block; /* Ensure display */
-    visibility: visible; /* Ensure visibility */
-    position: relative; /* Ensure correct positioning */
-    z-index: 1000; /* Ensure they appear above other elements */
-    background-color: #02577a; /* Ensure background color */
-    color: white; /* Ensure text color */
-    border: 1px solid #02577a; /* Ensure border for debugging */
-}
-
-/* Styles for the dropdown */
-.dropdown select {
-    padding: 10px;
-    border: 1px solid #02577a;
-    border-radius: 4px;
-    width: 300px;
-    margin-bottom: 20px; /* Add some space below the dropdown */
-}
-
-.submit-button-container button {
-    display: inline-block;
-    margin-right: 10px; /* Optional: Add some space between buttons */
 }

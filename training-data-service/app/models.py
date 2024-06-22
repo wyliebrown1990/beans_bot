@@ -4,22 +4,33 @@ from sqlalchemy.sql import func
 
 Base = declarative_base()
 
-class TrainingData(Base):
-   __tablename__ = 'training_data'
-   id = Column(Integer, primary_key=True)
-   user_id = Column(Integer, nullable=False)
-   job_title = Column(String(100), nullable=False)
-   company_name = Column(String(100), nullable=False)
-   file_summary = Column(String, nullable=False)
-   processed_files = Column(String, nullable=False)
-   top_topics = Column(Text, nullable=True)
-   primary_products_and_services = Column(Text, nullable=True)
-   target_market = Column(Text, nullable=True)
-   market_position = Column(Text, nullable=True)
-   required_skills = Column(Text, nullable=True)
-   unique_selling_proposition = Column(Text, nullable=True)
-   created_at = Column(DateTime(timezone=True), server_default=func.now())
-   updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+class JobDescriptionAnalysis(Base):
+    __tablename__ = 'job_description_analysis'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Job Details
+    job_title = Column(String(100), nullable=True)
+    job_level = Column(String(50), nullable=True)
+    job_location = Column(String(100), nullable=True)
+    job_type = Column(String(50), nullable=True)
+    job_salary = Column(String(50), nullable=True)
+    job_responsibilities = Column(Text, nullable=True)
+    personal_qualifications = Column(Text, nullable=True)
+
+    # Company Information
+    company_name = Column(String(100), nullable=True)
+    company_size = Column(String(50), nullable=True)
+    company_industry = Column(String(100), nullable=True)
+    company_mission_and_values = Column(Text, nullable=True)
+
+    # Requirements and Qualifications
+    education_background = Column(Text, nullable=True)
+    required_professional_experiences = Column(Text, nullable=True)
+    nice_to_have_experiences = Column(Text, nullable=True)
+    required_skill_sets = Column(Text, nullable=True)
 
 class ProcessStatus(Base):
    __tablename__ = 'process_status'

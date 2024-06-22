@@ -13,6 +13,8 @@ elif [[ "$TERRAFORM_ARG" == "apply" ]]; then
   TERRAFORM_ARG="apply -auto-approve"
 elif [ "$TERRAFORM_ARG" == "plan" ]; then
   TERRAFORM_ARG="plan"
+elif [ "$TERRAFORM_ARG" == "destroy" ]; then
+  TERRAFORM_ARG="destroy -auto-approve"
 else
   echo "only 'init', 'plan', or 'apply' may be passed"
   exit 1

@@ -1,3 +1,4 @@
+#asking aws for latest amazon linux 2 ami (amazon machine image i.e. blueprint for the instance)
 data "aws_ami" "latest_amazonlinux" {
   most_recent = true
 
@@ -23,27 +24,28 @@ data "aws_ami" "latest_amazonlinux" {
 
   owners = ["amazon"]
 }
-resource "aws_instance" "web" {
+#creating our instance 
+resource "aws_instance" "beans_bot_server" {
   ami = data.aws_ami.latest_amazonlinux.id
 
-  iam_instance_profile = aws_iam_instance_profile.studier-server-role.name
+  iam_instance_profile = aws_iam_instance_profile.beans-bot-server-role.name
 
   associate_public_ip_address = true
-  availability_zone           = "us-east-2a"
+  availability_zone           = "us-east-1a"
   instance_type               = "t2.micro"
-  key_name                    = "studier-instance-0"
+  key_name                    = "beans-bot-instance-0"
 
 
   source_dest_check = true
-  subnet_id         = "subnet-09a8aed2d8e727e84"
+  subnet_id         = "subnet-0600a215f2e3bd81f"
 
   tags = {
-    app = "studier"
+    app = "beans-bot"
   }
 
   user_data = file("${path.module}/ec2/user_data.sh")
   user_data_replace_on_change = true
-  vpc_security_group_ids = [aws_security_group.studier_server_rules.id]
+  vpc_security_group_ids = [aws_security_group.beans_bot_server_rules.id]
 
   root_block_device {
     delete_on_termination = true
@@ -63,12 +65,12 @@ EOF
 ]
 }
 
-resource "aws_security_group" "studier_server_rules" {
-  name        = "studier-server-rules"
+resource "aws_security_group" "beans_bot_server_rules" {
+  name        = "beans-bot-server-rules"
   description = "allow https and ssh from my computer"
   vpc_id      = var.vpc_id
   tags        = {
-    app = "studier"
+    app = "beans-bot"
   }
 }
 resource "aws_security_group_rule" "public_out" {
@@ -77,10 +79,10 @@ resource "aws_security_group_rule" "public_out" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.studier_server_rules.id
+  security_group_id = aws_security_group.beans_bot_server_rules.id
 }
 
-// TODO: for now we remove this after each deployment
+// TODO: Comment this rule out after running docker-compose then apply again
 resource "aws_security_group_rule" "my_computer_ssh" {
   depends_on        = [data.external.my_ip_address]
   type              = "ingress"
@@ -88,7 +90,7 @@ resource "aws_security_group_rule" "my_computer_ssh" {
   to_port           = 22
   protocol          = "tcp"
   cidr_blocks       = ["${data.external.my_ip_address.result.ip}/32"]
-  security_group_id = aws_security_group.studier_server_rules.id
+  security_group_id = aws_security_group.beans_bot_server_rules.id
 }
 
 resource "aws_security_group_rule" "public_in_https" {
@@ -97,5 +99,5 @@ resource "aws_security_group_rule" "public_in_https" {
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.studier_server_rules.id
+  security_group_id = aws_security_group.beans_bot_server_rules.id
 }

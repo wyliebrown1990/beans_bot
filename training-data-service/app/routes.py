@@ -40,7 +40,6 @@ def setup_routes(app, db_session):
             db.commit()
         return jsonify({'status': 'success'})
 
-
     @app.route('/get_status', methods=['GET'])
     def get_status():
         username = request.args.get('username').lower().strip()
@@ -59,7 +58,6 @@ def setup_routes(app, db_session):
                 print("No status found")
                 return jsonify({'status': 'No status found'})
 
-
     @app.route('/youtube_transcription', methods=['POST'])
     def youtube_transcription():
         job_title = request.form['job_title']
@@ -72,14 +70,13 @@ def setup_routes(app, db_session):
 
         with app.app_context():
             db = next(get_db())
-            user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
         
             if user_data_count >= 5:
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=transcribe_videos, args=(current_app._get_current_object(), channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username, user_id)).start()
         return jsonify({'pending': 'Transcription started successfully'}), 202
-
 
     @app.route('/youtube_urls_transcription', methods=['POST'])
     def youtube_urls_transcription():
@@ -93,14 +90,13 @@ def setup_routes(app, db_session):
 
         with app.app_context():
             db = next(get_db())
-            user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
         
             if user_data_count >= 5:
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=process_youtube_urls, args=(current_app._get_current_object(), youtube_urls, job_title, company_name, username, user_id)).start()
         return jsonify({'pending': 'YouTube URLs transcription started successfully'}), 202
-
 
     @app.route('/file_upload', methods=['POST'])
     def file_upload():
@@ -114,7 +110,7 @@ def setup_routes(app, db_session):
 
         with app.app_context():
             db = next(get_db())
-            user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
             print(f"DEBUG: User data count for user_id {user_id}: {user_data_count}")
 
             if user_data_count >= 5:
@@ -136,7 +132,6 @@ def setup_routes(app, db_session):
 
         return jsonify({'pending': 'File processing started'}), 202
 
-
     @app.route('/raw_text_submission', methods=['POST'])
     def raw_text_submission():
         job_title = request.form['job_title']
@@ -148,14 +143,13 @@ def setup_routes(app, db_session):
 
         with app.app_context():
             db = next(get_db())
-            user_data_count = db.query(TrainingData).filter_by(user_id=user_id).count()
+            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
 
             if user_data_count >= 5:
                 return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
 
         threading.Thread(target=process_raw_text, args=(current_app._get_current_object(), job_title, company_name, raw_text, username, user_id)).start()
         return jsonify({'pending': 'Raw text submission started successfully'}), 202
-
 
     @app.route('/progress')
     def progress():
@@ -169,7 +163,6 @@ def setup_routes(app, db_session):
 
         return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id)
 
-
     @app.route('/upload_options', methods=['GET'])
     def upload_options():
         job_title = request.args.get('job_title').lower().strip()
@@ -182,8 +175,8 @@ def setup_routes(app, db_session):
 
         with app.app_context():
             db = next(get_db())
-            training_data_exists = db.query(TrainingData).filter(
-                TrainingData.user_id == user_id
+            training_data_exists = db.query(JobDescriptionAnalysis).filter(
+                JobDescriptionAnalysis.user_id == user_id
             ).first() is not None
 
         if training_data_exists:
@@ -193,7 +186,6 @@ def setup_routes(app, db_session):
 
         return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id, message=message)
 
-
     @app.route('/api/training-data/<int:user_id>', methods=['GET'])
     def get_training_data(user_id):
         print(f"Route /api/training-data/{user_id} hit")
@@ -201,7 +193,7 @@ def setup_routes(app, db_session):
             with app.app_context():
                 db_session = next(get_db())
                 print(f"DB session established for user ID: {user_id}")
-                training_data = db_session.query(TrainingData).filter_by(user_id=user_id).all()
+                training_data = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).all()
                 print(f"Training data fetched: {training_data}")
                 response_data = [
                     {
@@ -216,7 +208,6 @@ def setup_routes(app, db_session):
             print(f"Exception occurred: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
-
     @app.route('/api/training-data/delete', methods=['DELETE'])
     def delete_selected_files():
         try:
@@ -226,13 +217,12 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                db_session.query(TrainingData).filter(TrainingData.id.in_(ids)).delete(synchronize_session=False)
+                db_session.query(JobDescriptionAnalysis).filter(JobDescriptionAnalysis.id.in_(ids)).delete(synchronize_session=False)
                 db_session.commit()
             return jsonify({'success': True})
         except Exception as e:
             logging.error(f"Failed to delete selected files: {str(e)}")
             return jsonify({'success': False, 'message': str(e)}), 500
-
 
     @app.route('/api/training-data/delete-all/<int:user_id>', methods=['DELETE'])
     def delete_all_files(user_id):
@@ -241,13 +231,12 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                db_session.query(TrainingData).filter_by(user_id=user_id).delete(synchronize_session=False)
+                db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).delete(synchronize_session=False)
                 db_session.commit()
             return jsonify({'success': True})
         except Exception as e:
             logging.error(f"Failed to delete all files for user {user_id}: {str(e)}")
             return jsonify({'success': False, 'message': str(e)}), 500
-
 
     @app.route('/', methods=['GET', 'POST'])
     def index():
@@ -262,9 +251,9 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db = next(get_db())
-                training_data_exists = db.query(TrainingData).filter(
-                    func.lower(TrainingData.job_title) == job_title,
-                    func.lower(TrainingData.company_name) == company_name
+                training_data_exists = db.query(JobDescriptionAnalysis).filter(
+                    func.lower(JobDescriptionAnalysis.job_title) == job_title,
+                    func.lower(JobDescriptionAnalysis.company_name) == company_name
                 ).first() is not None
 
             if training_data_exists:

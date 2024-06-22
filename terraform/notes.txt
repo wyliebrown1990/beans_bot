@@ -1,0 +1,26 @@
+From terraform in terminal run: 
+./run_terraform.sh plan
+./run_terraform.sh apply
+
+Identify the public IP 
+
+When done: 
+./run_terraform.sh destroy
+
+Then, SSH into EC2 with:
+chmod +x ./sshtoec2.sh
+./sshtoec2.sh
+
+Try to manually run docker-compose installation:
+sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+docker-compose version
+
+THEN will need to connect to RDS instance with psql to create db interview_bot
+THEN update docker-compose to connect to the RDS Instance URI
+
+Then will need to set up DNS connection 
+
+Once everything is running comment out the SSH port 20 opening and rerun apply 

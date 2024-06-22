@@ -1,407 +1,137 @@
 <!doctype html>
 <html lang="en">
 <head>
-   <meta charset="utf-8">
-   <title>Upload Options</title>
-   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-   <script>
-       document.addEventListener("DOMContentLoaded", function() {
-           const infoButton = document.getElementById("info-button");
-           const infoPopup = document.getElementById("info-popup");
-           const closeButton = document.getElementById("close-button");
-
-           infoButton.addEventListener("click", function() {
-               infoPopup.style.display = "block";
-           });
-
-           closeButton.addEventListener("click", function() {
-               infoPopup.style.display = "none";
-           });
-
-           const message = `{{ message|safe }}`;
-           const text = document.createElement("textarea");
-           text.innerHTML = message;
-           const decodedMessage = text.value;
-
-           let i = 0;
-           function typeWriter() {
-               if (i < decodedMessage.length) {
-                   document.getElementById("message-text").innerHTML += decodedMessage.charAt(i);
-                   i++;
-                   setTimeout(typeWriter, 20);
-               } else {
-                   checkMessageAndAddButton(decodedMessage);
-               }
-           }
-           if (message) {
-               typeWriter();
-           }
-
-           // Fetch processed files on page load
-           fetchProcessedFiles();
-
-           // Attach event listeners to the forms
-           document.getElementById('file-upload-form').addEventListener('submit', function(event) {
-               event.preventDefault();
-               showStatusBlock(this);
-               uploadFiles(new FormData(this));
-           });
-
-           document.getElementById('youtube-transcription-form').addEventListener('submit', function(event) {
-               event.preventDefault();
-               showStatusBlock(this);
-               startYouTubeTranscription(new FormData(this));
-           });
-
-           document.getElementById('youtube-urls-transcription-form').addEventListener('submit', function(event) {
-               event.preventDefault();
-               showStatusBlock(this);
-               startYouTubeURLsTranscription(new FormData(this));
-           });
-
-           document.getElementById('raw-text-submission-form').addEventListener('submit', function(event) {
-               event.preventDefault();
-               showStatusBlock(this);
-               submitRawText(new FormData(this));
-           });
-       });
-
-       function showStatusBlock(form) {
-           const statusBlock = document.createElement('div');
-           statusBlock.id = 'status-block';
-           statusBlock.style.display = 'block';
-           statusBlock.style.backgroundColor = '#CC5500';
-           statusBlock.style.color = 'white';
-           statusBlock.style.padding = '10px';
-           statusBlock.style.textAlign = 'center';
-           statusBlock.innerText = 'Upload being processed...';
-           form.appendChild(statusBlock);
-       }
-
-       function fetchProcessedFiles() {
-           const userId = "{{ user_id }}";
-           console.log("Fetching files for user ID:", userId);
-           fetch(`/api/training-data/${userId}`)
-               .then(response => {
-                   if (!response.ok) {
-                       throw new Error('Failed to fetch');
-                   }
-                   return response.json();
-               })
-               .then(data => {
-                   console.log("Data received:", data);
-                   const filesListDiv = document.getElementById('files-list');
-                   filesListDiv.innerHTML = '';
-                   if (data.length === 0) {
-                       const noFilesMessage = document.createElement('p');
-                       noFilesMessage.textContent = "You don't currently have any training files. Please upload training data below.";
-                       filesListDiv.appendChild(noFilesMessage);
-                   } else {
-                       data.forEach(file => {
-                           const label = document.createElement('label');
-                           const checkbox = document.createElement('input');
-                           checkbox.type = 'checkbox';
-                           checkbox.name = 'selected_files';
-                           checkbox.value = file.id;
-                           label.appendChild(checkbox);
-                           label.appendChild(document.createTextNode(file.processed_files));
-                           filesListDiv.appendChild(label);
-                           filesListDiv.appendChild(document.createElement('br'));
-                       });
-                   }
-               })
-               .catch(error => {
-                   console.error('Error fetching files:', error);
-               });
-       }
-
-       function uploadFiles(formData) {
-           fetch('/file_upload', {
-               method: 'POST',
-               body: formData
-           })
-           .then(response => response.json())
-           .then(data => {
-               setTimeout(() => {
-                   if (data.error) {
-                       alert(data.error);
-                   } else {
-                       fetchProcessedFiles();
-                       alert('Files uploaded successfully. You may need to refresh your page to see them in the browser.');
-                       location.reload(); // Refresh the page
-                   }
-               }, 10000); // 10 seconds delay
-           })
-           .catch(error => {
-               console.error('Error uploading files:', error);
-           });
-       }
-
-       function startYouTubeTranscription(formData) {
-           fetch('/youtube_transcription', {
-               method: 'POST',
-               body: formData
-           })
-           .then(response => response.json())
-           .then(data => {
-               setTimeout(() => {
-                   if (data.error) {
-                       alert(data.error);
-                   } else {
-                       fetchProcessedFiles();
-                       alert('Transcription started successfully. Note that if you scraped long video files you will need to wait a few minutes and refresh your page routinely until you see them in your file management form.');
-                       location.reload(); // Refresh the page
-                   }
-               }, 10000); // 10 seconds delay
-           })
-           .catch(error => {
-               console.error('Error starting transcription:', error);
-           });
-       }
-
-       function startYouTubeURLsTranscription(formData) {
-           fetch('/youtube_urls_transcription', {
-               method: 'POST',
-               body: formData
-           })
-           .then(response => response.json())
-           .then(data => {
-               setTimeout(() => {
-                   if (data.error) {
-                       alert(data.error);
-                   } else {
-                       fetchProcessedFiles();
-                       alert('YouTube URLs transcription started successfully. You may need to refresh your page to see them in the browser.');
-                       location.reload(); // Refresh the page
-                   }
-               }, 10000); // 10 seconds delay
-           })
-           .catch(error => {
-               console.error('Error starting YouTube URLs transcription:', error);
-           });
-       }
-
-       function submitRawText(formData) {
-           fetch('/raw_text_submission', {
-               method: 'POST',
-               body: formData
-           })
-           .then(response => response.json())
-           .then(data => {
-               setTimeout(() => {
-                   if (data.error) {
-                       alert(data.error);
-                   } else {
-                       fetchProcessedFiles();
-                       alert('Raw text submission started successfully. You may need to refresh your page to see them in the browser.');
-                       location.reload(); // Refresh the page
-                   }
-               }, 10000); // 10 seconds delay
-           })
-           .catch(error => {
-               console.error('Error submitting raw text:', error);
-           });
-       }
-
-       function deleteSelectedFiles(event) {
-           event.preventDefault();
-           const selectedFiles = Array.from(document.querySelectorAll('input[name="selected_files"]:checked'))
-               .map(checkbox => checkbox.value);
-           if (selectedFiles.length > 0) {
-               fetch(`/api/training-data/delete`, {
-                   method: 'DELETE',
-                   headers: {
-                       'Content-Type': 'application/json'
-                   },
-                   body: JSON.stringify({ ids: selectedFiles })
-               })
-               .then(response => response.json())
-               .then(data => {
-                   if (data.success) {
-                       alert('Selected files deleted successfully');
-                       fetchProcessedFiles();
-                   } else {
-                       alert('Error deleting files: ' + data.message);
-                   }
-               })
-               .catch(error => {
-                   console.error('Error deleting files:', error);
-               });
-           } else {
-               alert('No files selected');
-           }
-       }
-
-       function deleteAllFiles(event) {
-           event.preventDefault();
-           const userId = "{{ user_id }}";
-           fetch(`/api/training-data/delete-all/${userId}`, {
-               method: 'DELETE'
-           })
-           .then(response => response.json())
-           .then(data => {
-               if (data.success) {
-                   alert('All files deleted successfully');
-                   fetchProcessedFiles();
-               } else {
-                   alert('Error deleting files: ' + data.message);
-               }
-           })
-           .catch(error => {
-               console.error('Error deleting files:', error);
-           });
-       }
-
-       function checkMessageAndAddButton(message) {
-           if (message.includes("Looks like I have some data you uploaded in a previous session.")) {
-               const buttonContainer = document.createElement('div');
-               buttonContainer.id = 'buttonContainer';
-             
-               const startInterviewButton = document.createElement('button');
-               startInterviewButton.innerText = 'Start Interview!';
-               startInterviewButton.classList.add('actionButton');
-               startInterviewButton.onclick = function() {
-                   const jobTitle = "{{ job_title }}".toLowerCase();
-                   const companyName = "{{ company_name }}".toLowerCase();
-                   const industry = "{{ industry }}".toLowerCase();
-                   const username = "{{ username }}".toLowerCase();
-                   const userId = "{{ user_id }}";
-                   window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}&user_id=${userId}`;
-               };
-
-               buttonContainer.appendChild(startInterviewButton);
-               document.getElementById('file-list-container').insertBefore(buttonContainer, document.querySelector('h2'));
-           }
-       }
-   </script>
+    <meta charset="utf-8">
+    <title>Upload Options</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
 <div id="page-container">
-   <div id="content-wrap">
-       <h1>Select Your Method(s) For Uploading Training Data</h1>
-       <div class="container">
-           <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
-           <div class="speech-bubble" style="border-color: #02577a;">
-               <p id="message-text" class="centered-message"></p>
-           </div>
-       </div>
-       <div id="file-list-container">
-           <h2>Processed Files:</h2>
-           <form id="delete-selected-form" onsubmit="deleteSelectedFiles(event)">
-               <input type="hidden" name="user_id" value="{{ user_id }}">
-               <div id="files-list"></div>
-               <input type="submit" value="Delete Selected Files">
-           </form>
-           <form id="delete-all-form" onsubmit="deleteAllFiles(event)">
-               <input type="hidden" name="user_id" value="{{ user_id }}">
-               <input type="submit" value="Delete All Files">
-           </form>
-       </div>
-       <h2>If you want to extract the text from videos on a youtube channel:</h2>
-       <form id="youtube-transcription-form" method="post">
-           <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-           <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-           <input type="hidden" name="industry" value="{{ industry.lower() }}">
-           <input type="hidden" name="username" value="{{ username.lower() }}">
-           <input type="hidden" name="user_id" value="{{ user_id }}">
-           <label for="channel_id">YouTube Channel ID:
-               <span id="info-button" class="info-button">?</span>
-           </label>
-           <input type="text" id="channel_id" name="channel_id" required>
-           <br>
-           <label for="num_videos">Number of Videos:</label>
-           <input type="number" id="num_videos" name="num_videos" required>
-           <br>
-           <input type="submit" value="Start Transcription">
-       </form>
+    <div id="content-wrap">
+        <h1>Select Your Method(s) For Uploading Training Data</h1>
+        <div class="container">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="image">
+            <div class="speech-bubble" style="border-color: #02577a;">
+                <p id="message-text" class="centered-message"></p>
+            </div>
+        </div>
+        <div id="file-list-container">
+            <h2>Processed Files:</h2>
+            <form id="delete-selected-form" onsubmit="deleteSelectedFiles(event)">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <div id="files-list"></div>
+                <input type="submit" value="Delete Selected Files">
+            </form>
+            <form id="delete-all-form" onsubmit="deleteAllFiles(event)">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <input type="submit" value="Delete All Files">
+            </form>
+        </div>
+        <h2>If you want to extract the text from videos on a youtube channel:</h2>
+        <form id="youtube-transcription-form" method="post">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="channel_id">YouTube Channel ID:
+                <span id="info-button" class="info-button">?</span>
+            </label>
+            <input type="text" id="channel_id" name="channel_id" required>
+            <br>
+            <label for="num_videos">Number of Videos:</label>
+            <input type="number" id="num_videos" name="num_videos" required>
+            <br>
+            <input type="submit" value="Start Transcription">
+        </form>
 
-       <h2>Or enter individual YouTube video URLs:</h2>
-       <form id="youtube-urls-transcription-form" method="post">
-           <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-           <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-           <input type="hidden" name="industry" value="{{ industry.lower() }}">
-           <input type="hidden" name="username" value="{{ username.lower() }}">
-           <input type="hidden" name="user_id" value="{{ user_id }}">
-           <label for="youtube_urls">YouTube URLs:</label>
-           <textarea id="youtube_urls" name="youtube_urls" rows="5" cols="50" placeholder="Enter one URL per line"></textarea>
-           <br>
-           <input type="submit" value="Start Transcription">
-       </form>
+        <h2>Or enter individual YouTube video URLs:</h2>
+        <form id="youtube-urls-transcription-form" method="post">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="youtube_urls">YouTube URLs:</label>
+            <textarea id="youtube_urls" name="youtube_urls" rows="5" cols="50" placeholder="Enter one URL per line"></textarea>
+            <br>
+            <input type="submit" value="Start Transcription">
+        </form>
 
-       <h2>Feel free to upload text files from your computer:</h2>
-       <br>
-       <form id="file-upload-form" method="post" enctype="multipart/form-data">
-           <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-           <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-           <input type="hidden" name="industry" value="{{ industry.lower() }}">
-           <input type="hidden" name="username" value="{{ username.lower() }}">
-           <input type="hidden" name="user_id" value="{{ user_id }}">
-           <label for="files">File Upload:</label>
-           <input type="file" id="files" name="files" multiple required>
-           <br>
-           <input type="submit" value="Upload Files">
-       </form>
-       <br>
-       <h2>Or if you prefer paste some text here and submit it:</h2>
-       <form id="raw-text-submission-form" method="post">
-           <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
-           <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
-           <input type="hidden" name="industry" value="{{ industry.lower() }}">
-           <input type="hidden" name="username" value="{{ username.lower() }}">
-           <input type="hidden" name="user_id" value="{{ user_id }}">
-           <label for="raw_text">Raw Text:</label>
-           <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
-           <br>
-           <input type="submit" value="Submit Text">
-       </form>
-       <br></br>
-       <br></br>
-       <script>
-           function startInterview() {
-               const jobTitle = "{{ job_title }}".toLowerCase();
-               const companyName = "{{ company_name }}".toLowerCase();
-               const industry = "{{ industry }}".toLowerCase();
-               const username = "{{ username }}".toLowerCase();
-               const userId = "{{ user_id }}";
-               window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}&user_id=${userId}`;
-           }
-       </script>
-       <button onclick="startInterview()">Start Interview</button>
+        <h2>Feel free to upload text files from your computer:</h2>
+        <br>
+        <form id="file-upload-form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="files">File Upload:</label>
+            <input type="file" id="files" name="files" multiple required>
+            <br>
+            <input type="submit" value="Upload Files">
+        </form>
+        <br>
+        <h2>Or if you prefer paste some text here and submit it:</h2>
+        <form id="raw-text-submission-form" method="post">
+            <input type="hidden" name="job_title" value="{{ job_title.lower() }}">
+            <input type="hidden" name="company_name" value="{{ company_name.lower() }}">
+            <input type="hidden" name="industry" value="{{ industry.lower() }}">
+            <input type="hidden" name="username" value="{{ username.lower() }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <label for="raw_text">Raw Text:</label>
+            <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
+            <br>
+            <input type="submit" value="Submit Text">
+        </form>
+        <br></br>
+        <br></br>
+        <script>
+            function startInterview() {
+                const jobTitle = "{{ job_title }}".toLowerCase();
+                const companyName = "{{ company_name }}".toLowerCase();
+                const industry = "{{ industry }}".toLowerCase();
+                const username = "{{ username }}".toLowerCase();
+                const userId = "{{ user_id }}";
+                window.location.href = `http://localhost:5013/start_interview?job_title=${jobTitle}&company_name=${companyName}&industry=${industry}&username=${username}&user_id=${userId}`;
+            }
+        </script>
+        <button onclick="startInterview()">Start Interview</button>
 
-       <br></br>
+        <br></br>
 
-       <div id="info-popup" class="info-popup">
-           <span id="close-button" class="close-button">&times;</span>
-           <div class="info-content">
-               <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="popup-image">
-               <div class="speech-bubble">
-                   <p>If you want to extract the text from multiple videos on a specific youtube channel:</p>
-                   <ul>
-                       <li>Navigate to the channel's homepage on Youtube</li>
-                       <li>Right click on the page and "view page source"</li>
-                       <li>CTRL+F search for "channelid" and copy the preceding value</li>
-                       <li>For example: "UC4X9DZim5FK94v5ZflRZszQ" (my pal grumpy cat's channel)</li>
-                   </ul>
-               </div>
-           </div>
-       </div>
-   </div>
-   <footer>
-       <div>
-           <a href="#">About us</a><br>
-           <a href="#">Privacy Policy</a><br>
-           <a href="#">Contact us</a>
-       </div>
-       <div>
-           <a href="#">Pricing</a><br>
-           <a href="#">Github</a>
-       </div>
-       <div>
-           <a href="#">Blog</a><br>
-           <a href="#">Forum</a>
-       </div>
-   </footer>
+        <div id="info-popup" class="info-popup">
+            <span id="close-button" class="close-button">&times;</span>
+            <div class="info-content">
+                <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="popup-image">
+                <div class="speech-bubble">
+                    <p>If you want to extract the text from multiple videos on a specific youtube channel:</p>
+                    <ul>
+                        <li>Navigate to the channel's homepage on Youtube</li>
+                        <li>Right click on the page and "view page source"</li>
+                        <li>CTRL+F search for "channelid" and copy the preceding value</li>
+                        <li>For example: "UC4X9DZim5FK94v5ZflRZszQ" (my pal grumpy cat's channel)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
 </div>
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>
-

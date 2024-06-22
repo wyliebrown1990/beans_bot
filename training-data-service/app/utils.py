@@ -64,60 +64,6 @@ def update_process_status(app, username, job_title, company_name, status):
         })
         print(f"Status update response: {response.status_code} - {response.text}")
 
-def load_training_data(db: Session, job_title: str, company_name: str):
-    with current_app.app_context():
-        job_title = job_title.lower().strip()
-        company_name = company_name.lower().strip()
-        logging.debug(f"Loading training data for job title: {job_title}, company name: {company_name}")
-        training_data = db.query(TrainingData).filter(
-            func.lower(TrainingData.job_title) == job_title,
-            func.lower(TrainingData.company_name) == company_name
-        ).first()
-        logging.debug(f"Retrieved training data: {training_data}")
-        if training_data:
-            logging.debug(f"Data: {training_data.file_summary[:100]}...")  # Log first 100 characters of file_summary
-        return training_data
-
-def generate_summary(text):
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    model = ChatOpenAI(api_key=openai_api_key)
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert in summarizing the content of files. Return a JSON file with these attributes and corresponding serialized values: \"file_summary\": where serialized value is a 1000 character summary of the file. \"top_topics\": where serialized value is a summary of the top 3 topics in the file. \"primary_products_and_services\": where serialized value is a summary of the top products and services in the file. \"target_market\": where serialized value is a single definition of the market discussed in the file. \"market_position\": where serialized value is a summary of the market position of the company discussed in the file. \"required_skills\": where serialized value is a summary of the top 3 skills required to work at the company discussed in the file. \"unique_selling_proposition\": where serialized value is a summary of the unique selling proposition of the company discussed in the file."),
-        ("user", text)
-    ])
-
-    chain = prompt | model
-    response = chain.invoke({"messages": []})
-
-    # Extract response content
-    response_content = response.content.strip()
-
-    # Print the response content for debugging
-    print("Response Content:", response_content)
-
-    response_json = json.loads(response_content)  # Ensure response is valid JSON
-
-    # Print the parsed JSON data for debugging
-    print("Response JSON:", response_json)
-
-    return response_json
-
-def store_training_data(db_session, training_data):
-    with current_app.app_context():
-        logging.debug(f"Storing training data: {training_data}")
-        logging.debug(f"Data: {training_data.file_summary[:100]}...")  # Log first 100 characters of file_summary
-        db_session.add(training_data)
-        try:
-            db_session.commit()  # Ensure the session is committed
-            logging.debug(f"Stored training data with ID: {training_data.id}")
-            print(f"DEBUG: Training data stored with ID: {training_data.id}")
-        except Exception as e:
-            logging.error(f"Error committing training data to the database: {str(e)}")
-            print(f"ERROR: Error committing training data to the database: {str(e)}")
-            db_session.rollback()
-            raise e
-
 
 
 def process_file(app, file_path, job_title, company_name, username, user_id):
@@ -132,30 +78,35 @@ def process_file(app, file_path, job_title, company_name, username, user_id):
                 file_content = f.read()
                 print(f"DEBUG: File content loaded, length: {len(file_content)}")
 
-            # Generate summary using ChatGPT
-            summary = generate_summary(file_content)
-            print(f"DEBUG: Generated summary: {summary}")
+            # Generate job description analysis using the new function
+            analysis = get_job_description_analysis(file_content)
+            print(f"DEBUG: Generated analysis: {analysis}")
 
             db = next(get_db())
             job_title = job_title.lower().strip()
             company_name = company_name.lower().strip()
             print(f"DEBUG: Inside app context, job_title: {job_title}, company_name: {company_name}, username: {username}, user_id: {user_id}")
 
-            new_training_data = TrainingData(
+            new_analysis = JobDescriptionAnalysis(
                 user_id=user_id,
-                job_title=job_title,
-                company_name=company_name,
-                file_summary=summary.get("file_summary", ""),
-                top_topics=summary.get("top_topics", ""),
-                primary_products_and_services=summary.get("primary_products_and_services", ""),
-                target_market=summary.get("target_market", ""),
-                market_position=summary.get("market_position", ""),
-                required_skills=summary.get("required_skills", ""),
-                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
-                processed_files=filename
+                job_title=analysis['job_details']['title'],
+                job_level=analysis['job_details']['level'],
+                job_location=analysis['job_details']['location'],
+                job_type=analysis['job_details']['type'],
+                job_salary=analysis['job_details']['salary'],
+                job_responsibilities=json.dumps(analysis['job_details']['responsibilities']),
+                personal_qualifications=json.dumps(analysis['job_details']['personal_qualifications']),
+                company_name=analysis['company_information']['name'],
+                company_size=analysis['company_information']['size'],
+                company_industry=analysis['company_information']['industry'],
+                company_mission_and_values=analysis['company_information']['mission_and_values'],
+                education_background=json.dumps(analysis['requirements_and_qualifications']['education_background']),
+                required_professional_experiences=json.dumps(analysis['requirements_and_qualifications']['required_professional_experiences']),
+                nice_to_have_experiences=json.dumps(analysis['requirements_and_qualifications']['nice_to_have_experiences']),
+                required_skill_sets=json.dumps(analysis['requirements_and_qualifications']['required_skill_sets'])
             )
-            print(f"DEBUG: Prepared new_training_data: {new_training_data.__dict__}")
-            store_training_data(db, new_training_data)
+            print(f"DEBUG: Prepared new_analysis: {new_analysis.__dict__}")
+            store_analysis_data(db, new_analysis)
 
             update_process_status(app, username, job_title, company_name, f'File processed successfully: {filename}')
         except Exception as e:
@@ -165,44 +116,45 @@ def process_file(app, file_path, job_title, company_name, username, user_id):
         finally:
             cleanup_uploads_folder(app)
 
-
 def process_raw_text(app, job_title, company_name, raw_text, username, user_id):
     with app.app_context():
         try:
             update_process_status(app, username, job_title, company_name, 'Processing raw text')
 
-            # Generate summary using ChatGPT
-            summary = generate_summary(raw_text)
+            # Generate job description analysis using the new function
+            analysis = get_job_description_analysis(raw_text)
 
             db = next(get_db())
             job_title_lower = job_title.lower().strip()
             company_name_lower = company_name.lower().strip()
 
-            existing_files = db.query(TrainingData.processed_files).filter_by(job_title=job_title_lower, company_name=company_name_lower).all()
-            raw_text_count = sum(1 for files in existing_files for file in files.processed_files.split(',') if 'raw_text' in file)
-            processed_file_name = f"raw_text_{raw_text_count + 1}"
-
-            new_training_data = TrainingData(
+            new_analysis = JobDescriptionAnalysis(
                 user_id=user_id,
-                job_title=job_title_lower,
-                company_name=company_name_lower,
-                file_summary=summary.get("file_summary", ""),
-                top_topics=summary.get("top_topics", ""),
-                primary_products_and_services=summary.get("primary_products_and_services", ""),
-                target_market=summary.get("target_market", ""),
-                market_position=summary.get("market_position", ""),
-                required_skills=summary.get("required_skills", ""),
-                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
-                processed_files=processed_file_name
+                job_title=analysis['job_details']['title'],
+                job_level=analysis['job_details']['level'],
+                job_location=analysis['job_details']['location'],
+                job_type=analysis['job_details']['type'],
+                job_salary=analysis['job_details']['salary'],
+                job_responsibilities=json.dumps(analysis['job_details']['responsibilities']),
+                personal_qualifications=json.dumps(analysis['job_details']['personal_qualifications']),
+                company_name=analysis['company_information']['name'],
+                company_size=analysis['company_information']['size'],
+                company_industry=analysis['company_information']['industry'],
+                company_mission_and_values=analysis['company_information']['mission_and_values'],
+                education_background=json.dumps(analysis['requirements_and_qualifications']['education_background']),
+                required_professional_experiences=json.dumps(analysis['requirements_and_qualifications']['required_professional_experiences']),
+                nice_to_have_experiences=json.dumps(analysis['requirements_and_qualifications']['nice_to_have_experiences']),
+                required_skill_sets=json.dumps(analysis['requirements_and_qualifications']['required_skill_sets'])
             )
-            store_training_data(db, new_training_data)
+            store_analysis_data(db, new_analysis)
 
-            update_process_status(app, username, job_title, company_name, f'Raw text processed successfully: {processed_file_name}')
+            update_process_status(app, username, job_title, company_name, f'Raw text processed successfully')
         except Exception as e:
             logging.error(f"Error processing raw text: {str(e)}")
             update_process_status(app, username, job_title, company_name, 'Error processing raw text')
         finally:
             cleanup_uploads_folder(app)
+
 
 
 
@@ -382,3 +334,97 @@ def sanitize_filename(filename):
     return re.sub(r'[\\/*?:"<>|]', "", filename)
 
 
+def get_job_description_analysis(job_description_text):
+    openai_api_key = os.getenv('OPENAI_API_KEY')
+    model = ChatOpenAI(openai_api_key=openai_api_key)
+
+    prompt_text = """
+    You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. Please extract the relevant information from the following job description and return the results in JSON format. The examples below are just examples of what you might find and extract from the job descriptions I send you. If a job description is missing any detail, then return a JSON value of null for that field.
+
+    Desired Output in JSON Format:
+
+    {{
+      "job_details": {{
+        "title": "Senior Software Engineer",
+        "level": "Mid-Senior level",
+        "location": "New York, NY (Hybrid)",
+        "type": "Full-time",
+        "salary": "$175K/yr - $205K/yr",
+        "responsibilities": [
+          "Lead design and implementation of technical solutions",
+          "Collaborate with product designers, product managers, and other engineers",
+          "Investigate design approaches, prototype technology",
+          "Continuous improvement in software and development processes",
+          "Write automated tests",
+          "Mentor other engineers"
+        ],
+        "personal_qualifications": [
+          "Excellent written, verbal, and presentation skills",
+          "Ability to thrive in a fast-paced startup environment",
+          "Detail oriented with excellent organizational skills",
+          "Ability to work independently and be a self-motivator"
+        ]
+      }},
+      "company_information": {{
+        "name": "K Health",
+        "size": "201-500 employees",
+        "industry": "Telehealth and AI Healthcare",
+        "mission_and_values": "Use the power of AI to get everyone access to higher quality healthcare at more affordable costs"
+      }},
+      "requirements_and_qualifications": {{
+        "education_background": [
+          "Bachelor's degree in Computer Science, Engineering, or a related field"
+        ],
+        "required_professional_experiences": [
+          "5+ years of software engineering experience",
+          "Experience with highly-scalable, distributed systems",
+          "Experience in designing and developing services with APIs"
+        ],
+        "nice_to_have_experiences": [
+          "Experience with modern cloud technologies such as Docker, Kubernetes, Kafka, GCP/AWS suite"
+        ],
+        "required_skill_sets": [
+          "Node.js",
+          "TypeScript",
+          "GraphQL",
+          "Apollo Federation",
+          "Problem Solving",
+          "Excellent verbal and written communication skills"
+        ]
+      }}
+    }}
+    """
+
+    messages = [
+        SystemMessage(content=prompt_text),
+        HumanMessage(content=job_description_text)
+    ]
+
+    response = model(messages)
+
+    # Extract response content
+    response_content = response.content.strip()
+
+    # Print the response content for debugging
+    print("Response Content:", response_content)
+
+    response_json = json.loads(response_content)  # Ensure response is valid JSON
+
+    # Print the parsed JSON data for debugging
+    print("Response JSON:", response_json)
+
+    return response_json
+
+def store_analysis_data(db_session, analysis_data):
+    with current_app.app_context():
+        logging.debug(f"Storing analysis data: {analysis_data}")
+        db_session.add(analysis_data)
+        try:
+            db_session.commit()  # Ensure the session is committed
+            logging.debug(f"Stored analysis data with ID: {analysis_data.id}")
+            print(f"DEBUG: Analysis data stored with ID: {analysis_data.id}")
+        except Exception as e:
+            logging.error(f"Error committing analysis data to the database: {str(e)}")
+            print(f"ERROR: Error committing analysis data to the database: {str(e)}")
+            db_session.rollback()
+            raise e

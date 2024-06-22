@@ -1,54 +1,105 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Training Data Service</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta charset="utf-8">
+    <title>Training Data Service</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
 </head>
 <body>
-<div id="page-container">
-   <div id="content-wrap">
-       <h1>Training Data Service</h1>
-       <form method="post" action="/">
-           <label for="interview_type">Select Interview Type:</label>
-           <div class="dropdown">
-               <select id="interview_type" name="interview_type">
-                   <option value="first_round">First Round Interview</option>
-                   <option value="coming_soon">More Options Coming Soon...</option>
-               </select>
-           </div>
-           <br>
-           <label for="job_title">Job Title:</label>
-           <input type="text" id="job_title" name="job_title" required>
-           <br>
-           <label for="company_name">Company Name:</label>
-           <input type="text" id="company_name" name="company_name" required>
-           <br>
-           <label for="industry">Industry:</label>
-           <input type="text" id="industry" name="industry" required>
-           <br>
-           <label for="username">Username:</label>
-           <input type="text" id="username" name="username" value="{{ username }}" required>
-           <br>
-           <input type="hidden" id="user_id" name="user_id" value="{{ user_id }}">
-           <input type="submit" value="Submit">
-       </form>
-   </div>
-   <footer>
-       <div>
-           <a href="#">About us</a><br>
-           <a href="#">Privacy Policy</a><br>
-           <a href="#">Contact us</a>
-       </div>
-       <div>
-           <a href="#">Pricing</a><br>
-           <a href="#">Github</a>
-       </div>
-       <div>
-           <a href="#">Blog</a><br>
-           <a href="#">Forum</a>
-       </div>
-   </footer>
+<div id="sidebar">
+    <div id="logo-container">
+        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot">
+        <h1>Beans Bot</h1>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="#">Edit Resume</a></li>
+            <li><a href="#">Edit Job Listing</a></li>
+            <li><a href="#">Profile</a></li>
+            <li><a href="#">Plans</a></li>
+            <li><a href="#">Interview History</a></li>
+        </ul>
+    </nav>
 </div>
+<div id="main-content">
+    <header>
+        <h1>Beans Bot</h1>
+        <div id="version">Version 2.0 - New feature releases will be explained here briefly upon page loading</div>
+        <div class="hamburger-menu">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+    </header>
+    <div id="welcome-message">
+        <p>Welcome wylie! It's great to meet you. I'm excited to help you along your career search journey. My creator designed me to help him overcome 2 cat-astrophic pain points in his job search journey.</p>
+        <p>First, to overcome his anxiety. By interviewing frequently and purr-fecting your answers you can enter your next interview with confidence.</p>
+        <p>Second, he found that companies he interviewed at would never give critical feedback, if any. By getting real, claw-some feedback on your interview performance you can improve.</p>
+        <p>Here are some pawsome notes on how to get the most out of my services: Upload 1 file of data about the company, job listing or job role you want and see how it refines the interview experience. Each form of information you process is stored in my memory so that when I ask new questions and give you feedback. I'm fact checking you from the data you uploaded. If a file you already uploaded becomes irrelevant just delete it!</p>
+        <p>If you have any purr-spectives on how to improve my service please send them to: wyliedeveloper@gmail.com</p>
+        <p>Good Luck and lets go make those biscuits!</p>
+    </div>
+    <div id="job-listings-message">
+        <p>It looks like you’ve already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.</p>
+    </div>
+    <div id="job-listings-manager">
+        <h2>Job Listings Manager:</h2>
+        <label>
+            <input type="radio" name="listing" value="product_manager_google"> Product Manager at Google
+        </label>
+        <button>Delete</button>
+    </div>
+    <div id="file-upload-section">
+        <h2>Feel free to upload text files from your computer:</h2>
+        <form id="file-upload-form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="job_title" value="product_manager">
+            <input type="hidden" name="company_name" value="google">
+            <input type="hidden" name="industry" value="advertising">
+            <input type="hidden" name="username" value="username">
+            <input type="hidden" name="user_id" value="1">
+            <label for="files">File Upload:</label>
+            <input type="file" id="files" name="files" multiple required>
+            <br>
+            <input type="submit" value="Upload Files">
+        </form>
+        <br>
+        <h2>Or if you prefer paste some text here and submit it:</h2>
+        <form id="raw-text-submission-form" method="post">
+            <input type="hidden" name="job_title" value="product_manager">
+            <input type="hidden" name="company_name" value="google">
+            <input type="hidden" name="industry" value="advertising">
+            <input type="hidden" name="username" value="username">
+            <input type="hidden" name="user_id" value="1">
+            <label for="raw_text">Raw Text:</label>
+            <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
+            <br>
+            <input type="submit" value="Submit Text">
+        </form>
+    </div>
+    <div id="interview-details">
+        <h2>Interview Details:</h2>
+        <form method="post" action="/">
+            <label for="interview_type">Interview Round:</label>
+            <select id="interview_type" name="interview_type">
+                <option value="first_round">First Round</option>
+                <option value="coming_soon">More Options Coming Soon...</option>
+            </select>
+            <br>
+            <label for="job_title">Job Title:</label>
+            <input type="text" id="job_title" name="job_title" value="Product Manager" required>
+            <br>
+            <label for="company_name">Company Name:</label>
+            <input type="text" id="company_name" name="company_name" value="Google" required>
+            <br>
+            <label for="industry">Industry:</label>
+            <input type="text" id="industry" name="industry" value="Advertising" required>
+        </form>
+    </div>
+    
+    <div class="centered-button-container">
+        <button type="submit" class="start-interview-button">Start Interview</button>
+    </div>
+</div>
+<script src="../static/js/scripts.js"></script>
 </body>
 </html>
