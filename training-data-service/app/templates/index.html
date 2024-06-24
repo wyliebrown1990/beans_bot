@@ -44,19 +44,12 @@
     </div>
     <div id="job-listings-manager">
         <h2>Job Listings Manager:</h2>
-        <label>
-            <input type="radio" name="listing" value="product_manager_google"> Product Manager at Google
-        </label>
-        <button>Delete</button>
+        <div id="files-list"></div>
     </div>
     <div id="file-upload-section">
         <h2>Feel free to upload text files from your computer:</h2>
-        <form id="file-upload-form" method="post" enctype="multipart/form-data">
-            <input type="hidden" name="job_title" value="product_manager">
-            <input type="hidden" name="company_name" value="google">
-            <input type="hidden" name="industry" value="advertising">
-            <input type="hidden" name="username" value="username">
-            <input type="hidden" name="user_id" value="1">
+        <form id="file-upload-form" method="post" enctype="multipart/form-data" action="/file_upload">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
             <label for="files">File Upload:</label>
             <input type="file" id="files" name="files" multiple required>
             <br>
@@ -64,12 +57,8 @@
         </form>
         <br>
         <h2>Or if you prefer paste some text here and submit it:</h2>
-        <form id="raw-text-submission-form" method="post">
-            <input type="hidden" name="job_title" value="product_manager">
-            <input type="hidden" name="company_name" value="google">
-            <input type="hidden" name="industry" value="advertising">
-            <input type="hidden" name="username" value="username">
-            <input type="hidden" name="user_id" value="1">
+        <form id="raw-text-submission-form" method="post" action="/raw_text_submission">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
             <label for="raw_text">Raw Text:</label>
             <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
             <br>
@@ -79,6 +68,8 @@
     <div id="interview-details">
         <h2>Interview Details:</h2>
         <form method="post" action="/">
+            <input type="hidden" name="username" value="{{ username }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
             <label for="interview_type">Interview Round:</label>
             <select id="interview_type" name="interview_type">
                 <option value="first_round">First Round</option>
@@ -86,19 +77,19 @@
             </select>
             <br>
             <label for="job_title">Job Title:</label>
-            <input type="text" id="job_title" name="job_title" value="Product Manager" required>
+            <input type="text" id="job_title" name="job_title" required>
             <br>
             <label for="company_name">Company Name:</label>
-            <input type="text" id="company_name" name="company_name" value="Google" required>
+            <input type="text" id="company_name" name="company_name" required>
             <br>
             <label for="industry">Industry:</label>
-            <input type="text" id="industry" name="industry" value="Advertising" required>
+            <input type="text" id="industry" name="industry" required>
         </form>
     </div>
-    
     <div class="centered-button-container">
         <button type="submit" class="start-interview-button">Start Interview</button>
     </div>
+    <div id="status-message" style="display: none; background-color: #CC5500; color: white; padding: 10px; text-align: center;"></div>
 </div>
 <script src="../static/js/scripts.js"></script>
 </body>

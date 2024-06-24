@@ -1,430 +1,216 @@
 import os
-import uuid
-import glob
-import requests
 import json
-from io import BytesIO
-from sqlalchemy import create_engine, func
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import ProgrammingError
-from openai import OpenAI  # Ensure OpenAI is imported correctly
+import logging
+import glob
+from sqlalchemy.orm import sessionmaker
+from flask import current_app
+from app.models import JobDescriptionAnalysis
+from app.database import get_db
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from datetime import datetime
-from flask_login import UserMixin
-import numpy as np
+from langchain_community.chat_message_histories import ChatMessageHistory
+import requests
+import fitz  # PyMuPDF for PDF processing
+import docx
 import re
-import logging
-from dotenv import load_dotenv
-from elevenlabs import VoiceSettings
-from elevenlabs.client import ElevenLabs
-import yt_dlp
-import whisper
-from googleapiclient.discovery import build
-from app.models import TrainingData, ProcessStatus
-from app.database import get_db
-from flask import current_app
-
 
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
-
-youtube_api_key = os.getenv('GOOGLE_API_KEY')
-cookies_file = os.getenv('COOKIES_FILE')
-ffmpeg_location = os.getenv('FFMPEG_LOCATION')
 
 # Initialize the OpenAI chat model
 openai_api_key = os.getenv("OPENAI_API_KEY")
-openai_client = OpenAI(api_key=openai_api_key)
+model = ChatOpenAI(api_key=openai_api_key)
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-
-# Initialize YouTube API client
-youtube = build('youtube', 'v3', developerKey=youtube_api_key)
-
-def get_save_dir(app):
-    with app.app_context():
-        save_dir = app.config['UPLOAD_FOLDER']
-        transcription_dir = os.path.join(save_dir, "youtube")
-        os.makedirs(transcription_dir, exist_ok=True)
-    return save_dir, transcription_dir
-
-def update_process_status(app, username, job_title, company_name, status):
-    with app.app_context():
-        username = username.lower().strip()
-        job_title = job_title.lower().strip()
-        company_name = company_name.lower().strip()
-        print(f"Updating status for user: {username}, job: {job_title}, company: {company_name} to status: {status}")
-        response = requests.post('http://localhost:5011/update_status', json={
-            'username': username,
-            'job_title': job_title,
-            'company_name': company_name,
-            'status': status
-        })
-        print(f"Status update response: {response.status_code} - {response.text}")
-
-
-
-def process_file(app, file_path, job_title, company_name, username, user_id):
-    with app.app_context():
-        filename = os.path.basename(file_path)
-        logging.debug(f"Processing file: {filename}")
-        print(f"DEBUG: Processing file: {filename}, job_title: {job_title}, company_name: {company_name}, username: {username}, user_id: {user_id}")
-
-        try:
-            update_process_status(app, username, job_title, company_name, f'Processing file: {filename}')
-            with open(file_path, "r") as f:
-                file_content = f.read()
-                print(f"DEBUG: File content loaded, length: {len(file_content)}")
-
-            # Generate job description analysis using the new function
-            analysis = get_job_description_analysis(file_content)
-            print(f"DEBUG: Generated analysis: {analysis}")
-
-            db = next(get_db())
-            job_title = job_title.lower().strip()
-            company_name = company_name.lower().strip()
-            print(f"DEBUG: Inside app context, job_title: {job_title}, company_name: {company_name}, username: {username}, user_id: {user_id}")
-
-            new_analysis = JobDescriptionAnalysis(
-                user_id=user_id,
-                job_title=analysis['job_details']['title'],
-                job_level=analysis['job_details']['level'],
-                job_location=analysis['job_details']['location'],
-                job_type=analysis['job_details']['type'],
-                job_salary=analysis['job_details']['salary'],
-                job_responsibilities=json.dumps(analysis['job_details']['responsibilities']),
-                personal_qualifications=json.dumps(analysis['job_details']['personal_qualifications']),
-                company_name=analysis['company_information']['name'],
-                company_size=analysis['company_information']['size'],
-                company_industry=analysis['company_information']['industry'],
-                company_mission_and_values=analysis['company_information']['mission_and_values'],
-                education_background=json.dumps(analysis['requirements_and_qualifications']['education_background']),
-                required_professional_experiences=json.dumps(analysis['requirements_and_qualifications']['required_professional_experiences']),
-                nice_to_have_experiences=json.dumps(analysis['requirements_and_qualifications']['nice_to_have_experiences']),
-                required_skill_sets=json.dumps(analysis['requirements_and_qualifications']['required_skill_sets'])
-            )
-            print(f"DEBUG: Prepared new_analysis: {new_analysis.__dict__}")
-            store_analysis_data(db, new_analysis)
-
-            update_process_status(app, username, job_title, company_name, f'File processed successfully: {filename}')
-        except Exception as e:
-            logging.error(f"Error processing file {filename}: {str(e)}")
-            print(f"ERROR: Error processing file {filename}: {str(e)}")
-            update_process_status(app, username, job_title, company_name, f'Error processing file: {filename}')
-        finally:
-            cleanup_uploads_folder(app)
-
-def process_raw_text(app, job_title, company_name, raw_text, username, user_id):
+def update_process_status(app, user_id, status):
     with app.app_context():
         try:
-            update_process_status(app, username, job_title, company_name, 'Processing raw text')
-
-            # Generate job description analysis using the new function
-            analysis = get_job_description_analysis(raw_text)
-
-            db = next(get_db())
-            job_title_lower = job_title.lower().strip()
-            company_name_lower = company_name.lower().strip()
-
-            new_analysis = JobDescriptionAnalysis(
-                user_id=user_id,
-                job_title=analysis['job_details']['title'],
-                job_level=analysis['job_details']['level'],
-                job_location=analysis['job_details']['location'],
-                job_type=analysis['job_details']['type'],
-                job_salary=analysis['job_details']['salary'],
-                job_responsibilities=json.dumps(analysis['job_details']['responsibilities']),
-                personal_qualifications=json.dumps(analysis['job_details']['personal_qualifications']),
-                company_name=analysis['company_information']['name'],
-                company_size=analysis['company_information']['size'],
-                company_industry=analysis['company_information']['industry'],
-                company_mission_and_values=analysis['company_information']['mission_and_values'],
-                education_background=json.dumps(analysis['requirements_and_qualifications']['education_background']),
-                required_professional_experiences=json.dumps(analysis['requirements_and_qualifications']['required_professional_experiences']),
-                nice_to_have_experiences=json.dumps(analysis['requirements_and_qualifications']['nice_to_have_experiences']),
-                required_skill_sets=json.dumps(analysis['requirements_and_qualifications']['required_skill_sets'])
-            )
-            store_analysis_data(db, new_analysis)
-
-            update_process_status(app, username, job_title, company_name, f'Raw text processed successfully')
-        except Exception as e:
-            logging.error(f"Error processing raw text: {str(e)}")
-            update_process_status(app, username, job_title, company_name, 'Error processing raw text')
-        finally:
-            cleanup_uploads_folder(app)
-
-
-
-
-
-def download_and_transcribe(app, video, job_title, company_name, username, user_id):
-    with app.app_context():
-        video_url = video['url']
-        video_title = sanitize_filename(video['title'])
-
-        save_dir, transcription_dir = get_save_dir(app)
-
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': os.path.join(save_dir, '%(title)s.%(ext)s'),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'cookiefile': cookies_file,
-            'ffmpeg_location': ffmpeg_location
-        }
-
-        try:
-            update_process_status(app, username, job_title, company_name, f'Downloading and transcribing video: {video_title}')
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(video_url, download=True)
-                audio_file_path = ydl.prepare_filename(info_dict).replace('.webm', '.mp3')
-
-            if not os.path.exists(audio_file_path):
-                return
-
-            model = whisper.load_model("base")
-            result = model.transcribe(audio_file_path)
-
-            transcription_file_name = f"{video_title}.txt"
-            transcription_file_path = os.path.join(transcription_dir, transcription_file_name)
-            with open(transcription_file_path, "w") as f:
-                f.write(result["text"])
-
-            os.remove(audio_file_path)
-
-            with open(transcription_file_path, "r") as f:
-                transcription_content = f.read()
-
-            # Generate summary using ChatGPT
-            summary = generate_summary(transcription_content)
-
-            db = next(get_db())
-            job_title = job_title.lower().strip()
-            company_name = company_name.lower().strip()
-
-            new_training_data = TrainingData(
-                user_id=user_id,
-                job_title=job_title,
-                company_name=company_name,
-                file_summary=summary.get("file_summary", ""),
-                top_topics=summary.get("top_topics", ""),
-                primary_products_and_services=summary.get("primary_products_and_services", ""),
-                target_market=summary.get("target_market", ""),
-                market_position=summary.get("market_position", ""),
-                required_skills=summary.get("required_skills", ""),
-                unique_selling_proposition=summary.get("unique_selling_proposition", ""),
-                processed_files=transcription_file_name
-            )
-            store_training_data(db, new_training_data)
-
-            update_process_status(app, username, job_title, company_name, f'Video transcribed: {video_title}')
-        except Exception as e:
-            logging.error(f"Error downloading and transcribing video {video_title}: {str(e)}")
-            update_process_status(app, username, job_title, company_name, f'Error downloading/transcribing video: {video_title}')
-        finally:
-            cleanup_uploads_folder(app)
-
-
-def transcribe_videos(app, channel_id, num_videos, job_title, company_name, username, user_id):
-    try:
-        update_process_status(app, username, job_title, company_name, 'Transcribing videos')
-        video_urls = get_video_urls_from_channel(channel_id, num_videos)
-        for video in video_urls:
-            download_and_transcribe(app, video, job_title.lower().strip(), company_name.lower().strip(), username, user_id)
-        cleanup_uploads_folder(app)
-        update_process_status(app, username, job_title, company_name, 'Videos transcribed successfully')
-    except Exception as e:
-        logging.error(f"Error transcribing videos: {str(e)}")
-        update_process_status(app, username, job_title, company_name, 'Error transcribing videos')
-    finally:
-        cleanup_uploads_folder(app)
-
-def process_youtube_urls(app, youtube_urls, job_title, company_name, username, user_id):
-    try:
-        update_process_status(app, username, job_title, company_name, 'Processing YouTube URLs')
-        for url in youtube_urls:
-            video_id = url.split('v=')[-1]
-            request = youtube.videos().list(part="snippet", id=video_id)
-            response = request.execute()
-            if response['items']:
-                video_title = response['items'][0]['snippet']['title']
-            else:
-                video_title = 'Unknown Title'
-            video = {
-                'url': url,
-                'title': video_title  # Use actual video title
-            }
-            download_and_transcribe(app, video, job_title.lower().strip(), company_name.lower().strip(), username, user_id)
-        cleanup_uploads_folder(app)
-        update_process_status(app, username, job_title, company_name, 'YouTube URLs processed successfully')
-    except Exception as e:
-        logging.error(f"Error processing YouTube URLs: {str(e)}")
-        update_process_status(app, username, job_title, company_name, 'Error processing YouTube URLs')
-    finally:
-        cleanup_uploads_folder(app)
-
-
-
-def cleanup_uploads_folder(app):
-    save_dir, transcription_dir = get_save_dir(app)
-
-    # Remove all .txt files in the uploads folder
-    txt_files = glob.glob(os.path.join(save_dir, '*.txt'))
-    for txt_file in txt_files:
-        try:
-            os.remove(txt_file)
-            logging.info(f"Deleted file: {txt_file}")
-        except Exception as e:
-            logging.error(f"Error deleting file {txt_file}: {e}")
-
-    # Remove all .txt files in the uploads/youtube folder
-    youtube_txt_files = glob.glob(os.path.join(transcription_dir, '*.txt'))
-    for youtube_txt_file in youtube_txt_files:
-        try:
-            os.remove(youtube_txt_file)
-            logging.info(f"Deleted file: {youtube_txt_file}")
-        except Exception as e:
-            logging.error(f"Error deleting file {youtube_txt_file}: {e}")
-
-
-
-def get_video_urls_from_channel(channel_id, num_videos):
-    video_data = []
-    next_page_token = None
-
-    while len(video_data) < num_videos:
-        request = youtube.search().list(
-            part="snippet",
-            channelId=channel_id,
-            maxResults=min(50, num_videos - len(video_data)),
-            pageToken=next_page_token,
-            type="video",
-            order="date"
-        )
-
-        # Log the request URL for debugging
-        logging.debug(f"Request URL: {request.uri}")
-
-        try:
-            response = request.execute()
-        except Exception as e:
-            logging.error(f"Error executing YouTube API request: {e}")
-            raise e
-
-        for item in response['items']:
-            video_data.append({
-                'url': f"https://www.youtube.com/watch?v={item['id']['videoId']}",
-                'title': item['snippet']['title'],
-                'publishedAt': item['snippet']['publishedAt']
+            logging.debug(f"Updating status for user_id: {user_id} to status: {status}")
+            response = requests.post('http://localhost:5011/update_status', json={
+                'user_id': user_id,
+                'status': status
             })
+            logging.debug(f"Status update response: {response.status_code} - {response.text}")
+            if response.status_code != 200:
+                logging.error(f"Failed to update status for user_id: {user_id}. Status: {status}")
+        except Exception as e:
+            logging.error(f"Exception while updating status for user_id: {user_id}. Status: {status}. Error: {str(e)}")
 
-        next_page_token = response.get('nextPageToken')
-        if not next_page_token:
-            break
+def process_text(app, text, user_id):
+    with app.app_context():
+        try:
+            update_process_status(app, user_id, "Processing text submission")
+            cleaned_text = text.strip()  # Simple text cleaning
+            analysis = get_job_description_analysis(cleaned_text)
+            store_analysis_data(analysis, user_id)
+            update_process_status(app, user_id, "Processing complete")
+        except Exception as e:
+            logging.error(f"Error in process_text: {str(e)}")
+            update_process_status(app, user_id, f"Processing error: {str(e)}")
 
-    video_data.sort(key=lambda x: datetime.strptime(x['publishedAt'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
-    return video_data[:num_videos]
+def process_file(app, file_path, user_id):
+    with app.app_context():
+        try:
+            update_process_status(app, user_id, "Processing file upload")
+            if file_path.endswith('.pdf'):
+                extracted_text = extract_text_from_pdf(file_path)
+            elif file_path.endswith('.docx'):
+                extracted_text = extract_text_from_docx(file_path)
+            elif file_path.endswith('.txt'):
+                with open(file_path, 'r') as f:
+                    extracted_text = f.read()
+            else:
+                raise ValueError("Unsupported file type")
 
-def sanitize_filename(filename):
-    return re.sub(r'[\\/*?:"<>|]', "", filename)
+            cleaned_text = extracted_text.strip()
+            update_process_status(app, user_id, "Analyzing job description")
+            analysis = get_job_description_analysis(cleaned_text)
+            store_analysis_data(analysis, user_id)
+            update_process_status(app, user_id, "Processing complete")
+        except Exception as e:
+            logging.error(f"Error in process_file: {str(e)}")
+            update_process_status(app, user_id, f"Processing error: {str(e)}")
 
+def extract_text_from_pdf(file_path):
+    text = ""
+    doc = fitz.open(file_path)
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        text += page.get_text()
+    return text
 
+def extract_text_from_docx(file_path):
+    doc = docx.Document(file_path)
+    text = ""
+    for paragraph in doc.paragraphs:
+        text += paragraph.text + "\n"
+    return text
+
+#Don't change any of the code in this function. The Goal of the function is to take the job_description_text and invoke the openai chat model to return a JSON analysis. The JSON needs to be formatted correctly so that the response_json can then be stored in the database.
 def get_job_description_analysis(job_description_text):
-    openai_api_key = os.getenv('OPENAI_API_KEY')
-    model = ChatOpenAI(openai_api_key=openai_api_key)
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    model = ChatOpenAI(api_key=openai_api_key, model="gpt-4-turbo-preview")
 
-    prompt_text = """
-    You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. Please extract the relevant information from the following job description and return the results in JSON format. The examples below are just examples of what you might find and extract from the job descriptions I send you. If a job description is missing any detail, then return a JSON value of null for that field.
+    prompt_text = (
+        "You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. "
+        "Please extract the relevant information from the following job description and return the results in JSON format. If a job description is missing any detail, then return a JSON value of null for that field. "
+        "Desired Output in JSON Format: {{\"job_details\": {{\"title\": \"Senior Software Engineer\", \"level\": \"Mid-Senior level\", \"location\": \"New York, NY (Hybrid)\", \"type\": \"Full-time\", \"salary\": \"$175K/yr - $205K/yr\", \"responsibilities\": [\"Lead design and implementation of technical solutions\", \"Collaborate with product designers, product managers, and other engineers\", \"Investigate design approaches, prototype technology\", \"Continuous improvement in software and development processes\", \"Write automated tests\", \"Mentor other engineers\"], "
+        "\"personal_qualifications\": [\"Excellent written, verbal, and presentation skills\", \"Ability to thrive in a fast-paced startup environment\", \"Detail oriented with excellent organizational skills\", \"Ability to work independently and be a self-motivator\"]}}, "
+        "\"company_information\": {{\"name\": \"K Health\", \"size\": \"201-500 employees\", \"industry\": \"Telehealth and AI Healthcare\", \"mission_and_values\": \"Use the power of AI to get everyone access to higher quality healthcare at more affordable costs\"}}, "
+        "\"requirements_and_qualifications\": {{\"education_background\": [\"Bachelor's degree in Computer Science, Engineering, or a related field\"], \"required_professional_experiences\": [\"5+ years of software engineering experience\", \"Experience with highly-scalable, distributed systems\", \"Experience in designing and developing services with APIs\"], \"nice_to_have_experiences\": [\"Experience with modern cloud technologies such as Docker, Kubernetes, Kafka, GCP/AWS suite\"]}}, \"required_skill_sets\": [\"Node.js\", \"TypeScript\", \"GraphQL\", \"Apollo Federation\", \"Problem Solving\", \"Excellent verbal and written communication skills\"]}}"
+    )
 
-    Desired Output in JSON Format:
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", prompt_text),
+        ("user", "{job_description_text}")
+    ])
 
-    {{
-      "job_details": {{
-        "title": "Senior Software Engineer",
-        "level": "Mid-Senior level",
-        "location": "New York, NY (Hybrid)",
-        "type": "Full-time",
-        "salary": "$175K/yr - $205K/yr",
-        "responsibilities": [
-          "Lead design and implementation of technical solutions",
-          "Collaborate with product designers, product managers, and other engineers",
-          "Investigate design approaches, prototype technology",
-          "Continuous improvement in software and development processes",
-          "Write automated tests",
-          "Mentor other engineers"
-        ],
-        "personal_qualifications": [
-          "Excellent written, verbal, and presentation skills",
-          "Ability to thrive in a fast-paced startup environment",
-          "Detail oriented with excellent organizational skills",
-          "Ability to work independently and be a self-motivator"
-        ]
-      }},
-      "company_information": {{
-        "name": "K Health",
-        "size": "201-500 employees",
-        "industry": "Telehealth and AI Healthcare",
-        "mission_and_values": "Use the power of AI to get everyone access to higher quality healthcare at more affordable costs"
-      }},
-      "requirements_and_qualifications": {{
-        "education_background": [
-          "Bachelor's degree in Computer Science, Engineering, or a related field"
-        ],
-        "required_professional_experiences": [
-          "5+ years of software engineering experience",
-          "Experience with highly-scalable, distributed systems",
-          "Experience in designing and developing services with APIs"
-        ],
-        "nice_to_have_experiences": [
-          "Experience with modern cloud technologies such as Docker, Kubernetes, Kafka, GCP/AWS suite"
-        ],
-        "required_skill_sets": [
-          "Node.js",
-          "TypeScript",
-          "GraphQL",
-          "Apollo Federation",
-          "Problem Solving",
-          "Excellent verbal and written communication skills"
-        ]
-      }}
-    }}
-    """
+    logging.debug(f"Prompt created: {prompt}")
 
-    messages = [
-        SystemMessage(content=prompt_text),
-        HumanMessage(content=job_description_text)
-    ]
+    chain = prompt | model
 
-    response = model(messages)
+    input_data = {
+        "job_description_text": job_description_text.strip()
+    }
+    logging.debug(f"Input data to chain.invoke: {input_data}")
 
-    # Extract response content
+    response = chain.invoke(input_data)
+    logging.debug("Response received from chain.invoke")
+
     response_content = response.content.strip()
+    logging.debug(f"Response content: {response_content}")
 
-    # Print the response content for debugging
-    print("Response Content:", response_content)
+    if not response_content:
+        logging.error("Received empty response from chain.invoke")
+        raise ValueError("Received empty response from chain.invoke")
 
-    response_json = json.loads(response_content)  # Ensure response is valid JSON
+    try:
+        # Remove markdown formatting if present
+        if response_content.startswith("```json") and response_content.endswith("```"):
+            response_content = response_content[7:-3].strip()
+        
+        # Attempt to parse the JSON response
+        response_json = json.loads(response_content)
+        logging.debug(f"Response JSON: {response_json}")
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding JSON response: {str(e)}")
+        logging.error(f"Response content was: {response_content}")  # Log the problematic response
+        
+        # Attempt to handle and fix minor formatting issues
+        response_content = response_content.replace("```json", "").replace("```", "").strip()
+        try:
+            response_json = json.loads(response_content)
+            logging.debug(f"Recovered JSON: {response_json}")
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding JSON response after recovery attempt: {str(e)}")
+            raise ValueError(f"Error decoding JSON response: {str(e)}")
 
-    # Print the parsed JSON data for debugging
-    print("Response JSON:", response_json)
+    # Validate that essential keys are present
+    required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets"]
+    for key in required_keys:
+        if key not in response_json:
+            response_json[key] = None
 
     return response_json
 
-def store_analysis_data(db_session, analysis_data):
+def store_analysis_data(response_json, user_id):
     with current_app.app_context():
-        logging.debug(f"Storing analysis data: {analysis_data}")
-        db_session.add(analysis_data)
+        db_session = next(get_db())
+        
+        # Ensure all required keys are present in response_json
+        required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets"]
+        for key in required_keys:
+            if key not in response_json:
+                response_json[key] = None
+
+        job_details = response_json.get("job_details", {})
+        company_information = response_json.get("company_information", {})
+        requirements_and_qualifications = response_json.get("requirements_and_qualifications", {})
+        required_skill_sets = response_json.get("required_skill_sets", [])
+
+        # Safely join fields if they are lists, otherwise use an empty string
+        job_responsibilities = "\n".join(job_details.get("responsibilities", [])) if isinstance(job_details.get("responsibilities"), list) else ""
+        personal_qualifications = "\n".join(job_details.get("personal_qualifications", [])) if isinstance(job_details.get("personal_qualifications"), list) else ""
+        education_background = "\n".join(requirements_and_qualifications.get("education_background", [])) if isinstance(requirements_and_qualifications.get("education_background"), list) else ""
+        required_professional_experiences = "\n".join(requirements_and_qualifications.get("required_professional_experiences", [])) if isinstance(requirements_and_qualifications.get("required_professional_experiences"), list) else ""
+        nice_to_have_experiences = "\n".join(requirements_and_qualifications.get("nice_to_have_experiences", [])) if isinstance(requirements_and_qualifications.get("nice_to_have_experiences"), list) else ""
+        required_skill_sets_str = "\n".join(required_skill_sets) if isinstance(required_skill_sets, list) else ""
+
+        # Create a new JobDescriptionAnalysis object
+        job_description = JobDescriptionAnalysis(
+            user_id=user_id,
+            job_title=job_details.get("title"),
+            job_level=job_details.get("level"),
+            job_location=job_details.get("location"),
+            job_type=job_details.get("type"),
+            job_salary=job_details.get("salary"),
+            job_responsibilities=job_responsibilities,
+            personal_qualifications=personal_qualifications,
+            company_name=company_information.get("name"),
+            company_size=company_information.get("size"),
+            company_industry=company_information.get("industry"),
+            company_mission_and_values=company_information.get("mission_and_values"),
+            education_background=education_background,
+            required_professional_experiences=required_professional_experiences,
+            nice_to_have_experiences=nice_to_have_experiences,
+            required_skill_sets=required_skill_sets_str
+        )
+
+        # Add the new job description analysis to the session and commit
         try:
-            db_session.commit()  # Ensure the session is committed
-            logging.debug(f"Stored analysis data with ID: {analysis_data.id}")
-            print(f"DEBUG: Analysis data stored with ID: {analysis_data.id}")
+            db_session.add(job_description)
+            db_session.commit()
+            logging.info(f"Stored job description analysis for user_id: {user_id}")
         except Exception as e:
-            logging.error(f"Error committing analysis data to the database: {str(e)}")
-            print(f"ERROR: Error committing analysis data to the database: {str(e)}")
+            logging.error(f"Error storing job description analysis: {str(e)}")
             db_session.rollback()
-            raise e
+
+def cleanup_uploads_folder(app):
+    save_dir = app.config['UPLOAD_FOLDER']
+    files = glob.glob(os.path.join(save_dir, '*'))
+    for file in files:
+        try:
+            os.remove(file)
+            logging.info(f"Deleted file: {file}")
+        except Exception as e:
+            logging.error(f"Error deleting file {file}: {e}")

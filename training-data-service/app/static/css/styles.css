@@ -156,3 +156,14 @@ form button:hover, form input[type="submit"]:hover {
 .start-interview-button:hover {
     background-color: #01303f;
 }
+
+#status-message {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #CC5500;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    display: none;
+}

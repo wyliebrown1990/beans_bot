@@ -15,6 +15,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key_here')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 app.config['MAX_CONTENT_PATH'] = 100000
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16 MB uploads
 
 # Initialize Flask-Session
 Session(app)

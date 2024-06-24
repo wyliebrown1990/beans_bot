@@ -17,3 +17,5 @@ gevent
 gunicorn
 elevenlabs
 ffmpeg
+python-docx 
+PyMuPDF

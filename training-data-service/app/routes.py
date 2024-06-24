@@ -4,216 +4,89 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import TrainingData, ProcessStatus
-from app.utils import (
-  load_training_data, generate_summary, store_training_data,
-  process_raw_text, process_file, cleanup_uploads_folder,
-  get_video_urls_from_channel, sanitize_filename, download_and_transcribe,
-  transcribe_videos, process_youtube_urls, update_process_status
-)
+from app.models import JobDescriptionAnalysis, ProcessStatus
+from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
 from sqlalchemy import func
-
+import fitz  # PyMuPDF for PDF processing
+import docx
 
 logging.basicConfig(level=logging.DEBUG)
 
+def extract_text_from_pdf(file_path):
+    text = ""
+    doc = fitz.open(file_path)
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        text += page.get_text()
+    return text
+
+def extract_text_from_docx(file_path):
+    doc = docx.Document(file_path)
+    text = ""
+    for paragraph in doc.paragraphs:
+        text += paragraph.text + "\n"
+    return text
 
 def setup_routes(app, db_session):
 
-    @app.route('/update_status', methods=['POST'])
-    def update_status():
-        data = request.json
-        username = data.get('username')
-        job_title = data.get('job_title')
-        company_name = data.get('company_name')
-        status = data.get('status')
-
-        print(f"Received status update for user: {username}, job: {job_title}, company: {company_name} to status: {status}")
-
-        with app.app_context():
-            db = next(get_db())
-            process_status = db.query(ProcessStatus).filter_by(username=username, job_title=job_title, company_name=company_name).first()
-            if process_status:
-                process_status.status = status
-            else:
-                process_status = ProcessStatus(username=username, job_title=job_title, company_name=company_name, status=status)
-                db.add(process_status)
-            db.commit()
-        return jsonify({'status': 'success'})
-
-    @app.route('/get_status', methods=['GET'])
-    def get_status():
-        username = request.args.get('username').lower().strip()
-        job_title = request.args.get('job_title').lower().strip()
-        company_name = request.args.get('company_name').lower().strip()
-
-        print(f"Fetching status for user: {username}, job: {job_title}, company: {company_name}")
-
-        with app.app_context():
-            db = next(get_db())
-            process_status = db.query(ProcessStatus).filter_by(username=username, job_title=job_title, company_name=company_name).first()
-            if process_status:
-                print(f"Status found: {process_status.status}")
-                return jsonify({'status': process_status.status})
-            else:
-                print("No status found")
-                return jsonify({'status': 'No status found'})
-
-    @app.route('/youtube_transcription', methods=['POST'])
-    def youtube_transcription():
-        job_title = request.form['job_title']
-        company_name = request.form['company_name']
-        industry = request.form['industry']
-        username = request.form['username']
-        user_id = request.form['user_id']
-        channel_id = request.form['channel_id']
-        num_videos = int(request.form['num_videos'])
-
-        with app.app_context():
-            db = next(get_db())
-            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
-        
-            if user_data_count >= 5:
-                return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
-
-        threading.Thread(target=transcribe_videos, args=(current_app._get_current_object(), channel_id, num_videos, job_title.lower().strip(), company_name.lower().strip(), username, user_id)).start()
-        return jsonify({'pending': 'Transcription started successfully'}), 202
-
-    @app.route('/youtube_urls_transcription', methods=['POST'])
-    def youtube_urls_transcription():
-        job_title = request.form['job_title']
-        company_name = request.form['company_name']
-        industry = request.form['industry']
-        username = request.form['username']
-        user_id = request.form['user_id']
-        youtube_urls = request.form['youtube_urls'].strip().split('\n')
-        youtube_urls = [url.strip() for url in youtube_urls if url.strip()]
-
-        with app.app_context():
-            db = next(get_db())
-            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
-        
-            if user_data_count >= 5:
-                return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
-
-        threading.Thread(target=process_youtube_urls, args=(current_app._get_current_object(), youtube_urls, job_title, company_name, username, user_id)).start()
-        return jsonify({'pending': 'YouTube URLs transcription started successfully'}), 202
-
     @app.route('/file_upload', methods=['POST'])
     def file_upload():
-        job_title = request.form['job_title']
-        company_name = request.form['company_name']
-        industry = request.form['industry']
-        username = request.form['username']
-        user_id = request.form['user_id']
+        try:
+            user_id = request.form.get('user_id')
+            if not user_id:
+                raise ValueError("Missing user_id")
 
-        print(f"DEBUG: file_upload - Received data: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
+            files = request.files.getlist('files')
+            if not files:
+                raise ValueError("No files part")
 
-        with app.app_context():
-            db = next(get_db())
-            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
-            print(f"DEBUG: User data count for user_id {user_id}: {user_data_count}")
-
-            if user_data_count >= 5:
-                print("DEBUG: User has reached the limit of 5 uploads.")
-                return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
-
-        files = request.files.getlist('files')
-        print(f"DEBUG: Number of files received: {len(files)}")
-
-        for file in files:
-            if file and file.filename.endswith('.txt'):
+            for file in files:
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                print(f"DEBUG: Saving file {filename} to {file_path}")
                 file.save(file_path)
-                threading.Thread(target=process_file, args=(current_app._get_current_object(), file_path, job_title, company_name, username, user_id)).start()
-            else:
-                print(f"DEBUG: Skipping file {file.filename} - not a .txt file")
 
-        return jsonify({'pending': 'File processing started'}), 202
+                if filename.endswith('.txt'):
+                    with open(file_path, 'r') as f:
+                        file_content = f.read()
+                    threading.Thread(target=process_text, args=(current_app._get_current_object(), file_content, user_id)).start()
+                elif filename.endswith('.pdf'):
+                    file_content = extract_text_from_pdf(file_path)
+                    threading.Thread(target=process_text, args=(current_app._get_current_object(), file_content, user_id)).start()
+                elif filename.endswith('.docx'):
+                    file_content = extract_text_from_docx(file_path)
+                    threading.Thread(target=process_text, args=(current_app._get_current_object(), file_content, user_id)).start()
+                else:
+                    print(f"DEBUG: Skipping unsupported file type: {filename}")
+
+            return jsonify({'pending': 'File processing started'}), 202
+        except Exception as e:
+            print(f"ERROR: Exception in file_upload - {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
 
     @app.route('/raw_text_submission', methods=['POST'])
     def raw_text_submission():
-        job_title = request.form['job_title']
-        company_name = request.form['company_name']
-        industry = request.form['industry']
-        username = request.form['username']
-        user_id = request.form['user_id']
-        raw_text = request.form['raw_text']
-
-        with app.app_context():
-            db = next(get_db())
-            user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
-
-            if user_data_count >= 5:
-                return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
-
-        threading.Thread(target=process_raw_text, args=(current_app._get_current_object(), job_title, company_name, raw_text, username, user_id)).start()
-        return jsonify({'pending': 'Raw text submission started successfully'}), 202
-
-    @app.route('/progress')
-    def progress():
-        job_title = request.args.get('job_title')
-        company_name = request.args.get('company_name')
-        industry = request.args.get('industry')
-        username = request.args.get('username')
-        user_id = request.args.get('user_id')
-    
-        print(f"DEBUG: progress - Received query params: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
-
-        return render_template('progress.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id)
-
-    @app.route('/upload_options', methods=['GET'])
-    def upload_options():
-        job_title = request.args.get('job_title').lower().strip()
-        company_name = request.args.get('company_name').lower().strip()
-        industry = request.args.get('industry')
-        username = request.args.get('username')
-        user_id = request.args.get('user_id')
-
-        print(f"DEBUG: upload_options - Received query params: job_title={job_title}, company_name={company_name}, industry={industry}, username={username}, user_id={user_id}")
-
-        with app.app_context():
-            db = next(get_db())
-            training_data_exists = db.query(JobDescriptionAnalysis).filter(
-                JobDescriptionAnalysis.user_id == user_id
-            ).first() is not None
-
-        if training_data_exists:
-            message = "Looks like I have some data you uploaded in a previous session. Feel free to use this or delete it and upload more. We have a 5 file limit for free users."
-        else:
-            message = f"Looks like I don’t have any data uploaded about being a {job_title} at {company_name}. Please upload at least 1 file of data so that our interview is relevant to your job search. We have a max upload limit of 5 but you can always delete uploaded data and then add more."
-
-        return render_template('upload_options.html', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id, message=message)
-
-    @app.route('/api/training-data/<int:user_id>', methods=['GET'])
-    def get_training_data(user_id):
-        print(f"Route /api/training-data/{user_id} hit")
         try:
+            user_id = request.form['user_id']
+            raw_text = request.form['raw_text']
+
             with app.app_context():
-                db_session = next(get_db())
-                print(f"DB session established for user ID: {user_id}")
-                training_data = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).all()
-                print(f"Training data fetched: {training_data}")
-                response_data = [
-                    {
-                        'id': data.id,
-                        'processed_files': data.processed_files
-                    } for data in training_data
-                ]
-                print(f"Response data: {response_data}")
-                return jsonify(response_data)
+                db = next(get_db())
+                user_data_count = db.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
+
+                if user_data_count >= 5:
+                    return jsonify({'error': 'You have reached the limit of 5 uploads. Please delete some files before uploading more.'}), 400
+
+            threading.Thread(target=process_text, args=(current_app._get_current_object(), raw_text, user_id)).start()
+            return jsonify({'pending': 'Raw text submission started successfully'}), 202
         except Exception as e:
-            logging.error(f"Failed to fetch training data for user {user_id}: {str(e)}")
-            print(f"Exception occurred: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/training-data/delete', methods=['DELETE'])
+    @app.route('/api/job-description-analysis/delete', methods=['DELETE'])
     def delete_selected_files():
         try:
             data = request.json
             ids = data.get('ids', [])
-            print(f"Deleting files with IDs: {ids}")
 
             with app.app_context():
                 db_session = next(get_db())
@@ -222,13 +95,11 @@ def setup_routes(app, db_session):
             return jsonify({'success': True})
         except Exception as e:
             logging.error(f"Failed to delete selected files: {str(e)}")
-            return jsonify({'success': False, 'message': str(e)}), 500
+            return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/training-data/delete-all/<int:user_id>', methods=['DELETE'])
+    @app.route('/api/job-description-analysis/delete-all/<int:user_id>', methods=['DELETE'])
     def delete_all_files(user_id):
         try:
-            print(f"Deleting all files for user ID: {user_id}")
-
             with app.app_context():
                 db_session = next(get_db())
                 db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).delete(synchronize_session=False)
@@ -236,12 +107,16 @@ def setup_routes(app, db_session):
             return jsonify({'success': True})
         except Exception as e:
             logging.error(f"Failed to delete all files for user {user_id}: {str(e)}")
-            return jsonify({'success': False, 'message': str(e)}), 500
-
+            return jsonify({'error': str(e)}), 500
+        
     @app.route('/', methods=['GET', 'POST'])
     def index():
         username = request.args.get('username')
         user_id = request.args.get('user_id')
+
+        if not username or not user_id:
+            return "Missing username or user_id parameters", 400
+
         if request.method == 'POST':
             job_title = request.form['job_title'].lower().strip()
             company_name = request.form['company_name'].lower().strip()
@@ -251,16 +126,57 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db = next(get_db())
-                training_data_exists = db.query(JobDescriptionAnalysis).filter(
+                analysis_data_exists = db.query(JobDescriptionAnalysis).filter(
                     func.lower(JobDescriptionAnalysis.job_title) == job_title,
                     func.lower(JobDescriptionAnalysis.company_name) == company_name
                 ).first() is not None
 
-            if training_data_exists:
-                message = f"It looks like I already have training data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
+            if analysis_data_exists:
+                message = f"It looks like I already have analysis data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
             else:
-                message = f"It looks like I don't have any training data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
+                message = f"It looks like I don't have any analysis data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
 
-            return redirect(url_for('upload_options', job_title=job_title, company_name=company_name, industry=industry, username=username, user_id=user_id))
+            return render_template('index.html', username=username, user_id=user_id, message=message)
 
         return render_template('index.html', username=username, user_id=user_id)
+
+    @app.route('/api/job-description/<int:user_id>', methods=['GET'])
+    def get_job_description(user_id):
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+                if job_description:
+                    response_data = {
+                        'job_title': job_description.job_title,
+                        'company_name': job_description.company_name,
+                        'industry': job_description.company_industry
+                    }
+                else:
+                    response_data = {
+                        'job_title': '',
+                        'company_name': '',
+                        'industry': ''
+                    }
+                return jsonify(response_data)
+        except Exception as e:
+            logging.error(f"Failed to fetch job description for user {user_id}: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+        
+    @app.route('/update_status', methods=['POST'])
+    def update_status():
+        try:
+            data = request.get_json()
+            user_id = data.get('user_id')
+            status = data.get('status')
+
+            if not user_id or not status:
+                raise ValueError("Missing user_id or status")
+
+            # Logic to update status in the database
+            print(f"Updated status for user_id: {user_id} to {status}")
+
+            return jsonify({'success': True}), 200
+        except Exception as e:
+            print(f"ERROR: Exception in update_status - {str(e)}")
+            return jsonify({'error': str(e)}), 500

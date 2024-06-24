@@ -31,48 +31,31 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     fetchProcessedFiles();
+    fetchJobDescriptionData();
 
     document.getElementById('file-upload-form').addEventListener('submit', function(event) {
         event.preventDefault();
-        showStatusBlock(this);
+        showStatusMessage('Upload being processed...');
         uploadFiles(new FormData(this));
-    });
-
-    document.getElementById('youtube-transcription-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        showStatusBlock(this);
-        startYouTubeTranscription(new FormData(this));
-    });
-
-    document.getElementById('youtube-urls-transcription-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        showStatusBlock(this);
-        startYouTubeURLsTranscription(new FormData(this));
     });
 
     document.getElementById('raw-text-submission-form').addEventListener('submit', function(event) {
         event.preventDefault();
-        showStatusBlock(this);
+        showStatusMessage('We\'re processing your submission...');
         submitRawText(new FormData(this));
     });
 });
 
-function showStatusBlock(form) {
-    const statusBlock = document.createElement('div');
-    statusBlock.id = 'status-block';
-    statusBlock.style.display = 'block';
-    statusBlock.style.backgroundColor = '#CC5500';
-    statusBlock.style.color = 'white';
-    statusBlock.style.padding = '10px';
-    statusBlock.style.textAlign = 'center';
-    statusBlock.innerText = 'Upload being processed...';
-    form.appendChild(statusBlock);
+function showStatusMessage(message) {
+    const statusMessageDiv = document.getElementById('status-message');
+    statusMessageDiv.innerText = message;
+    statusMessageDiv.style.display = 'block';
 }
 
 function fetchProcessedFiles() {
     const userId = "{{ user_id }}";
     console.log("Fetching files for user ID:", userId);
-    fetch(`/api/training-data/${userId}`)
+    fetch(`/api/job-description-analysis/${userId}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch');
@@ -85,17 +68,17 @@ function fetchProcessedFiles() {
             filesListDiv.innerHTML = '';
             if (data.length === 0) {
                 const noFilesMessage = document.createElement('p');
-                noFilesMessage.textContent = "You don't currently have any training files. Please upload training data below.";
+                noFilesMessage.textContent = "You don't currently have any job listings. Please upload data below.";
                 filesListDiv.appendChild(noFilesMessage);
             } else {
                 data.forEach(file => {
                     const label = document.createElement('label');
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = 'selected_files';
-                    checkbox.value = file.id;
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(file.processed_files));
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'listing';
+                    radio.value = `${file.job_title}_${file.company_name}`;
+                    label.appendChild(radio);
+                    label.appendChild(document.createTextNode(`${file.job_title} at ${file.company_name}`));
                     filesListDiv.appendChild(label);
                     filesListDiv.appendChild(document.createElement('br'));
                 });
@@ -106,69 +89,49 @@ function fetchProcessedFiles() {
         });
 }
 
+function fetchJobDescriptionData() {
+    const userId = "{{ user_id }}";
+    console.log("Fetching job description data for user ID:", userId);
+    fetch(`/api/job-description/${userId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch job description data');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Job description data received:", data);
+            document.getElementById('job_title').value = data.job_title || '';
+            document.getElementById('company_name').value = data.company_name || '';
+            document.getElementById('industry').value = data.industry || '';
+        })
+        .catch(error => {
+            console.error('Error fetching job description data:', error);
+        });
+}
+
 function uploadFiles(formData) {
     fetch('/file_upload', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
-        setTimeout(() => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                fetchProcessedFiles();
-                alert('Files uploaded successfully. You may need to refresh your page to see them in the browser.');
-                location.reload();
-            }
-        }, 10000);
+        if (data.error) {
+            showStatusMessage(data.error);
+        } else {
+            showStatusMessage('Files uploaded successfully. Processing started...');
+            waitForProcessingCompletion("file_upload");
+        }
     })
     .catch(error => {
         console.error('Error uploading files:', error);
-    });
-}
-
-function startYouTubeTranscription(formData) {
-    fetch('/youtube_transcription', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        setTimeout(() => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                fetchProcessedFiles();
-                alert('Transcription started successfully. Note that if you scraped long video files you will need to wait a few minutes and refresh your page routinely until you see them in your file management form.');
-                location.reload();
-            }
-        }, 10000);
-    })
-    .catch(error => {
-        console.error('Error starting transcription:', error);
-    });
-}
-
-function startYouTubeURLsTranscription(formData) {
-    fetch('/youtube_urls_transcription', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        setTimeout(() => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                fetchProcessedFiles();
-                alert('YouTube URLs transcription started successfully. You may need to refresh your page to see them in the browser.');
-                location.reload();
-            }
-        }, 10000);
-    })
-    .catch(error => {
-        console.error('Error starting YouTube URLs transcription:', error);
+        showStatusMessage('Error uploading files: ' + error.message);
     });
 }
 
@@ -177,21 +140,45 @@ function submitRawText(formData) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
-        setTimeout(() => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                fetchProcessedFiles();
-                alert('Raw text submission started successfully. You may need to refresh your page to see them in the browser.');
-                location.reload();
-            }
-        }, 10000);
+        if (data.error) {
+            showStatusMessage(data.error);
+        } else {
+            showStatusMessage('Raw text submitted successfully. Processing started...');
+            waitForProcessingCompletion("raw_text_submission");
+        }
     })
     .catch(error => {
         console.error('Error submitting raw text:', error);
+        showStatusMessage('Error submitting raw text: ' + error.message);
     });
+}
+
+function waitForProcessingCompletion(endpoint) {
+    const userId = "{{ user_id }}";
+    const intervalId = setInterval(() => {
+        fetch(`/api/status/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "Processing complete" || data.status.startsWith("Processing error")) {
+                    showStatusMessage(data.status);
+                    clearInterval(intervalId);
+                } else {
+                    showStatusMessage(data.status);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking status:', error);
+                showStatusMessage('Error checking status: ' + error.message);
+                clearInterval(intervalId);
+            });
+    }, 5000);
 }
 
 function deleteSelectedFiles(event) {
@@ -199,7 +186,7 @@ function deleteSelectedFiles(event) {
     const selectedFiles = Array.from(document.querySelectorAll('input[name="selected_files"]:checked'))
         .map(checkbox => checkbox.value);
     if (selectedFiles.length > 0) {
-        fetch(`/api/training-data/delete`, {
+        fetch(`/api/job-description-analysis/delete`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
@@ -226,7 +213,7 @@ function deleteSelectedFiles(event) {
 function deleteAllFiles(event) {
     event.preventDefault();
     const userId = "{{ user_id }}";
-    fetch(`/api/training-data/delete-all/${userId}`, {
+    fetch(`/api/job-description-analysis/delete-all/${userId}`, {
         method: 'DELETE'
     })
     .then(response => response.json())
@@ -247,7 +234,7 @@ function checkMessageAndAddButton(message) {
     if (message.includes("Looks like I have some data you uploaded in a previous session.")) {
         const buttonContainer = document.createElement('div');
         buttonContainer.id = 'buttonContainer';
-     
+
         const startInterviewButton = document.createElement('button');
         startInterviewButton.innerText = 'Start Interview!';
         startInterviewButton.classList.add('actionButton');
