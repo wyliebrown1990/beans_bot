@@ -4,7 +4,7 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import JobDescriptionAnalysis, ProcessStatus, User
+from app.models import JobDescriptionAnalysis, ProcessStatus, User, Questions
 from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
@@ -370,3 +370,41 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Failed to update resume data: {str(e)}")
             return jsonify({'error': str(e)}), 500
+        
+    @app.route('/api/questions', methods=['POST'])
+    def create_question():
+        data = request.json
+        new_question = add_question(db_session, data)
+        return jsonify({'id': new_question.id, 'message': 'Question created successfully'}), 201
+
+    @app.route('/api/questions', methods=['GET'])
+    def get_questions():
+        filters = request.args.to_dict()
+        query = db_session.query(Questions)
+        
+        for key, value in filters.items():
+            if hasattr(Questions, key):
+                query = query.filter(getattr(Questions, key) == value)
+        
+        questions = query.all()
+        return jsonify([q.to_dict() for q in questions])
+    
+    @app.route('/question_data.html')
+    def question_data():
+        username = request.args.get('username')
+        user_id = request.args.get('user_id')
+        return render_template('question_data.html', username=username, user_id=user_id)
+
+    @app.route('/api/questions/<int:question_id>', methods=['PUT'])
+    def update_question_route(question_id):
+        data = request.json
+        updated_question = update_question(db_session, question_id, data)
+        if updated_question:
+            return jsonify({'message': 'Question updated successfully'}), 200
+        return jsonify({'error': 'Question not found'}), 404
+
+    @app.route('/api/questions/<int:question_id>', methods=['DELETE'])
+    def delete_question_route(question_id):
+        if delete_question(db_session, question_id):
+            return jsonify({'message': 'Question deleted successfully'}), 200
+        return jsonify({'error': 'Question not found'}), 404

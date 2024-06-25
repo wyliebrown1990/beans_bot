@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from app.models import JobDescriptionAnalysis, ProcessStatus, User, Questions
 
 # Load environment variables
 load_dotenv()

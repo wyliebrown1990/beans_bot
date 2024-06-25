@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const applyChangesButton = document.getElementById('apply-changes-button');
     const resumeDataContainer = document.getElementById('resume-data');
     const editResumeButton = document.getElementById('edit-resume-button');
-    const applyResumeChangesButton = document.getElementById('apply-changes-button');
+    const applyResumeChangesButton = document.getElementById('apply-resume-changes-button');
     const statusMessage = document.getElementById('status-message');
     const homeLink = document.getElementById('home-link');
 
@@ -22,6 +22,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const editJobListingLink = document.getElementById('edit-job-listing-link');
     const editResumeLink = document.getElementById('edit-resume-link');
+
+    const questionDataLink = document.getElementById('question-data-link');
+    const questionsDataContainer = document.getElementById('questions-data');
+
+    if (questionDataLink) {
+        questionDataLink.addEventListener('click', function() {
+            window.location.href = `/question_data.html?user_id=${userId}&username=${username}`;
+        });
+    }
+
+    if (questionsDataContainer) {
+        fetchQuestionData();
+    }
 
     if (!filesListContainer) {
         console.error('Element with id "files-list" not found.');
@@ -107,6 +120,65 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function fetchQuestionData(filters = {}) {
+        fetch(`/api/questions?${new URLSearchParams(filters)}`)
+            .then(response => response.json())
+            .then(data => {
+                populateQuestionDataDropdowns(data);
+            })
+            .catch(error => {
+                console.error('Error fetching question data:', error);
+                showStatusMessage('Error fetching question data: ' + error.message);
+            });
+    }
+
+    function populateQuestionDataDropdowns(data) {
+        const container = document.getElementById('questions-data');
+        if (!container) {
+            console.error('Questions data container not found');
+            return;
+        }
+        container.innerHTML = ''; // Clear existing content
+    
+        const columns = ['id', 'created_at', 'updated_at', 'is_user_submitted', 'is_role_specific', 
+                         'is_resume_specific', 'is_question_ai_generated', 'question_type', 'question', 
+                         'description', 'job_title', 'user_id'];
+    
+        columns.forEach(column => {
+            const values = [...new Set(data.map(item => item[column]))];
+            const dropdownHtml = createDropdown(column, values);
+            container.innerHTML += dropdownHtml;
+        });
+    
+        // Add event listeners to dropdowns
+        container.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', handleDropdownChange);
+        });
+    }
+    
+    function createDropdown(column, values) {
+        let options = values.map(value => `<option value="${value}">${value === null ? 'NULL' : value}</option>`).join('');
+        return `
+            <div class="dropdown-container">
+                <label for="${column}">${column}:</label>
+                <select id="${column}" name="${column}">
+                    <option value="">All</option>
+                    ${options}
+                </select>
+            </div>
+        `;
+    }
+    
+    function handleDropdownChange(event) {
+        const filters = {};
+        document.querySelectorAll('#questions-data select').forEach(select => {
+            if (select.value) {
+                filters[select.name] = select.value;
+            }
+        });
+        fetchQuestionData(filters);
+    }
+
     function uploadFiles(formData) {
         fetch('/file_upload', {
             method: 'POST',
@@ -175,9 +247,9 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => {
             console.error('Error fetching job listings:', error);
-            filesListContainer.innerHTML = 'Error fetching job listings: ' + error.message;
-            jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
-            deleteJobListingButton.style.display = 'none';
+            if (filesListContainer) filesListContainer.innerHTML = 'Error fetching job listings: ' + error.message;
+            if (jobListingsMessage) jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
+            if (deleteJobListingButton) deleteJobListingButton.style.display = 'none';
         });
     }
 
@@ -261,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.error) {
                     console.error('Error fetching job listing data:', data.error);
                     showStatusMessage('Error fetching job listing data: ' + data.error);
-                    jobListingDataContainer.innerHTML = 'Error fetching job listing data.';
+                    if (jobListingDataContainer) jobListingDataContainer.innerHTML = 'Error fetching job listing data.';
                 } else {
                     populateJobListingData(data[0]); // Assuming there's only one job listing per user
                 }
@@ -273,6 +345,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function populateJobListingData(data) {
+        if (!jobListingDataContainer) {
+            console.error('Element with id "job-listing-data" not found.');
+            return;
+        }
+
         jobListingDataContainer.innerHTML = `
             <div>
                 <label>Job Title:</label>
@@ -344,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.error) {
                     console.error('Error fetching resume data:', data.error);
                     showStatusMessage('Error fetching resume data: ' + data.error);
-                    resumeDataContainer.innerHTML = 'Error fetching resume data.';
+                    if (resumeDataContainer) resumeDataContainer.innerHTML = 'Error fetching resume data.';
                 } else {
                     populateResumeData(data); // Populate resume data
                 }
@@ -356,6 +433,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function populateResumeData(data) {
+        if (!resumeDataContainer) {
+            console.error('Element with id "resume-data" not found.');
+            return;
+        }
+
         resumeDataContainer.innerHTML = `
             <div>
                 <label>Key Technical Skills:</label>
@@ -429,6 +511,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function makeJobListingFieldsEditable() {
+        if (!jobListingDataContainer) {
+            console.error('Element with id "job-listing-data" not found.');
+            return;
+        }
+
         const inputs = jobListingDataContainer.querySelectorAll('input, textarea');
         inputs.forEach(input => input.removeAttribute('readonly'));
         editJobListingButton.style.display = 'none';
@@ -482,6 +569,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function makeResumeFieldsEditable() {
+        if (!resumeDataContainer) {
+            console.error('Element with id "resume-data" not found.');
+            return;
+        }
+
         const inputs = resumeDataContainer.querySelectorAll('input, textarea');
         inputs.forEach(input => input.removeAttribute('readonly'));
         editResumeButton.style.display = 'none';

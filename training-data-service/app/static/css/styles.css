@@ -2,7 +2,7 @@
 
 body {
     font-family: 'Roboto', Arial, sans-serif;
-    background-color: #d4f0fc;
+    background-color: #ffffff;
     color: #01303f;
     margin: 0;
     padding: 0;
@@ -10,13 +10,15 @@ body {
 }
 
 #sidebar {
-    background-color: #f1f1f1;
+    background-color: #ffffff;
     width: 250px;
     padding: 20px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: 100vh;
+    position: fixed;
 }
 
 #logo-container {
@@ -53,12 +55,11 @@ body {
     color: #02577a;
     display: block;
     text-align: center;
-    padding: 15px; /* Increase padding for better appearance */
+    padding: 15px;
     border-radius: 5px;
     background-color: #89d6fb;
-    width: 100%; /* Adjust the width to 100% */
-    margin: 0 auto; /* Center the buttons */
-    box-sizing: border-box; /* Ensure padding is included in the width */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #sidebar nav ul li a:hover {
@@ -69,15 +70,20 @@ body {
 #main-content {
     flex: 1;
     padding: 20px;
+    margin-left: 250px; /* Adjust this value to match the sidebar width + padding */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 header {
     background-color: #CC5500;
     color: white;
-    padding: 10px 20px;
+    padding: 10px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 header h1 {
@@ -101,11 +107,59 @@ header h1 {
     margin: 4px 0;
 }
 
-#welcome-message, #job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
-    background-color: white;
-    border: 1px solid #89d6fb;
-    border-radius: 5px;
+.chat-container {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.chat-block {
+    display: flex;
+    align-items: flex-start;
+}
+
+.chat-image {
+    width: 100px;
+    height: 100px;
+    margin-right: 20px;
+}
+
+.speech-bubble {
+    background-color: #89d6fb;
+    border: 2px solid #02577a;
+    border-radius: 10px;
     padding: 20px;
+    position: relative;
+    max-width: calc(100% - 120px);
+    color: #02577a;
+}
+
+.speech-bubble:before {
+    content: '';
+    position: absolute;
+    top: 50px;
+    left: -20px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #02577a;
+}
+
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    top: 50px;
+    left: -17px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: #89d6fb;
+}
+
+#welcome-message, #job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
+    width: 100%;
+    max-width: 800px;
     margin-top: 20px;
 }
 
@@ -116,6 +170,7 @@ header h1 {
 form label {
     display: block;
     margin: 10px 0 5px;
+    border: #02577a;
 }
 
 form input[type="text"], form select, form button, form textarea {
@@ -126,34 +181,20 @@ form input[type="text"], form select, form button, form textarea {
     border-radius: 5px;
 }
 
-form button, form input[type="submit"] {
+form button, form input[type="submit"], .start-interview-button, #delete-job-listing-button {
     background-color: #02577a;
     color: white;
     border: none;
     cursor: pointer;
-}
-
-form button:hover, form input[type="submit"]:hover {
-    background-color: #01303f;
-}
-
-.centered-button-container {
     text-align: center;
-    margin-top: 20px;
+    width: 250px;
+    padding: 15px;
+    margin: 20px auto;
+    display: block;
+    border-radius: 5px;
 }
 
-.start-interview-button {
-    width: 100%; /* Set the width to 100% */
-    padding: 10px;
-    border: 1px solid #89d6fb;
-    border-radius: 4px;
-    background-color: #02577a;
-    color: white;
-    cursor: pointer;
-    border: none; /* Remove border */
-}
-
-.start-interview-button:hover {
+form button:hover, form input[type="submit"]:hover, .start-interview-button:hover, #delete-job-listing-button:hover {
     background-color: #01303f;
 }
 

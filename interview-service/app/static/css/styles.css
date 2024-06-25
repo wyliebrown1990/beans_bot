@@ -180,8 +180,8 @@ hr {
   color: white;
 }
 .chat-image {
-  max-width: 100px;
-  margin-right: 10px;
+  float: left; /* Float the image to the left */
+  margin-right: 10px; /* Add margin to create space between the image and the speech bubble */
   align-self: flex-start; /* Ensure the image stays at the top */
 }
 p {
@@ -312,17 +312,15 @@ h5 {
   width: calc(100% - 40px); /* Adjust width to account for padding */
   color: white; /* Ensures text is readable on dark background */
 }
-.chat-image {
-  max-width: 100px;
-  margin-right: 10px; /* Ensure there's space between the image and the speech bubble */
-}
 .speech-bubble {
+  float: left; /* Float the speech bubble to the left */
+  clear: both; /* Clear the float to ensure proper alignment */
   background-color: #89d6fb;
   border: 2px solid #02577a;
   border-radius: 10px;
   padding: 20px;
   position: relative;
-  max-width: 70%;
+  max-width: 70%; /* Adjust the maximum width as needed */
   color: #02577a; /* Updated text color to match the border */
 }
 .speech-bubble:after {

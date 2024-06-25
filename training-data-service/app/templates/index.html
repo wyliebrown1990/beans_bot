@@ -18,6 +18,7 @@
             <li><a href="#">Profile</a></li>
             <li><a href="#">Plans</a></li>
             <li><a href="#">Interview History</a></li>
+            <li><a href="javascript:void(0)" id="question-data-link">Question Data</a></li>
         </ul>
     </nav>
 </div>
@@ -31,16 +32,26 @@
             <div class="bar"></div>
         </div>
     </header>
-    <div id="welcome-message">
-        <p>Welcome wylie! It's great to meet you. I'm excited to help you along your career search journey. My creator designed me to help him overcome 2 cat-astrophic pain points in his job search journey.</p>
-        <p>First, to overcome his anxiety. By interviewing frequently and purr-fecting your answers you can enter your next interview with confidence.</p>
-        <p>Second, he found that companies he interviewed at would never give critical feedback, if any. By getting real, claw-some feedback on your interview performance you can improve.</p>
-        <p>Here are some pawsome notes on how to get the most out of my services: Upload 1 file of data about the company, job listing or job role you want and see how it refines the interview experience. Each form of information you process is stored in my memory so that when I ask new questions and give you feedback. I'm fact checking you from the data you uploaded. If a file you already uploaded becomes irrelevant just delete it!</p>
-        <p>If you have any purr-spectives on how to improve my service please send them to: wyliedeveloper@gmail.com</p>
-        <p>Good Luck and lets go make those biscuits!</p>
+    <div class="chat-container">
+        <div class="chat-block">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+            <div id="welcome-message" class="speech-bubble">
+                <p>Welcome wylie! It's great to meet you. I'm excited to help you along your career search journey. My creator designed me to help him overcome 2 cat-astrophic pain points in his job search journey.</p>
+                <p>First, to overcome his anxiety. By interviewing frequently and purr-fecting your answers you can enter your next interview with confidence.</p>
+                <p>Second, he found that companies he interviewed at would never give critical feedback, if any. By getting real, claw-some feedback on your interview performance you can improve.</p>
+                <p>Here are some pawsome notes on how to get the most out of my services: Upload 1 file of data about the company, job listing or job role you want and see how it refines the interview experience. Each form of information you process is stored in my memory so that when I ask new questions and give you feedback. I'm fact checking you from the data you uploaded. If a file you already uploaded becomes irrelevant just delete it!</p>
+                <p>If you have any purr-spectives on how to improve my service please send them to: wyliedeveloper@gmail.com</p>
+                <p>Good Luck and lets go make those biscuits!</p>
+            </div>
+        </div>
     </div>
-    <div id="job-listings-message">
-        <p>It looks like you’ve already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.</p>
+    <div class="chat-container">
+        <div class="chat-block">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+            <div id="job-listings-message" class="speech-bubble">
+                <p>It looks like you've already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.</p>
+            </div>
+        </div>
     </div>
     <div id="job-listings-manager">
         <h2>Job Listings Manager:</h2>
@@ -93,12 +104,10 @@
             <select id="industry" name="industry" required>
                 <option value="">Upload a job description to get started here</option>
             </select>
+            <button type="submit" class="start-interview-button">Start Interview</button>
         </form>
     </div>    
-    <div class="centered-button-container">
-        <button type="submit" class="start-interview-button">Start Interview</button>
-    </div>
-    <div id="status-message" style="display: none; background-color: #CC5500; color: white; padding: 10px; text-align: center;"></div>
+    <div id="status-message" style="display: none;"></div>
 </div>
 <script src="../static/js/scripts.js"></script>
 </body>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from flask_login import UserMixin
@@ -70,3 +70,35 @@ class User(UserMixin, Base):
     resume_length = Column(Text, nullable=True)
     top_challenge = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class Questions(Base):
+    __tablename__ = 'questions'
+    
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_user_submitted = Column(Boolean, nullable=False)
+    is_role_specific = Column(Boolean, nullable=False)
+    is_resume_specific = Column(Boolean, nullable=False)
+    is_question_ai_generated = Column(Boolean, nullable=False)
+    question_type = Column(String(50), nullable=False)
+    question = Column(String(200), nullable=False)
+    description = Column(String(200), nullable=True)
+    job_title = Column(String(50), nullable=True)
+    user_id = Column(Integer, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_user_submitted': self.is_user_submitted,
+            'is_role_specific': self.is_role_specific,
+            'is_resume_specific': self.is_resume_specific,
+            'is_question_ai_generated': self.is_question_ai_generated,
+            'question_type': self.question_type,
+            'question': self.question,
+            'description': self.description,
+            'job_title': self.job_title,
+            'user_id': self.user_id
+        }

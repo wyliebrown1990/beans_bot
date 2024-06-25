@@ -89,7 +89,7 @@ def extract_text_from_docx(file_path):
 #Don't change any of the code in this function. The Goal of the function is to take the job_description_text and invoke the openai chat model to return a JSON analysis. The JSON needs to be formatted correctly so that the response_json can then be stored in the database.
 def get_job_description_analysis(job_description_text):
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    model = ChatOpenAI(api_key=openai_api_key, model="gpt-4-turbo-preview")
+    model = ChatOpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
 
     prompt_text = (
         "You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. "
@@ -214,3 +214,33 @@ def cleanup_uploads_folder(app):
             logging.info(f"Deleted file: {file}")
         except Exception as e:
             logging.error(f"Error deleting file {file}: {e}")
+
+#questions table functions: 
+def add_question(db_session, question_data):
+    new_question = Questions(**question_data)
+    db_session.add(new_question)
+    db_session.commit()
+    return new_question
+
+def get_questions(db_session, filters=None):
+    query = db_session.query(Questions)
+    if filters:
+        query = query.filter_by(**filters)
+    return query.all()
+
+def update_question(db_session, question_id, update_data):
+    question = db_session.query(Questions).filter_by(id=question_id).first()
+    if question:
+        for key, value in update_data.items():
+            setattr(question, key, value)
+        db_session.commit()
+        return question
+    return None
+
+def delete_question(db_session, question_id):
+    question = db_session.query(Questions).filter_by(id=question_id).first()
+    if question:
+        db_session.delete(question)
+        db_session.commit()
+        return True
+    return False
