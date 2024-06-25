@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+   <meta charset="utf-8">
+   <title>Edit Job Listing</title>
+   <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+<div id="sidebar">
+   <div id="logo-container">
+       <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot">
+       <h1>Beans Bot</h1>
+   </div>
+   <nav>
+       <ul>
+        <li><a href="javascript:void(0)" id="home-link">Home</a></li>
+           <li><a href="#">Edit Resume</a></li>
+           <li><a href="#">Edit Job Listing</a></li>
+           <li><a href="#">Profile</a></li>
+           <li><a href="#">Plans</a></li>
+           <li><a href="#">Interview History</a></li>
+       </ul>
+   </nav>
+</div>
+<div id="main-content">
+   <header>
+       <h1>Edit Job Listing</h1>
+       <div id="version">Version 2.0 - New feature releases will be explained here briefly upon page loading</div>
+       <div class="hamburger-menu">
+           <div class="bar"></div>
+           <div class="bar"></div>
+           <div class="bar"></div>
+       </div>
+   </header>
+   <div id="job-listing-details">
+       <h2>Job Listing Details:</h2>
+       <div id="job-listing-data">
+           <!-- Job Listing data will be populated here -->
+       </div>
+       <button id="edit-job-listing-button">Edit</button>
+       <button id="apply-changes-button" style="display:none;">Apply Changes</button>
+       <div id="status-message" style="display:none; background-color: #CC5500; color: white; padding: 10px; text-align: center;"></div>
+   </div>
+</div>
+<script src="../static/js/scripts.js"></script>
+</body>
+</html>
