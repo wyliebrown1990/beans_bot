@@ -8,3 +8,5 @@ __pycache__/
 .DS_Store
 venv
 terraform/.aws/
+
+terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/

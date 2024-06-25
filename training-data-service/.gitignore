@@ -1,1 +1,2 @@
 .env
+terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/
