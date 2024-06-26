@@ -4,7 +4,7 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import JobDescriptionAnalysis, ProcessStatus, User, Questions
+from app.models import JobDescriptionAnalysis, User, Questions, InterviewHistory
 from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
@@ -408,3 +408,83 @@ def setup_routes(app, db_session):
         if delete_question(db_session, question_id):
             return jsonify({'message': 'Question deleted successfully'}), 200
         return jsonify({'error': 'Question not found'}), 404
+    
+    @app.route('/save_interview_history', methods=['POST'])
+    def save_interview_history():
+        session = Session()
+        new_history = InterviewHistory(
+            session_id=request.json['session_id'],
+            user_id=request.json['user_id'],
+            # ... other fields ...
+        )
+        session.add(new_history)
+        session.commit()
+        session.close()
+        return jsonify({'status': 'success'})
+    
+    @app.route('/api/interview-history/sessions/<int:user_id>', methods=['GET'])
+    def get_interview_sessions(user_id):
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                sessions = db_session.query(
+                    InterviewHistory.session_id,
+                    func.min(InterviewHistory.created_at).label('date')
+                ).filter_by(user_id=user_id).group_by(InterviewHistory.session_id).all()
+                
+                return jsonify([
+                    {'session_id': session.session_id, 'date': session.date.isoformat()}
+                    for session in sessions
+                ])
+        except Exception as e:
+            logging.error(f"Error fetching interview sessions: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/interview-history/<int:user_id>/<int:session_id>', methods=['GET'])
+    def get_interview_history(user_id, session_id):
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                summary = db_session.query(InterviewHistory).filter_by(
+                    user_id=user_id, session_id=session_id
+                ).first()
+                
+                transcript = db_session.query(
+                    InterviewHistory.question,
+                    InterviewHistory.answer,
+                    InterviewHistory.feedback,
+                    InterviewHistory.score,
+                    InterviewHistory.created_at
+                ).filter_by(user_id=user_id, session_id=session_id).order_by(
+                    InterviewHistory.created_at, InterviewHistory.id
+                ).all()
+                
+                return jsonify({
+                    'summary': {
+                        'top_score': summary.session_top_score,
+                        'lowest_score': summary.session_low_score,
+                        'average_score': summary.session_score_average,
+                        'next_steps': summary.session_summary_next_steps
+                    },
+                    'transcript': [
+                        {
+                            'question': item.question,
+                            'answer': item.answer,
+                            'feedback': item.feedback,
+                            'score': item.score
+                        } for item in transcript
+                    ]
+                })
+        except Exception as e:
+            logging.error(f"Error fetching interview history: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+        
+    @app.route('/interview_history.html')
+    def interview_history():
+        username = request.args.get('username')
+        user_id = request.args.get('user_id')
+
+        if not username or not user_id:
+            return "Missing username or user_id parameters", 400
+
+        return render_template('interview_history.html', username=username, user_id=user_id)

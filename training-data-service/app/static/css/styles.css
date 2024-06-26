@@ -58,7 +58,7 @@ body {
     padding: 15px;
     border-radius: 5px;
     background-color: #89d6fb;
-    width: 100%;
+    width: 250px;
     box-sizing: border-box;
 }
 
@@ -83,7 +83,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
+    width: 90%;
 }
 
 header h1 {
@@ -138,7 +138,6 @@ header h1 {
 .speech-bubble:before {
     content: '';
     position: absolute;
-    top: 50px;
     left: -20px;
     width: 0;
     height: 0;
@@ -157,10 +156,22 @@ header h1 {
     border-right-color: #89d6fb;
 }
 
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    top: 50px;
+    left: -17px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+}
+
 #welcome-message, #job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     margin-top: 20px;
+    border: 2px solid #02577a;
+    margin-left: -20px;
 }
 
 #job-listings-manager h2, #interview-details h2 {
@@ -179,6 +190,11 @@ form input[type="text"], form select, form button, form textarea {
     margin-bottom: 10px;
     border: 1px solid #89d6fb;
     border-radius: 5px;
+}
+
+#file-upload-section textarea {
+    width: calc(100% - 40px);
+    padding: 10px;
 }
 
 form button, form input[type="submit"], .start-interview-button, #delete-job-listing-button {
@@ -207,4 +223,46 @@ form button:hover, form input[type="submit"]:hover, .start-interview-button:hove
     padding: 10px;
     text-align: center;
     display: none;
+}
+
+#questions-data {
+    margin-left: 40px; /* Adjust this value to match the width of the left nav bar */
+}
+
+/* interview_history styles */
+
+#session-selector {
+    margin-bottom: 20px;
+}
+
+#session-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #89d6fb;
+    border-radius: 5px;
+}
+
+#interview-history-content {
+    width: 100%;
+    max-width: 900px;
+}
+
+#session-summary, #session-transcript {
+    background-color: #f0f8ff;
+    border: 1px solid #02577a;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.transcript-group {
+    background-color: #ffffff;
+    border: 1px solid #89d6fb;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.transcript-group p {
+    margin: 5px 0;
 }

@@ -1,10 +1,37 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from flask_login import UserMixin
 from datetime import datetime
 
 Base = declarative_base()
+
+class InterviewHistory(Base):
+    __tablename__ = 'interview_history'
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    job_title = Column(String(100), nullable=True)
+    job_level = Column(String(50), nullable=True)
+    company_name = Column(String(100), nullable=True)
+    company_industry = Column(String(100), nullable=True)
+    question = Column(String(200), nullable=False)
+    question_id = Column(Integer, ForeignKey('questions.id'), nullable=False)
+    answer = Column(Text, nullable=True)
+    feedback = Column(String(1000), nullable=True)
+    score = Column(Integer, nullable=True)
+    skip_next_time = Column(Boolean, nullable=False, default=False)
+    session_score_average = Column(Integer, nullable=True)
+    session_top_score = Column(String(100), nullable=True)
+    session_low_score = Column(String(100), nullable=True)
+    session_summary_next_steps = Column(Text, nullable=True)
+
+    user = relationship("User", back_populates="interview_history")
+    question_rel = relationship("Questions", back_populates="interview_history")
 
 class JobDescriptionAnalysis(Base):
     __tablename__ = 'job_description_analysis'
@@ -34,16 +61,6 @@ class JobDescriptionAnalysis(Base):
     nice_to_have_experiences = Column(Text, nullable=True)
     required_skill_sets = Column(Text, nullable=True)
 
-class ProcessStatus(Base):
-   __tablename__ = 'process_status'
-   id = Column(Integer, primary_key=True)
-   username = Column(String, nullable=False, index=True)
-   job_title = Column(String, nullable=False, index=True)
-   company_name = Column(String, nullable=False, index=True)
-   status = Column(Text, nullable=False)
-   created_at = Column(DateTime(timezone=True), server_default=func.now())
-   updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
 class User(UserMixin, Base):
     __tablename__ = 'users'
 
@@ -71,6 +88,9 @@ class User(UserMixin, Base):
     top_challenge = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # Add this line to create the relationship with InterviewHistory
+    interview_history = relationship("InterviewHistory", back_populates="user")
+
 class Questions(Base):
     __tablename__ = 'questions'
     
@@ -86,6 +106,9 @@ class Questions(Base):
     description = Column(String(200), nullable=True)
     job_title = Column(String(50), nullable=True)
     user_id = Column(Integer, nullable=True)
+
+    # Add this line to create the relationship with InterviewHistory
+    interview_history = relationship("InterviewHistory", back_populates="question_rel")
 
     def to_dict(self):
         return {

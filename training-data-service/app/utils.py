@@ -4,7 +4,7 @@ import logging
 import glob
 from sqlalchemy.orm import sessionmaker
 from flask import current_app
-from app.models import JobDescriptionAnalysis
+from app.models import JobDescriptionAnalysis, InterviewHistory
 from app.database import get_db
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
