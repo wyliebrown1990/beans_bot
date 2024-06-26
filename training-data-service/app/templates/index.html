@@ -81,11 +81,11 @@
     </div>
     <div id="interview-details">
         <h2>Interview Details:</h2>
-        <form method="post" action="/">
+        <form method="get" action="http://localhost:5013/first_round">
             <input type="hidden" name="username" value="{{ username }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <label for="interview_type">Interview Round:</label>
-            <select id="interview_type" name="interview_type">
+            <select id="interview_type" name="interview_round">
                 <option value="first_round">First Round</option>
                 <option value="coming_soon">More Options Coming Soon...</option>
             </select>

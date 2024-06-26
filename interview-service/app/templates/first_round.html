@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Round Interview</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+<div id="page-container">
+    <div id="sidebar">
+        <div id="timer-container">
+            <div id="interview-timer-container">
+                <h5>Time Left in Interview</h5>
+                <div id="interview-timer">2700</div>
+            </div>
+            <div id="answer-timer-container">
+                <h5>Countdown to Recommended Answer Submission</h5>
+                <div id="answer-timer">90</div>
+            </div>
+            <div class="button-container">
+                <button id="record-video">Record Video of Interview<i class="fa fa-video-camera" aria-hidden="true"></i></button>
+                <button id="download-transcript">Download Transcript <i class="fa fa-download" aria-hidden="true"></i></button>
+                <button onclick="startNewInterviewSession()">Start New Session <i class="fa fa-redo" aria-hidden="true"></i></button>
+                <button id="wrap-up-interview">End interview early <i class="fa fa-stop-circle" aria-hidden="true"></i></button>
+                <div class="previous-sessions-container">
+                    <p>Previous Chat Sessions:</p>
+                    <button>June 12th 2024</button>
+                    <button>June 10th 2024</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="content-wrap">
+        <header>
+            <div>
+                <h1>First Round Interview for {{ username }}</h1>
+            </div>
+            <nav class="navbar">
+                <button id="nav-toggle">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </button>
+                <ul id="nav-links" class="nav-menu hidden">
+                    <li><a href="#">About us</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Contact us</a></li>
+                    <li><a href="#">Pricing</a></li>
+                    <li><a href="#">Github</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Forum</a></li>
+                </ul>
+            </nav>
+        </header>
+        <div id="chat" class="chat-container">
+            <div class="chat-block">
+                <div class="chat-image">
+                    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image" id="bot-image">
+                </div>
+                <div class="speech-bubble">
+                    <p>Beans-bot: {{ initial_question }}</p>
+                </div>
+            </div>
+            <div id="responses" data-username="{{ username }}"></div>
+        </div>
+
+        <div class="status-container">
+            <div id="status-message" class="status-message"></div>
+        </div>
+        <form id="response-form" method="POST">
+            <input type="hidden" name="username" value="{{ username }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <input type="hidden" name="interview_round" value="{{ interview_round }}">
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+            <label for="answer_1">Your Response:</label>
+            <textarea id="answer_1" name="answer_1" rows="5" required></textarea>
+            <div class="submit-button-container">
+                <button type="submit" class="form-button" data-tooltip="Click to submit your answers">&#9654;</button>
+                <button type="button" id="record-answer" class="form-button" data-tooltip="Click to record your answer">🎙</button>
+                <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">💬</button>
+            </div>
+            <div id="voice-selection" style="display:none;">
+                <label for="voice">Choose Voice:</label>
+                <select id="voice" name="voice">
+                    <option value="none" selected>None</option>
+                    <option value="WBPMIeOib7vXJnT2Iibp">Knightley</option>
+                    <option value="P9OzYIULscDISblYABOC">Raj</option>
+                    <option value="tnSpp4vdxKPjI9w0GnoV">Hope</option>
+                    <option value="kBag1HOZlaVBH7ICPE8x">Sally</option>
+                    <option value="aTxZrSrp47xsP6Ot4Kgd">Kayla</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    const transcribeAudioUrl = "{{ url_for('transcribe_audio') }}";
+    const startInterviewUrl = "{{ url_for('start_interview') }}";
+    const downloadTranscriptUrl = "{{ url_for('download_transcript', session_id=session_id) }}";
+    const clearSessionUrl = "{{ url_for('clear_session') }}";
+    const getLastAnswerUrl = "{{ url_for('last_question') }}";
+    const wrapUpInterviewUrl = "{{ url_for('wrap_up_interview') }}";
+
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const username = urlParams.get('username');
+    const userId = urlParams.get('user_id');
+    const interviewRound = urlParams.get('interview_round');
+
+    // Set hidden input values
+    document.querySelector('input[name="username"]').value = username;
+    document.querySelector('input[name="user_id"]').value = userId;
+    document.querySelector('input[name="interview_round"]').value = interviewRound;
+
+    // Update the header with the username
+    document.querySelector('h1').textContent = `First Round Interview for ${username}`;
+</script>
+</body>
+</html>
