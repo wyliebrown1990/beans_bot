@@ -98,12 +98,12 @@
 </div>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
-    const transcribeAudioUrl = "{{ url_for('transcribe_audio') }}";
-    const startInterviewUrl = "{{ url_for('start_interview') }}";
-    const downloadTranscriptUrl = "{{ url_for('download_transcript', session_id=session_id) }}";
-    const clearSessionUrl = "{{ url_for('clear_session') }}";
-    const getLastAnswerUrl = "{{ url_for('last_question') }}";
-    const wrapUpInterviewUrl = "{{ url_for('wrap_up_interview') }}";
+    const transcribeAudioUrl = "{{ url_for('main.transcribe_audio') }}";
+    const startInterviewUrl = "{{ url_for('main.submit_answer') }}";
+    const downloadTranscriptUrl = "{{ url_for('main.submit_answer') }}";
+    const clearSessionUrl = "{{ url_for('main.submit_answer') }}";
+    const getLastAnswerUrl = "{{ url_for('main.submit_answer') }}";
+    const wrapUpInterviewUrl = "{{ url_for('main.submit_answer') }}";
 
     // Parse URL parameters
     const urlParams = new URLSearchParams(window.location.search);

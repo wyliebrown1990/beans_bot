@@ -123,5 +123,3 @@ class Questions(Base):
             'job_title': self.job_title,
             'user_id': self.user_id
         }
-
-# Remove the TrainingData, InterviewAnswer, and VideoRecordingLog classes as they are not present in the training-data service models

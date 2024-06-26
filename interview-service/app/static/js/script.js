@@ -1,21 +1,22 @@
- document.querySelectorAll('.chat-list li').forEach(li => {
+document.querySelectorAll('.chat-list li').forEach(li => {
     li.addEventListener('click', function() {
         this.querySelector('.options').style.display = (this.querySelector('.options').style.display === 'none' || this.querySelector('.options').style.display === '') ? 'block' : 'none';
     });
- });
- let mediaRecorder;
- let audioChunks = [];
- let recording = false;
- let videoRecorder;
- let videoChunks = [];
- let videoRecording = false;
- let answerTimerInterval;
- let answerTimeLeft = 90;
- let interviewTimerInterval;
- let interviewTimeLeft = 2700; // 45 minutes in seconds
- let currentAudio = null;
- let playButton = null;
- function startAnswerTimer() {
+});
+let mediaRecorder;
+let audioChunks = [];
+let recording = false;
+let videoRecorder;
+let videoChunks = [];
+let videoRecording = false;
+let answerTimerInterval;
+let answerTimeLeft = 90;
+let interviewTimerInterval;
+let interviewTimeLeft = 2700; // 45 minutes in seconds
+let currentAudio = null;
+let playButton = null;
+
+function startAnswerTimer() {
     clearInterval(answerTimerInterval);
     answerTimeLeft = 90;
     const timerElement = document.getElementById('answer-timer');
@@ -31,8 +32,9 @@
             timerElement.innerText = answerTimeLeft;
         }
     }, 1000);
- }
- function startInterviewTimer() {
+}
+
+function startInterviewTimer() {
     clearInterval(interviewTimerInterval);
     const timerElement = document.getElementById('interview-timer');
     timerElement.classList.remove('pulse');
@@ -47,17 +49,20 @@
             timerElement.innerText = formatTime(interviewTimeLeft);
         }
     }, 1000);
- }
- function formatTime(seconds) {
+}
+
+function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
- }
- document.addEventListener('DOMContentLoaded', (event) => {
+}
+
+document.addEventListener('DOMContentLoaded', (event) => {
     startAnswerTimer();
     startInterviewTimer();
- });
- document.getElementById('generate_audio').addEventListener('click', function() {
+});
+
+document.getElementById('generate_audio').addEventListener('click', function() {
     const voiceSelection = document.getElementById('voice-selection');
     if (voiceSelection.style.display === 'none' || voiceSelection.style.display === '') {
         voiceSelection.style.display = 'block';
@@ -78,14 +83,16 @@
     }
     console.log("Selected voice:", selectedVoice); // Verify the selected value
 });
- document.getElementById('record-answer').addEventListener('click', function() {
+
+document.getElementById('record-answer').addEventListener('click', function() {
     if (!recording) {
         startRecording();
     } else {
         stopRecording();
     }
- });
- function startRecording() {
+});
+
+function startRecording() {
     console.log("Starting recording...");
     $('#status-message').text("Recording...").fadeIn();
     $('#record-answer').html("⏹");
@@ -107,8 +114,9 @@
         .catch(error => {
             console.error('Error accessing microphone:', error);
         });
- }
- function stopRecording() {
+}
+
+function stopRecording() {
     console.log("Stopping recording...");
     $('#status-message').text("Transcribing answer. This can take a while... Sit tight.").fadeIn();
     $('#record-answer').html("🎙");
@@ -118,7 +126,7 @@
         console.log("Recording stopped.");
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
         const formData = new FormData();
-        formData.append('audio', audioBlob);
+        formData.append('audio', audioBlob, 'recording.wav');
         console.log("Sending audio blob to server...");
         $.ajax({
             type: 'POST',
@@ -138,15 +146,17 @@
         });
         audioChunks = [];
     };
- }
- document.getElementById('record-video').addEventListener('click', function() {
+}
+
+document.getElementById('record-video').addEventListener('click', function() {
     if (!videoRecording) {
         startVideoRecording();
     } else {
         stopVideoRecording();
     }
- });
- function startVideoRecording() {
+});
+
+function startVideoRecording() {
     console.log("Starting video recording...");
     $('#status-message').text("Video recording...").fadeIn();
     $('#record-video').text("Press to Stop Video Recording");
@@ -168,8 +178,9 @@
         .catch(error => {
             console.error('Error accessing camera:', error);
         });
- }
- function stopVideoRecording() {
+}
+
+function stopVideoRecording() {
     console.log("Stopping video recording...");
     $('#status-message').text("Processing video...").fadeIn();
     $('#record-video').text("Record Video of This Session");
@@ -189,8 +200,9 @@
         $('#status-message').text("Download of recording complete").fadeIn().delay(3000).fadeOut();
         videoChunks = [];
     };
- }
- $('#response-form').on('submit', function(event) {
+}
+
+$('#response-form').on('submit', function(event) {
     event.preventDefault();
     const form = $(this);
     const userResponse = $('#answer_1').val();
@@ -232,8 +244,9 @@
             $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
         }
     });
- });
- function toggleAudio(audioPath, button) {
+});
+
+function toggleAudio(audioPath, button) {
     if (currentAudio && !currentAudio.paused) {
         currentAudio.pause();
         button.style.backgroundColor = '';
@@ -248,8 +261,9 @@
         button.style.backgroundColor = '';
         button.innerText = 'Play Next Question';
     };
- }
- document.getElementById('download-transcript').addEventListener('click', function() {
+}
+
+document.getElementById('download-transcript').addEventListener('click', function() {
     $.ajax({
         type: 'GET',
         url: downloadTranscriptUrl,
@@ -267,8 +281,9 @@
             console.error('Error downloading transcript:', error);
         }
     });
- });
- function startNewInterviewSession() {
+});
+
+function startNewInterviewSession() {
     const urlParams = new URLSearchParams(window.location.search);
     const job_title = urlParams.get('job_title');
     const company_name = urlParams.get('company_name');
@@ -287,13 +302,14 @@
             console.error('Error clearing session:', error);
         }
     });
- }
- document.getElementById('nav-toggle').addEventListener('click', function() {
+}
+
+document.getElementById('nav-toggle').addEventListener('click', function() {
     const navLinks = document.getElementById('nav-links');
     navLinks.classList.toggle('hidden');
- });
- 
- document.getElementById('wrap-up-interview').addEventListener('click', function() {
+});
+
+document.getElementById('wrap-up-interview').addEventListener('click', function() {
     const form = document.getElementById('response-form');
     const sessionId = document.querySelector('input[name="session_id"]').value;
     const jobTitle = document.querySelector('input[name="job_title"]').value;

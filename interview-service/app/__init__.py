@@ -1,39 +1,29 @@
-from flask import Flask, send_from_directory
-from .config import DATABASE_URL
-from .utils import create_table_if_not_exists, setup_database
-from .routes import setup_routes
+from flask import Flask
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+from .config import Config
 from .models import Base
-import os
+import logging
+
+# Database setup
+engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # Set the secret key from environment variable
+    app.config.from_object(Config)
+    app.config['DEBUG'] = True  # Enable debug mode
 
-    # Setup database
-    engine, session = setup_database(DATABASE_URL)
-    print("Database engine created.")
-    Base.metadata.create_all(engine)  # Create tables based on models
-    print("Database tables created.")
-    create_table_if_not_exists(engine)
-    print("Tables checked/created if not exist.")
+    Base.metadata.create_all(bind=engine)
 
-    # Setup routes
-    setup_routes(app, session)
+    from .routes import main
+    app.register_blueprint(main)
 
-    # Serve static files from audio_files directory
-    @app.route('/audio_files/<path:filename>')
-    def serve_audio(filename):
-        directory = os.path.join(app.root_path, '..', 'audio_files')
-        file_path = os.path.join(directory, filename)
-        print(f"Serving audio file from: {file_path}")
-        if not os.path.exists(file_path):
-            print(f"File not found: {file_path}")
-        return send_from_directory(directory, filename)
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db_session.remove()
 
     return app
 
-# Create the app instance at the module level
 app = create_app()
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5013)
