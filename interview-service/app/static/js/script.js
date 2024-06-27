@@ -68,7 +68,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const initialQuestion = document.querySelector('.speech-bubble p').textContent;
     store_questions_asked.push(initialQuestion);
     console.log("Initial question stored:", initialQuestion);
+
+    // Include session_id in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+        // Set hidden input value for session_id
+        const sessionInput = document.createElement('input');
+        sessionInput.type = 'hidden';
+        sessionInput.name = 'session_id';
+        sessionInput.value = sessionId;
+        document.getElementById('response-form').appendChild(sessionInput);
+    }
 });
+
 
 document.getElementById('generate_audio').addEventListener('click', function() {
     const voiceSelection = document.getElementById('voice-selection');
@@ -215,13 +229,14 @@ $('#response-form').on('submit', function(event) {
     const form = $(this);
     const userResponse = $('#answer_1').val();
     const username = $('#responses').data('username'); // Get the username from data attribute
+    const sessionId = $('input[name="session_id"]').val(); // Get the session_id from hidden input
     console.log("User response:", userResponse);
     // Show status message
     $('#status-message').text("Processing your response...").fadeIn();
     $.ajax({
         type: 'POST',
         url: '/submit_answer',
-        data: form.serialize(),
+        data: form.serialize() + `&session_id=${sessionId}`,
         success: function(response) {
             console.log("Server response:", response);
             // Hide status message
@@ -269,6 +284,7 @@ $('#response-form').on('submit', function(event) {
 });
 
 
+
 function toggleAudio(audioPath, button) {
     if (currentAudio && !currentAudio.paused) {
         currentAudio.pause();
@@ -313,19 +329,25 @@ function startNewInterviewSession() {
     const industry = urlParams.get('industry');
     const username = urlParams.get('username');
     const user_id = urlParams.get('user_id');
+    const session_id = generateSessionId(); // Function to generate session ID
     // Clear Flask session data on the server
     $.ajax({
         type: 'POST',
         url: clearSessionUrl,
         success: function() {
-            // Redirect to the same URL to start a new session
-            window.location.href = `${startInterviewUrl}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}`;
+            // Redirect to the same URL to start a new session with session_id
+            window.location.href = `${startInterviewUrl}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}&session_id=${session_id}`;
         },
         error: function(error) {
             console.error('Error clearing session:', error);
         }
     });
 }
+
+function generateSessionId() {
+    return Math.floor(Math.random() * 1000000000); // Generate a simple session ID
+}
+
 
 document.getElementById('nav-toggle').addEventListener('click', function() {
     const navLinks = document.getElementById('nav-links');
@@ -380,3 +402,4 @@ document.getElementById('wrap-up-interview').addEventListener('click', function(
         }
     });
 });
+

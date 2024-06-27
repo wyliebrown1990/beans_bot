@@ -1,5 +1,6 @@
 import os
 import uuid
+import random
 from pydub import AudioSegment
 from pydub.utils import which
 from io import BytesIO
@@ -47,6 +48,11 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = SessionLocal()
+
+
+def generate_session_id():
+    return random.randint(100000, 999999)
+
 
 def text_to_speech_file(text: str, voice_id: str) -> str:
     if not text.strip():
@@ -101,9 +107,8 @@ def intro_question(user_id):
             intro_question_text = (f"Hi {username}, thanks for taking this meeting to discuss the {job_title} role at {company_name}. "
                                    "I'm excited to learn more about you. Could you please start by telling me more about yourself? "
                                    f"Specifically, what professional experiences have you had that make you a good fit for the {job_title} role at {company_name}?")
-            # Store the initial question globally
-            store_questions_asked.append(intro_question_text)
-            print("Initial question stored:", intro_question_text)
+            # Store the initial question globally with is_initial flag
+            store_question(intro_question_text, is_initial=True)
             return intro_question_text
         else:
             return "Error: User or job description not found."
@@ -112,15 +117,19 @@ def intro_question(user_id):
         return "Error: Could not generate intro question."
 
 
+
 def store_user_response(answer):
     # Function to store user responses globally
     store_answers.append(answer)
     print("User response stored:", answer)
 
-def store_question(question):
-    # Function to store questions globally
-    store_questions_asked.append(question)
+def store_question(question, is_initial=False):
+    if is_initial:
+        store_questions_asked.append({"question": question, "type": "initial"})
+    else:
+        store_questions_asked.append({"question": question, "type": "follow_up"})
     print("Question stored:", question)
+
 
 def get_last_question():
     # Function to get the last question asked
@@ -143,7 +152,7 @@ def get_score(user_id):
         key_technical_skills = user.key_technical_skills
 
         most_recent_answer = store_answers[-1]
-        most_recent_question = store_questions_asked[-1]
+        most_recent_question = store_questions_asked[-1]["question"]
 
         score_prompt = ChatPromptTemplate.from_messages([
             ("system", f"Score the answer I am sending you to the question '{most_recent_question}' from 0 to 10. "
@@ -177,7 +186,7 @@ def extract_score(content):
     return 0
 
 
-def get_intro_question_feedback(user_id):
+def get_intro_question_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
         job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
@@ -234,7 +243,7 @@ def get_intro_question_feedback(user_id):
 
         # Write to interview history table after sending response to the front end
         if store_answers and store_questions_asked:
-            write_interview_history_table(user_id)
+            write_interview_history_table(user_id, session_id, is_initial=True)
 
         return response_data
     except Exception as e:
@@ -246,7 +255,8 @@ def get_intro_question_feedback(user_id):
         }
 
 
-def write_interview_history_table(user_id):
+
+def write_interview_history_table(user_id, session_id, is_initial=False):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
         job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
@@ -257,8 +267,11 @@ def write_interview_history_table(user_id):
         if not store_answers or not store_questions_asked:
             raise ValueError("No answers or questions stored")
 
+        # Determine the question to store
+        question = store_questions_asked[0]["question"] if is_initial else store_questions_asked[-1]["question"]
+
         new_interview_history = InterviewHistory(
-            id=uuid.uuid4().int,  # Generate a unique id
+            id=random.randint(1, 2147483647),  # Generate a unique id within the 32-bit integer range
             session_id=session_id,
             user_id=user_id,
             created_at=datetime.utcnow(),
@@ -266,7 +279,7 @@ def write_interview_history_table(user_id):
             job_title=job_description.job_title,
             company_name=job_description.company_name,
             company_industry=job_description.company_industry,
-            question=store_questions_asked[-1],
+            question=question,
             question_id=0,  # Update this if you have question_id
             answer=store_answers[-1],
             feedback=global_feedback,

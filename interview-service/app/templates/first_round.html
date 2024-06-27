@@ -110,11 +110,13 @@
     const username = urlParams.get('username');
     const userId = urlParams.get('user_id');
     const interviewRound = urlParams.get('interview_round');
+    const sessionId = urlParams.get('session_id') || '{{ session_id }}';
 
     // Set hidden input values
     document.querySelector('input[name="username"]').value = username;
     document.querySelector('input[name="user_id"]').value = userId;
     document.querySelector('input[name="interview_round"]').value = interviewRound;
+    document.querySelector('input[name="session_id"]').value = sessionId;
 
     // Update the header with the username
     document.querySelector('h1').textContent = `First Round Interview for ${username}`;

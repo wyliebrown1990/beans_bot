@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 import os
+import random
 from openai import OpenAI
 from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
-from .utils import get_answer_1, store_user_response, intro_question, store_question, get_last_question, get_intro_question_feedback
+from .utils import get_answer_1, store_user_response, intro_question, store_question, get_last_question, get_intro_question_feedback, generate_session_id
 from . import db_session
 
 main = Blueprint('main', __name__)
@@ -18,10 +19,20 @@ def first_round():
         username = request.args.get('username')
         user_id = request.args.get('user_id')
         interview_round = request.args.get('interview_round')
+        job_title = request.args.get('job_title')
+        company_name = request.args.get('company_name')
+        industry = request.args.get('industry')
+
+        # Generate a session ID if not already provided in the URL
+        session_id = request.args.get('session_id')
+        if not session_id:
+            session_id = generate_session_id()
+            # Redirect to the same URL with the session_id included
+            return redirect(url_for('main.first_round', username=username, user_id=user_id, interview_round=interview_round, job_title=job_title, company_name=company_name, industry=industry, session_id=session_id))
 
         initial_question = intro_question(user_id)
 
-        return render_template('first_round.html', username=username, initial_question=initial_question)
+        return render_template('first_round.html', username=username, initial_question=initial_question, session_id=session_id)
     except Exception as e:
         # Log the error and return a user-friendly message
         current_app.logger.error(f"Error in first_round route: {e}")
@@ -32,13 +43,20 @@ def submit_answer():
     try:
         answer = request.form.get('answer_1')
         user_id = request.form.get('user_id')
+        session_id = request.form.get('session_id')  # Get session_id from the form data
+
         store_user_response(answer)
-        
-        response = get_intro_question_feedback(user_id)
-        return jsonify({"next_question_response": response['next_question_response']})
+        response = get_intro_question_feedback(user_id, session_id)  # Pass session_id
+
+        # Ensure session_id is included in the response if needed
+        response['session_id'] = session_id
+        return jsonify(response)
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+
+
+
     
 @main.route('/transcribe_audio', methods=['POST'])
 def transcribe_audio():
