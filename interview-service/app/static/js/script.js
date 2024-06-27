@@ -3,6 +3,7 @@ document.querySelectorAll('.chat-list li').forEach(li => {
         this.querySelector('.options').style.display = (this.querySelector('.options').style.display === 'none' || this.querySelector('.options').style.display === '') ? 'block' : 'none';
     });
 });
+
 let mediaRecorder;
 let audioChunks = [];
 let recording = false;
@@ -15,6 +16,8 @@ let interviewTimerInterval;
 let interviewTimeLeft = 2700; // 45 minutes in seconds
 let currentAudio = null;
 let playButton = null;
+let store_questions_asked = [];
+let store_answers = [];
 
 function startAnswerTimer() {
     clearInterval(answerTimerInterval);
@@ -60,6 +63,11 @@ function formatTime(seconds) {
 document.addEventListener('DOMContentLoaded', (event) => {
     startAnswerTimer();
     startInterviewTimer();
+
+    // Add the initial question to store_questions_asked
+    const initialQuestion = document.querySelector('.speech-bubble p').textContent;
+    store_questions_asked.push(initialQuestion);
+    console.log("Initial question stored:", initialQuestion);
 });
 
 document.getElementById('generate_audio').addEventListener('click', function() {
@@ -212,12 +220,14 @@ $('#response-form').on('submit', function(event) {
     $('#status-message').text("Processing your response...").fadeIn();
     $.ajax({
         type: 'POST',
-        url: startInterviewUrl,
+        url: '/submit_answer',
         data: form.serialize(),
         success: function(response) {
             console.log("Server response:", response);
             // Hide status message
             $('#status-message').fadeOut();
+
+            // Append the new user response to the responses div
             $('#responses').append(`
                 <div class="chat-block">
                     <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User Image" class="chat-image">
@@ -225,16 +235,28 @@ $('#response-form').on('submit', function(event) {
                         <p>${username}: ${userResponse}</p>
                     </div>
                 </div>
+            `);
+
+            // Append the new question from the server to the responses div
+            $('#responses').append(`
                 <div class="chat-block">
                     <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
                     <div class="speech-bubble">
-                        <p>Beans-bot Feedback: ${response.feedback_response}</p>
-                        <p>Beans-bot Score: ${response.score_response}</p>
                         <p>Beans-bot: ${response.next_question_response}</p>
                         ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
                     </div>
                 </div>
             `);
+
+            // Store the new question in store_questions_asked
+            store_questions_asked.push(response.next_question_response);
+            console.log("Stored questions:", store_questions_asked);
+
+            // Store the user response in store_answers
+            store_answers.push(userResponse);
+            console.log("Stored answers:", store_answers);
+
+            // Clear the answer input field
             $('#answer_1').val('');
             startAnswerTimer();  // Reset the timer when a new question is received
         },
@@ -245,6 +267,7 @@ $('#response-form').on('submit', function(event) {
         }
     });
 });
+
 
 function toggleAudio(audioPath, button) {
     if (currentAudio && !currentAudio.paused) {
