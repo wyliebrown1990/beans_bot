@@ -258,16 +258,132 @@ def get_intro_question_feedback(user_id, session_id):
 
     
 def get_resume_question_1_feedback(user_id, session_id):
-    print("this is a question")
-    return {"next_question_response": "this is a question"}
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
+        # Get the most recent answer
+        interview_history = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).order_by(InterviewHistory.created_at.desc()).first()
+        if not interview_history or not interview_history.answer:
+            raise ValueError("No answers stored")
+
+        most_recent_answer = interview_history.answer
+
+        # Get the most recent question
+        most_recent_question = interview_history.question
+
+        # Generate the next question first
+        next_question = get_resume_question_2(user_id, session_id)
+
+        feedback_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are helping me land a new job by conducting realistic job interviews with me. "
+                       f"I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me the question: {most_recent_question}. "
+                       "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                       "Specifically, check that my answer followed these best practices: Did I give a relevant example of a time I used the technical skill in your question? Did the example follow the STAR (Situation, Task, Action, and Result) format? "
+                       "Did I answer the question in a reasonable amount of time that lasted no more than 3 minutes? "
+                       "Finally, please give me a recommendation on how I could have presented my experience better. "
+                       f"When you are critiquing me please refer to my resume information which you have on a piece of paper in front of you. "
+                       f"The resume shows: I was most recently a {user.most_recent_job_title} "
+                       f"I have experience in: {user.most_recent_job_title_summary} and {user.second_most_recent_job_title_summary}."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        analysis_chain = feedback_prompt | model
+
+        feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        feedback = feedback_response.content if feedback_response.content else "No feedback found"
+        print(f"Generated feedback: {feedback}")
+
+        # Store the feedback
+        store_feedback(feedback, user_id, session_id)
+
+        # Generate and store the score after the feedback
+        score = get_score(user_id, session_id)
+        if score is not None:
+            print(f"Calling store_score with score: {score}")
+            store_score(score, user_id, session_id)
+        else:
+            print("Score was not generated, store_score will not be called.")
+
+        return {"next_question_response": next_question, "feedback": feedback, "score": score}
+    except Exception as e:
+        print(f"Error in get_resume_question_1_feedback function: {e}")
+        return {"error": "Could not generate feedback."}
+
 
 def get_resume_question_2_feedback(user_id, session_id):
-    print("this is a question")
-    return {"next_question_response": "this is a question"}
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
 
-def get_behavioral_question_1_feedback(user_id, session_id):
-    print("this is a question")
-    return {"next_question_response": "this is a question"}
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
+        # Get the most recent answer
+        interview_history = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).order_by(InterviewHistory.created_at.desc()).first()
+        if not interview_history or not interview_history.answer:
+            raise ValueError("No answers stored")
+
+        most_recent_answer = interview_history.answer
+
+        # Get the most recent question
+        most_recent_question = interview_history.question
+
+        # Generate the next question first
+        next_question = get_resume_question_3(user_id, session_id)
+
+        feedback_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are helping me land a new job by conducting realistic job interviews with me. "
+                       f"I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me the question: {most_recent_question}. "
+                       "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                       "Specifically, check that my answer followed these best practices: Did I give a relevant example of a time I used the technical skill in your question? Did the example follow the STAR (Situation, Task, Action, and Result) format? "
+                       "Did I answer the question in a reasonable amount of time that lasted no more than 3 minutes? "
+                       "Finally, please give me a recommendation on how I could have presented my experience better. "
+                       f"When you are critiquing me please refer to my resume information which you have on a piece of paper in front of you. "
+                       f"The resume shows: I was most recently a {user.most_recent_job_title} "
+                       f"I have experience in: {user.most_recent_job_title_summary} and {user.second_most_recent_job_title_summary}."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        analysis_chain = feedback_prompt | model
+
+        feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        feedback = feedback_response.content if feedback_response.content else "No feedback found"
+        print(f"Generated feedback: {feedback}")
+
+        # Store the feedback
+        store_feedback(feedback, user_id, session_id)
+
+        # Generate and store the score after the feedback
+        score = get_score(user_id, session_id)
+        if score is not None:
+            print(f"Calling store_score with score: {score}")
+            store_score(score, user_id, session_id)
+        else:
+            print("Score was not generated, store_score will not be called.")
+
+        return {"next_question_response": next_question, "feedback": feedback, "score": score}
+    except Exception as e:
+        print(f"Error in get_resume_question_2_feedback function: {e}")
+        return {"error": "Could not generate feedback."}
+
 
 #Start of question functions: 
 
@@ -311,13 +427,12 @@ def get_resume_question_1(user_id, session_id):
         required_skill_sets = job_description.required_skill_sets
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", f"You are the world's best interview coach. We are conducting an interview for the role of {job_title} at {job_description.company_name} company. "
+            ("system", f"You are the world's best interview coach. We are conducting a mock interview where I am interviewing for the role of {job_title} at {job_description.company_name} company. "
                        f"I want you to ask me a question as if you are the actual hiring manager. You have my resume in front of you. "
                        f"You can see from my resume that my top technical skills are: {key_technical_skills}. "
                        f"You have the job description in front of you which shows that the job responsibilities are: {job_responsibilities} and the required professional experiences are: {required_professional_experiences}. "
-                       f"It also shows that the required skill sets are: {required_skill_sets}. "
-                       "Identify similarities in the job description and my top technical skills. "
-                       "Pick the most relevant of my technical skills and ask me to go into more detail on how I have used a top technical skill in the past."),
+                       "Identify similarities in the job description and my top technical skills."
+                       "Select one of my top technical skills that matches the job description and ask me to elaborate on how I developed and have used that technical skill in the past."),
             MessagesPlaceholder(variable_name="messages"),
         ])
 
@@ -332,5 +447,69 @@ def get_resume_question_1(user_id, session_id):
         return "Error: Could not generate resume question 1."
 
 def get_resume_question_2(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = user.most_recent_job_title
+        key_soft_skills = user.key_soft_skills
+
+        job_responsibilities = job_description.job_responsibilities
+        required_professional_experiences = job_description.required_professional_experiences
+        required_skill_sets = job_description.required_skill_sets
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are the world's best interview coach. We are conducting a mock interview where I am interviewing for the role of {job_title} at {job_description.company_name} company. "
+                       f"You can see from my resume that my top soft skills are: {key_soft_skills}. "
+                       f"You have the job description I’m interviewing for in front of you which shows that the job responsibilities are: {job_responsibilities} and the required professional experiences are: {required_professional_experiences}. "
+                       "Identify similarities in the job description and my top soft skills. "
+                       "Select one of my top soft skills that matches the job description and ask me to elaborate on how I developed and have used that soft skill in the past."),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        chain = prompt | model
+        response = chain.invoke({"messages": []})
+
+        question = response.content
+        store_question(question, user_id, session_id)
+        return question
+    except Exception as e:
+        print(f"Error in get_resume_question_2 function: {e}")
+        return "Error: Could not generate resume question 2."
+    
+def get_resume_question_3(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = user.most_recent_job_title
+        most_recent_successful_project = user.most_recent_successful_project
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are the world's best interview coach. We are conducting a mock interview where I am interviewing for the role of {job_title} at {job_description.company_name} company. "
+                       f"You have my resume in front of you and you can see that my most successful project was: {most_recent_successful_project}. "
+                       "Start your next question with, \"I noticed from your resume that a recent accomplishment was {most_recent_successful_project}\". Follow that up by asking me to explain how I contributed and helped lead the team to the success of that project."),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        chain = prompt | model
+        response = chain.invoke({"messages": []})
+
+        question = response.content
+        store_question(question, user_id, session_id)
+        return question
+    except Exception as e:
+        print(f"Error in get_resume_question_3 function: {e}")
+        return "Error: Could not generate resume question 3."
+
+
+def get_behavioral_question_1_feedback(user_id, session_id):
     print("this is a question")
-    return "this is a question"
+    return {"next_question_response": "this is a question"}
+

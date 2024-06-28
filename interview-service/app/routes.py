@@ -8,7 +8,7 @@ from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
 from .utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
     get_resume_question_1_feedback, get_resume_question_2_feedback, get_behavioral_question_1_feedback,
-    get_resume_question_1, get_resume_question_2, store_question, get_score, db_session
+    get_resume_question_1, get_resume_question_2, get_resume_question_3, store_question, get_score, db_session
 )
 
 main = Blueprint('main', __name__)
