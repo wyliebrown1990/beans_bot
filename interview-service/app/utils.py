@@ -49,10 +49,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = SessionLocal()
 
-
 def generate_session_id():
     return random.randint(100000, 999999)
-
 
 def text_to_speech_file(text: str, voice_id: str) -> str:
     if not text.strip():
@@ -116,8 +114,6 @@ def intro_question(user_id):
         print(f"Error generating intro question: {e}")
         return "Error: Could not generate intro question."
 
-
-
 def store_user_response(answer):
     # Function to store user responses globally
     store_answers.append(answer)
@@ -129,7 +125,6 @@ def store_question(question, is_initial=False):
     else:
         store_questions_asked.append({"question": question, "type": "follow_up"})
     print("Question stored:", question)
-
 
 def get_last_question():
     # Function to get the last question asked
@@ -176,8 +171,6 @@ def get_score(user_id):
         print(f"Error in get_score function: {e}")
         return "Error: Could not calculate score."
 
-
-
 def extract_score(content):
     # Extract score from the response content
     score_match = re.search(r'\d+', content)
@@ -185,6 +178,45 @@ def extract_score(content):
         return int(score_match.group())
     return 0
 
+def write_interview_history_table(user_id, session_id, is_initial=False):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        if not store_answers or not store_questions_asked:
+            raise ValueError("No answers or questions stored")
+
+        question = store_questions_asked[0]["question"] if is_initial else store_questions_asked[-1]["question"]
+
+        new_interview_history = InterviewHistory(
+            id=random.randint(1, 2147483647),
+            session_id=session_id,
+            user_id=user_id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            job_title=job_description.job_title,
+            company_name=job_description.company_name,
+            company_industry=job_description.company_industry,
+            question=question,
+            question_id=0,
+            answer=store_answers[-1],
+            feedback=global_feedback,
+            score=global_score,
+            skip_next_time=False,
+            session_score_average=None,
+            session_top_score=None,
+            session_low_score=None,
+            session_summary_next_steps=None
+        )
+
+        db_session.add(new_interview_history)
+        db_session.commit()
+        print("Interview history record added successfully.")
+    except Exception as e:
+        print(f"Error in write_interview_history_table function: {e}")
 
 def get_intro_question_feedback(user_id, session_id):
     try:
@@ -254,9 +286,7 @@ def get_intro_question_feedback(user_id, session_id):
             "next_question_response": "Error: Could not generate next question."
         }
 
-
-
-def write_interview_history_table(user_id, session_id, is_initial=False):
+def get_resume_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
         job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
@@ -264,41 +294,65 @@ def write_interview_history_table(user_id, session_id, is_initial=False):
         if not user or not job_description:
             raise ValueError("User or job description not found")
 
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
         if not store_answers or not store_questions_asked:
             raise ValueError("No answers or questions stored")
 
-        # Determine the question to store
-        question = store_questions_asked[0]["question"] if is_initial else store_questions_asked[-1]["question"]
+        most_recent_answer = store_answers[-1]
 
-        new_interview_history = InterviewHistory(
-            id=random.randint(1, 2147483647),  # Generate a unique id within the 32-bit integer range
-            session_id=session_id,
-            user_id=user_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            job_title=job_description.job_title,
-            company_name=job_description.company_name,
-            company_industry=job_description.company_industry,
-            question=question,
-            question_id=0,  # Update this if you have question_id
-            answer=store_answers[-1],
-            feedback=global_feedback,
-            score=global_score,
-            skip_next_time=False,
-            session_score_average=None,
-            session_top_score=None,
-            session_low_score=None,
-            session_summary_next_steps=None
-        )
+        feedback_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are helping me land a new job by conducting realistic interviews with me. "
+                       f"I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me the question: 'tell me about your professional experience and how it relates to this role at {company_name}'. "
+                       "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                       "Specifically, check that my answer followed these best practices: "
+                       "Did my response answer the question, without adding extra ideas or unnecessary words? "
+                       "Was my answer concise and no longer than 2 or 3 minutes in length? "
+                       "Once I finished my answer did I say something that showed I was finished? "
+                       "Did I give a specific example that followed the STAR format (Situation, Task, Action, and Result)? "
+                       "Finally, please give me a recommendation on how I could have presented my experience better. "
+                       f"When you are critiquing me please refer to my resume information which you have on a piece of paper in front of you. "
+                       f"The resume shows: I was most recently a {user.most_recent_job_title} "
+                       f"I have experience in: {user.most_recent_job_title_summary} and {user.second_most_recent_job_title_summary}."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
 
-        db_session.add(new_interview_history)
-        db_session.commit()
-        print("Interview history record added successfully.")
+        analysis_chain = feedback_prompt | model
+        print("Sending feedback prompt to OpenAI API...")
+
+        feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        global global_feedback
+        global_feedback = feedback_response.content
+
+        global global_score
+        global_score = get_score(user_id) if store_answers and store_questions_asked else None
+
+        next_question = get_resume_question_2(user_id)
+
+        # Immediately send the next question to the front end
+        response_data = {
+            "feedback_response": global_feedback,
+            "score_response": global_score,
+            "next_question_response": next_question
+        }
+
+        # Write to interview history table after sending response to the front end
+        if store_answers and store_questions_asked:
+            write_interview_history_table(user_id, session_id, is_initial=False)
+
+        return response_data
     except Exception as e:
-        print(f"Error in write_interview_history_table function: {e}")
-
-
-
+        print(f"Error in get_resume_question_1_feedback function: {e}")
+        return {
+            "feedback_response": "Error: Could not generate feedback.",
+            "score_response": "Error: Could not calculate score.",
+            "next_question_response": "Error: Could not generate next question."
+        }
 
 def get_resume_question_1(user_id):
     try:
@@ -337,9 +391,56 @@ def get_resume_question_1(user_id):
         response = chain.invoke({"messages": []})
 
         question = response.content
-        store_questions_asked.append(question)
+        store_question(question)
         return question
     except Exception as e:
         print(f"Error in get_resume_question_1 function: {e}")
         return "Error: Could not generate resume question 1."
-    
+
+def get_resume_question_2(user_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        most_recent_job_title = user.most_recent_job_title
+        key_soft_skills = user.key_soft_skills
+        job_responsibilities = job_description.job_responsibilities
+        required_professional_experience = job_description.required_professional_experiences  # Variable assignment corrected here
+        required_skill_sets = job_description.required_skill_sets
+
+        print(f"Most Recent Job Title: {most_recent_job_title}")
+        print(f"Key Soft Skills: {key_soft_skills}")
+        print(f"Job Responsibilities: {job_responsibilities}")
+        print(f"Required Professional Experiences: {required_professional_experience}")  # Corrected here
+        print(f"Required Skill Sets: {required_skill_sets}")
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are the world's best interview coach. We are conducting an interview and I want you to ask me a question as if you are the actual hiring manager so that this interview feels real. You have my resume in front of you where you can see that my top soft skills are: {key_soft_skills}. My most recent job title is {most_recent_job_title}. You also have the job listing in front of you where you can see that the job I’m interviewing for is looking for {job_responsibilities} and {required_skill_sets} and {required_professional_experience}. Compare my soft skills with the job description and ask me to tell you more about how I have used a relevant soft skill while I was {most_recent_job_title}."),  # Corrected here
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+        print(f"Prompt created: {prompt}")
+
+        chain = prompt | model
+        print("Sending prompt to OpenAI API for generating the second resume question...")
+        print(f"Prompt: {prompt}")
+
+        response = chain.invoke({"messages": []})
+
+        question = response.content
+        store_question(question)
+        return question
+    except Exception as e:
+        print(f"Error in get_resume_question_2 function: {e}")
+        return "Error: Could not generate the second resume question."
+
+
+def get_behavioral_question_1(user_id):
+    # Logic to generate the first behavioral question
+    pass
+
+def get_behavioral_question_1_feedback(user_id, session_id):
+    # Logic to generate feedback for the first behavioral question
+    pass

@@ -183,6 +183,8 @@ hr {
   float: left; /* Float the image to the left */
   margin-right: 10px; /* Add margin to create space between the image and the speech bubble */
   align-self: flex-start; /* Ensure the image stays at the top */
+  max-width: 40%;
+  max-height: 40%;
 }
 p {
   text-align: center;

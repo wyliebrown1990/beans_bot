@@ -1,3 +1,4 @@
+# routes.py
 from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
@@ -5,7 +6,7 @@ import os
 import random
 from openai import OpenAI
 from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
-from .utils import get_answer_1, store_user_response, intro_question, store_question, get_last_question, get_intro_question_feedback, generate_session_id
+from .utils import get_answer_1, store_user_response, intro_question, store_question, get_last_question, get_intro_question_feedback, get_resume_question_1_feedback, get_resume_question_1, get_resume_question_2, get_behavioral_question_1, generate_session_id, store_answers, store_questions_asked
 from . import db_session
 
 main = Blueprint('main', __name__)
@@ -43,21 +44,31 @@ def submit_answer():
     try:
         answer = request.form.get('answer_1')
         user_id = request.form.get('user_id')
-        session_id = request.form.get('session_id')  # Get session_id from the form data
+        session_id = request.form.get('session_id')
 
         store_user_response(answer)
-        response = get_intro_question_feedback(user_id, session_id)  # Pass session_id
 
-        # Ensure session_id is included in the response if needed
+        # Determine the current cycle and set the conditions for transitioning to the next questions
+        current_cycle = len(store_answers)
+
+        if current_cycle == 1:
+            response = get_intro_question_feedback(user_id, session_id)
+        elif current_cycle == 2:
+            response = get_resume_question_1_feedback(user_id, session_id)
+        elif current_cycle == 3:
+            response = get_resume_question_1(user_id)
+        else:
+            response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
+
+        next_question = response['next_question_response'] if 'next_question_response' in response else response
+
         response['session_id'] = session_id
+        response['next_question'] = next_question
         return jsonify(response)
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
-
-
-    
 @main.route('/transcribe_audio', methods=['POST'])
 def transcribe_audio():
     file_path = None

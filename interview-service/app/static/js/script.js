@@ -44,15 +44,22 @@ function startInterviewTimer() {
     timerElement.innerText = formatTime(interviewTimeLeft);
     interviewTimerInterval = setInterval(() => {
         interviewTimeLeft--;
-        if (interviewTimeLeft <= 0) {
+        if (interviewTimeLeft <= 300) { // 5 minutes remaining
             clearInterval(interviewTimerInterval);
-            timerElement.innerText = "Interview Ending";
-            timerElement.classList.add('pulse');
+            getLastQuestion();
         } else {
             timerElement.innerText = formatTime(interviewTimeLeft);
         }
     }, 1000);
 }
+
+function getLastQuestion() {
+    // Logic to get the last question and wrap up the interview
+}
+
+document.getElementById('wrap-up-interview').addEventListener('click', function() {
+    getLastQuestion();
+});
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
