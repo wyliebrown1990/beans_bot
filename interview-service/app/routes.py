@@ -1,4 +1,3 @@
-# routes.py
 from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
@@ -6,8 +5,11 @@ import os
 import random
 from openai import OpenAI
 from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
-from .utils import get_answer_1, store_user_response, intro_question, store_question, get_last_question, get_intro_question_feedback, get_resume_question_1_feedback, get_resume_question_1, get_resume_question_2, get_behavioral_question_1, generate_session_id, store_answers, store_questions_asked
-from . import db_session
+from .utils import (
+    generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
+    get_resume_question_1_feedback, get_resume_question_2_feedback, get_behavioral_question_1_feedback,
+    get_resume_question_1, get_resume_question_2, store_question, get_score, db_session
+)
 
 main = Blueprint('main', __name__)
 
@@ -31,7 +33,7 @@ def first_round():
             # Redirect to the same URL with the session_id included
             return redirect(url_for('main.first_round', username=username, user_id=user_id, interview_round=interview_round, job_title=job_title, company_name=company_name, industry=industry, session_id=session_id))
 
-        initial_question = intro_question(user_id)
+        initial_question = intro_question(user_id, session_id)
 
         return render_template('first_round.html', username=username, initial_question=initial_question, session_id=session_id)
     except Exception as e:
@@ -46,28 +48,36 @@ def submit_answer():
         user_id = request.form.get('user_id')
         session_id = request.form.get('session_id')
 
-        store_user_response(answer)
+        print(f"Submitting answer: {answer} for user_id: {user_id}, session_id: {session_id}")
+
+        store_user_answer(answer, user_id, session_id)
 
         # Determine the current cycle and set the conditions for transitioning to the next questions
-        current_cycle = len(store_answers)
+        current_cycle = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).count()
+        print(f"Current cycle: {current_cycle}")
 
         if current_cycle == 1:
             response = get_intro_question_feedback(user_id, session_id)
         elif current_cycle == 2:
             response = get_resume_question_1_feedback(user_id, session_id)
         elif current_cycle == 3:
-            response = get_resume_question_1(user_id)
+            response = get_resume_question_2_feedback(user_id, session_id)
+        elif current_cycle == 4:
+            response = get_behavioral_question_1_feedback(user_id, session_id)
         else:
             response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
 
-        next_question = response['next_question_response'] if 'next_question_response' in response else response
+        next_question = response['next_question_response']
 
         response['session_id'] = session_id
         response['next_question'] = next_question
+        print(f"Next question: {next_question}")
         return jsonify(response)
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+
+
 
 @main.route('/transcribe_audio', methods=['POST'])
 def transcribe_audio():
