@@ -7,8 +7,8 @@ from openai import OpenAI
 from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
 from .utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
-    get_resume_question_1_feedback, get_resume_question_2_feedback, get_behavioral_question_1_feedback,
-    get_resume_question_1, get_resume_question_2, get_resume_question_3, store_question, get_score, db_session
+    get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback, get_resume_question_4_feedback, get_behavioral_question_1_feedback,
+    get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4, get_resume_question_5, store_question, get_score, db_session
 )
 
 main = Blueprint('main', __name__)
@@ -63,7 +63,9 @@ def submit_answer():
         elif current_cycle == 3:
             response = get_resume_question_2_feedback(user_id, session_id)
         elif current_cycle == 4:
-            response = get_behavioral_question_1_feedback(user_id, session_id)
+            response = get_resume_question_3_feedback(user_id, session_id)
+        elif current_cycle == 5:
+            response = get_resume_question_4_feedback(user_id, session_id)
         else:
             response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
 
