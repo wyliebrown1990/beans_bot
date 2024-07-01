@@ -8,9 +8,10 @@ from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
 from .utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
     get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback,
-    get_resume_question_4_feedback, get_behavioral_question_1_feedback, get_behavioral_question_1, 
-    get_behavioral_question_2, get_resume_question_1, get_resume_question_2, get_resume_question_3, 
-    get_resume_question_4, store_question, get_score, db_session
+    get_resume_question_4_feedback, get_behavioral_question_1_feedback, get_behavioral_question_2_feedback,
+    get_situational_question_1_feedback, get_personality_question_1, get_behavioral_question_1, 
+    get_behavioral_question_2, get_situational_question_1, get_resume_question_1, get_resume_question_2, 
+    get_resume_question_3, get_resume_question_4, store_question, get_score, db_session
 )
 
 
@@ -72,6 +73,10 @@ def submit_answer():
             response = get_resume_question_4_feedback(user_id, session_id)
         elif current_cycle == 6:
             response = get_behavioral_question_1_feedback(user_id, session_id)
+        elif current_cycle == 7:
+            response = get_behavioral_question_2_feedback(user_id, session_id)
+        elif current_cycle == 8:
+            response = get_situational_question_1_feedback(user_id, session_id)
         else:
             response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
 
@@ -87,7 +92,6 @@ def submit_answer():
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
-
 
 
 @main.route('/transcribe_audio', methods=['POST'])

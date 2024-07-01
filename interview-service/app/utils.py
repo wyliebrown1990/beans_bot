@@ -595,6 +595,148 @@ def get_behavioral_question_1_feedback(user_id, session_id):
     except Exception as e:
         logger.error(f"Error in get_behavioral_question_1_feedback function: {e}")
         return {"error": "Could not generate feedback."}
+    
+def get_behavioral_question_2_feedback(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
+        # Get the most recent answer
+        interview_history = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).order_by(InterviewHistory.created_at.desc()).first()
+        if not interview_history or not interview_history.answer:
+            raise ValueError("No answers stored")
+
+        most_recent_answer = interview_history.answer
+        most_recent_question = interview_history.question
+
+        # Get the most recent ID from the global variable
+        if not used_questions_table_ids:
+            raise ValueError("No used question IDs found")
+        
+        most_recent_question_id = used_questions_table_ids[-1]
+        
+        # Fetch the description of the question from the questions table
+        question_row = db_session.query(Questions).filter_by(id=most_recent_question_id).first()
+        if not question_row:
+            raise ValueError("Question not found in questions table")
+
+        question_description = question_row.description
+
+        # Generate the next question first
+        next_question = get_situational_question_1(user_id, session_id)
+
+        feedback_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are helping me land a new job by conducting realistic job interviews with me. "
+                       f"I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me the question: {most_recent_question}. "
+                       "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                       f"As the interviewer, you asked me this question because: {question_description}. Did my answer accomplish this? "
+                       "Did I answer the question in a reasonable amount of time that lasted no more than 3 minutes? "
+                       "Finally, please give me a recommendation on how I could have presented my experience better."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        analysis_chain = feedback_prompt | model
+
+        feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        feedback = feedback_response.content if feedback_response.content else "No feedback found"
+        logger.info(f"Generated feedback: {feedback}")
+
+        # Store the feedback
+        store_feedback(feedback, user_id, session_id)
+
+        # Generate and store the score after the feedback
+        score = get_score(user_id, session_id)
+        if score is not None:
+            logger.info(f"Calling store_score with score: {score}")
+            store_score(interview_history.id, score)
+        else:
+            logger.info("Score was not generated, store_score will not be called.")
+
+        return {"next_question_response": next_question, "feedback": feedback, "score": score}
+    except Exception as e:
+        logger.error(f"Error in get_behavioral_question_2_feedback function: {e}")
+        return {"error": "Could not generate feedback."}
+
+def get_situational_question_1_feedback(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
+        # Get the most recent answer
+        interview_history = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).order_by(InterviewHistory.created_at.desc()).first()
+        if not interview_history or not interview_history.answer:
+            raise ValueError("No answers stored")
+
+        most_recent_answer = interview_history.answer
+        most_recent_question = interview_history.question
+
+        # Get the most recent ID from the global variable
+        if not used_questions_table_ids:
+            raise ValueError("No used question IDs found")
+        
+        most_recent_question_id = used_questions_table_ids[-1]
+        
+        # Fetch the description of the question from the questions table
+        question_row = db_session.query(Questions).filter_by(id=most_recent_question_id).first()
+        if not question_row:
+            raise ValueError("Question not found in questions table")
+
+        question_description = question_row.description
+
+        # Generate the next question first
+        next_question = get_personality_question_1(user_id, session_id)
+
+        feedback_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are helping me land a new job by conducting realistic job interviews with me. "
+                       f"I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me the question: {most_recent_question}. "
+                       "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                       f"As the interviewer, you asked me this question because: {question_description}. Did my answer accomplish this? "
+                       "Did I answer the question in a reasonable amount of time that lasted no more than 3 minutes? "
+                       "Finally, please give me a recommendation on how I could have presented my experience better."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        analysis_chain = feedback_prompt | model
+
+        feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        feedback = feedback_response.content if feedback_response.content else "No feedback found"
+        logger.info(f"Generated feedback: {feedback}")
+
+        # Store the feedback
+        store_feedback(feedback, user_id, session_id)
+
+        # Generate and store the score after the feedback
+        score = get_score(user_id, session_id)
+        if score is not None:
+            logger.info(f"Calling store_score with score: {score}")
+            store_score(interview_history.id, score)
+        else:
+            logger.info("Score was not generated, store_score will not be called.")
+
+        return {"next_question_response": next_question, "feedback": feedback, "score": score}
+    except Exception as e:
+        logger.error(f"Error in get_situational_question_1_feedback function: {e}")
+        return {"error": "Could not generate feedback."}
 
 
 
@@ -829,4 +971,94 @@ def get_behavioral_question_1(user_id, session_id):
         return "Error: Could not generate behavioral question 1."
 
 def get_behavioral_question_2(user_id, session_id):
-    print("This is a placeholder for behavioral question 2.")
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+
+        if not user:
+            raise ValueError("User not found")
+
+        # Fetch username
+        username = user.username
+
+        # Query to get a behavioral question that hasn't been used yet
+        question_row = db_session.query(Questions).filter(
+            Questions.question_type == "behavioral questions",
+            ~Questions.id.in_(used_questions_table_ids)
+        ).first()
+
+        if not question_row:
+            raise ValueError("No available behavioral questions found")
+
+        # Add the question ID to the used list
+        used_questions_table_ids.append(question_row.id)
+
+        # Clean and format the question
+        question = capitalize_sentences(question_row.question)
+        final_question = f"Thanks {username}! {question}"
+
+        store_question(final_question, user_id, session_id)
+        return final_question
+    except Exception as e:
+        logger.error(f"Error in get_behavioral_question_2 function: {e}")
+        return "Error: Could not generate behavioral question 2."
+
+def get_situational_question_1(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+
+        if not user:
+            raise ValueError("User not found")
+
+        # Fetch username
+        username = user.username
+
+        # Query to get a situational question that hasn't been used yet
+        question_row = db_session.query(Questions).filter(
+            Questions.question_type == "situatinoal questions",  # Note the typo here
+            ~Questions.id.in_(used_questions_table_ids)
+        ).first()
+
+        if not question_row:
+            raise ValueError("No available situational questions found")
+
+        # Add the question ID to the used list
+        used_questions_table_ids.append(question_row.id)
+
+        # Clean and format the question
+        question = capitalize_sentences(question_row.question)
+        final_question = f"Thanks again {username}! {question}"
+
+        store_question(final_question, user_id, session_id)
+        return final_question
+    except Exception as e:
+        logger.error(f"Error in get_situational_question_1 function: {e}")
+        return "Error: Could not generate situational question 1."
+
+def get_personality_question_1(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+
+        if not user:
+            raise ValueError("User not found")
+
+        # Query to get a personality question that hasn't been used yet
+        question_row = db_session.query(Questions).filter(
+            Questions.question_type == "personality questions",
+            ~Questions.id.in_(used_questions_table_ids)
+        ).first()
+
+        if not question_row:
+            raise ValueError("No available personality questions found")
+
+        # Add the question ID to the used list
+        used_questions_table_ids.append(question_row.id)
+
+        # Clean and format the question
+        question = capitalize_sentences(question_row.question)
+        final_question = f"{question}"
+
+        store_question(final_question, user_id, session_id)
+        return final_question
+    except Exception as e:
+        logger.error(f"Error in get_personality_question_1 function: {e}")
+        return "Error: Could not generate personality question 1."
