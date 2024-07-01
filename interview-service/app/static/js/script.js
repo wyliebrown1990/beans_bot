@@ -259,28 +259,30 @@ $('#response-form').on('submit', function(event) {
                 </div>
             `);
 
-            // Append the new question from the server to the responses div
-            $('#responses').append(`
-                <div class="chat-block">
-                    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
-                    <div class="speech-bubble">
-                        <p>Beans-bot: ${response.next_question_response}</p>
-                        ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
+            // Check if the next_question_response exists in the response
+            if (response.next_question_response) {
+                // Append the new question from the server to the responses div
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>Beans-bot: ${response.next_question_response}</p>
+                            ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
+                        </div>
                     </div>
-                </div>
-            `);
+                `);
 
-            // Store the new question in store_questions_asked
-            store_questions_asked.push(response.next_question_response);
-            console.log("Stored questions:", store_questions_asked);
+                // Store the new question in store_questions_asked
+                store_questions_asked.push(response.next_question_response);
+                console.log("Stored questions:", store_questions_asked);
 
-            // Store the user response in store_answers
-            store_answers.push(userResponse);
-            console.log("Stored answers:", store_answers);
-
-            // Clear the answer input field
-            $('#answer_1').val('');
-            startAnswerTimer();  // Reset the timer when a new question is received
+                // Clear the answer input field
+                $('#answer_1').val('');
+                startAnswerTimer();  // Reset the timer when a new question is received
+            } else {
+                console.error("No next_question_response found in the server response.");
+                $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
+            }
         },
         error: function(error) {
             console.log('Error:', error);
@@ -289,6 +291,7 @@ $('#response-form').on('submit', function(event) {
         }
     });
 });
+
 
 
 

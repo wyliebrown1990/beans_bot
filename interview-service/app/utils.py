@@ -126,21 +126,24 @@ def store_user_answer(answer, user_id, session_id):
     except Exception as e:
         print(f"Error storing user answer: {e}")
 
-def store_score(score, user_id, session_id):
-    global most_recent_row
+def store_score(row_id, score):
     try:
-        # Use the global variable to find the specific row
-        interview_history = db_session.query(InterviewHistory).filter_by(id=most_recent_row).first()
-        
-        if interview_history and interview_history.score is None:
-            interview_history.score = score
-            interview_history.updated_at = datetime.utcnow()
-            db_session.commit()
-            print(f"Score stored in interview history ID: {most_recent_row}, Score: {score}")
-        else:
-            print(f"No matching interview history found to store score for row ID: {most_recent_row} or score already exists.")
+        # Check if interview history exists
+        interview_history = db_session.query(InterviewHistory).filter_by(id=row_id).first()
+        if not interview_history:
+            raise ValueError(f"No matching interview history found to store score for row ID: {row_id}")
+
+        # Check if score already exists
+        if interview_history.score is not None:
+            raise ValueError(f"Score already exists for row ID: {row_id}")
+
+        # Store the score
+        interview_history.score = score
+        db_session.commit()
+        print(f"Stored score: {score} for row ID: {row_id}")
     except Exception as e:
         print(f"Error storing score: {e}")
+
 
 #Start of Scoring function: 
 def get_score(user_id, session_id):
@@ -191,11 +194,12 @@ def get_score(user_id, session_id):
             print("No integer found in score response, setting score to None")
             score = None
 
-        store_score(score, user_id, session_id)
+        store_score(most_recent_row, score)
         return score
     except Exception as e:
         print(f"Error in get_score function: {e}")
         return None
+
 
 
 #Start of Feedback functions: 
@@ -249,8 +253,7 @@ def get_intro_question_feedback(user_id, session_id):
 
         # Generate and store the score after the feedback
         score = get_score(user_id, session_id)
-        store_score(score, user_id, session_id)
-
+        store_score(most_recent_row, score)  # Update to use most_recent_row
         return {"next_question_response": next_question, "feedback": feedback, "score": score}
     except Exception as e:
         print(f"Error in get_intro_question_feedback function: {e}")
@@ -311,7 +314,7 @@ def get_resume_question_1_feedback(user_id, session_id):
         score = get_score(user_id, session_id)
         if score is not None:
             print(f"Calling store_score with score: {score}")
-            store_score(score, user_id, session_id)
+            store_score(interview_history.id, score)
         else:
             print("Score was not generated, store_score will not be called.")
 
@@ -319,6 +322,7 @@ def get_resume_question_1_feedback(user_id, session_id):
     except Exception as e:
         print(f"Error in get_resume_question_1_feedback function: {e}")
         return {"error": "Could not generate feedback."}
+
 
 
 def get_resume_question_2_feedback(user_id, session_id):
@@ -482,15 +486,22 @@ def get_resume_question_2(user_id, session_id):
     
 def get_resume_question_3(user_id, session_id):
     try:
+        # Fetch user information
         user = db_session.query(User).filter_by(id=user_id).first()
+        if not user:
+            raise ValueError("User not found")
+        
+        # Fetch job description information
         job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        if not job_description:
+            raise ValueError("Job description not found")
 
-        if not user or not job_description:
-            raise ValueError("User or job description not found")
-
+        # Extract necessary details
         job_title = user.most_recent_job_title
         most_recent_successful_project = user.most_recent_successful_project
+        logger.info(f"Generating question for user: {user_id}, job title: {job_title}, project: {most_recent_successful_project}")
 
+        # Prepare the chat prompt
         prompt = ChatPromptTemplate.from_messages([
             ("system", f"You are the world's best interview coach. We are conducting a mock interview where I am interviewing for the role of {job_title} at {job_description.company_name} company. "
                        f"You have my resume in front of you and you can see that my most successful project was: {most_recent_successful_project}. "
@@ -498,15 +509,24 @@ def get_resume_question_3(user_id, session_id):
             MessagesPlaceholder(variable_name="messages"),
         ])
 
+        # Invoke the model to generate the response
         chain = prompt | model
         response = chain.invoke({"messages": []})
 
+        # Extract and store the question
         question = response.content
+        if not question:
+            raise ValueError("Generated question is empty")
         store_question(question, user_id, session_id)
+        logger.info(f"Generated question: {question}")
         return question
+    except ValueError as ve:
+        logger.error(f"ValueError in get_resume_question_3 function: {ve}")
+        return f"Error: {ve}"
     except Exception as e:
-        print(f"Error in get_resume_question_3 function: {e}")
+        logger.error(f"Unexpected error in get_resume_question_3 function: {e}")
         return "Error: Could not generate resume question 3."
+
 
 
 def get_behavioral_question_1_feedback(user_id, session_id):

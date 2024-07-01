@@ -67,7 +67,10 @@ def submit_answer():
         else:
             response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
 
-        next_question = response['next_question_response']
+        # Debugging print statement to check the response
+        print(f"Response: {response}")
+
+        next_question = response.get('next_question_response', 'No next question found')
 
         response['session_id'] = session_id
         response['next_question'] = next_question
