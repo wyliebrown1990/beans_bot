@@ -9,12 +9,11 @@ from .utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
     get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback,
     get_resume_question_4_feedback, get_behavioral_question_1_feedback, get_behavioral_question_2_feedback,
-    get_situational_question_1_feedback, get_personality_question_1, get_behavioral_question_1, 
-    get_behavioral_question_2, get_situational_question_1, get_resume_question_1, get_resume_question_2, 
-    get_resume_question_3, get_resume_question_4, store_question, get_score, db_session
+    get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
+    get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
+    get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
+    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_score, db_session
 )
-
-
 
 main = Blueprint('main', __name__)
 
@@ -57,28 +56,46 @@ def submit_answer():
 
         store_user_answer(answer, user_id, session_id)
 
-        # Determine the current cycle and set the conditions for transitioning to the next questions
-        current_cycle = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).count()
-        print(f"Current cycle: {current_cycle}")
-
-        if current_cycle == 1:
-            response = get_intro_question_feedback(user_id, session_id)
-        elif current_cycle == 2:
-            response = get_resume_question_1_feedback(user_id, session_id)
-        elif current_cycle == 3:
-            response = get_resume_question_2_feedback(user_id, session_id)
-        elif current_cycle == 4:
-            response = get_resume_question_3_feedback(user_id, session_id)
-        elif current_cycle == 5:
-            response = get_resume_question_4_feedback(user_id, session_id)
-        elif current_cycle == 6:
-            response = get_behavioral_question_1_feedback(user_id, session_id)
-        elif current_cycle == 7:
-            response = get_behavioral_question_2_feedback(user_id, session_id)
-        elif current_cycle == 8:
-            response = get_situational_question_1_feedback(user_id, session_id)
+        # Check if the last question was triggered
+        if session.get('last_question', False):
+            print("Last question flag detected.")
+            response = get_last_question_feedback(user_id, session_id)
+            session.pop('last_question', None)  # Clear the flag after handling
         else:
-            response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
+            # Determine the current cycle and set the conditions for transitioning to the next questions
+            current_cycle = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).count()
+            print(f"Current cycle: {current_cycle}")
+
+            if current_cycle == 1:
+                response = get_intro_question_feedback(user_id, session_id)
+            elif current_cycle == 2:
+                response = get_resume_question_1_feedback(user_id, session_id)
+            elif current_cycle == 3:
+                response = get_resume_question_2_feedback(user_id, session_id)
+            elif current_cycle == 4:
+                response = get_resume_question_3_feedback(user_id, session_id)
+            elif current_cycle == 5:
+                response = get_resume_question_4_feedback(user_id, session_id)
+            elif current_cycle == 6:
+                response = get_behavioral_question_1_feedback(user_id, session_id)
+            elif current_cycle == 7:
+                response = get_behavioral_question_2_feedback(user_id, session_id)
+            elif current_cycle == 8:
+                response = get_situational_question_1_feedback(user_id, session_id)
+            elif current_cycle == 9:
+                response = get_personality_question_1_feedback(user_id, session_id)
+            elif current_cycle == 10:
+                response = get_motivational_question_1_feedback(user_id, session_id)
+            elif current_cycle == 11:
+                response = get_competency_question_1_feedback(user_id, session_id)
+            elif current_cycle == 12:
+                response = get_ethical_question_1_feedback(user_id, session_id)
+            else:
+                response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
+
+            # Set the session flag to indicate the last question was asked
+            if current_cycle >= 12:
+                session['last_question'] = True
 
         # Debugging print statement to check the response
         print(f"Response: {response}")
@@ -88,10 +105,30 @@ def submit_answer():
         response['session_id'] = session_id
         response['next_question'] = next_question
         print(f"Next question: {next_question}")
+
         return jsonify(response)
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
+        print(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+
+@main.route('/get_last_question', methods=['GET'])
+def get_last_question_route():
+    try:
+        user_id = request.args.get('user_id')
+        session_id = request.args.get('session_id')
+        if not user_id or not session_id:
+            raise ValueError("user_id or session_id missing from request")
+        print(f"Getting last question for user_id: {user_id}, session_id: {session_id}")
+        question = get_last_question(user_id, session_id)
+        session['last_question'] = True  # Set the session flag
+        print(f"Generated last question: {question}")
+        return jsonify({"next_question_response": question})
+    except Exception as e:
+        current_app.logger.error(f"Error in get_last_question route: {e}")
+        print(f"Error in get_last_question route: {e}")
+        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+
 
 
 @main.route('/transcribe_audio', methods=['POST'])

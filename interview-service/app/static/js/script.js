@@ -13,7 +13,7 @@ let videoRecording = false;
 let answerTimerInterval;
 let answerTimeLeft = 90;
 let interviewTimerInterval;
-let interviewTimeLeft = 2700; // 45 minutes in seconds
+let interviewTimeLeft = 1800; // 45 minutes in seconds
 let currentAudio = null;
 let playButton = null;
 let store_questions_asked = [];
@@ -53,13 +53,54 @@ function startInterviewTimer() {
     }, 1000);
 }
 
-function getLastQuestion() {
-    // Logic to get the last question and wrap up the interview
-}
-
 document.getElementById('wrap-up-interview').addEventListener('click', function() {
     getLastQuestion();
 });
+
+function getLastQuestion() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+    const sessionId = urlParams.get('session_id');
+
+    $.ajax({
+        type: 'GET',
+        url: getLastQuestionUrl,
+        data: {
+            user_id: userId,
+            session_id: sessionId
+        },
+        success: function(response) {
+            // Append the last question to the responses div
+            $('#responses').append(`
+                <div class="chat-block">
+                    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                    <div class="speech-bubble">
+                        <p>Beans-bot: ${response.next_question_response}</p>
+                        ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
+                    </div>
+                </div>
+            `);
+
+            // Store the new question in store_questions_asked
+            store_questions_asked.push(response.next_question_response);
+            console.log("Stored questions:", store_questions_asked);
+
+            // Clear the answer input field
+            $('#answer_1').val('');
+            startAnswerTimer();  // Reset the timer when a new question is received
+
+            // Set the session flag for last question
+            sessionStorage.setItem('last_question', 'true');
+        },
+        error: function(error) {
+            console.log('Error:', error);
+            // Show error message
+            $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
+        }
+    });
+}
+
+
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
