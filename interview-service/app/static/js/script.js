@@ -13,7 +13,7 @@ let videoRecording = false;
 let answerTimerInterval;
 let answerTimeLeft = 90;
 let interviewTimerInterval;
-let interviewTimeLeft = 1800; // 45 minutes in seconds
+let interviewTimeLeft = 330; // 30 minutes in seconds
 let currentAudio = null;
 let playButton = null;
 let store_questions_asked = [];
@@ -281,28 +281,38 @@ $('#response-form').on('submit', function(event) {
     console.log("User response:", userResponse);
     // Show status message
     $('#status-message').text("Processing your response...").fadeIn();
+    
     $.ajax({
         type: 'POST',
         url: '/submit_answer',
         data: form.serialize() + `&session_id=${sessionId}`,
         success: function(response) {
-            console.log("Server response:", response);
-            // Hide status message
+            console.log("Server response:", response); // This will help us see the actual response
             $('#status-message').fadeOut();
 
-            // Append the new user response to the responses div
-            $('#responses').append(`
-                <div class="chat-block">
-                    <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User Image" class="chat-image">
-                    <div class="speech-bubble">
-                        <p>${username}: ${userResponse}</p>
+            // Handle the response
+            if (response.final_message) {
+                // Append the final message to the responses div
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>Beans-bot: ${response.final_message}</p>
+                        </div>
                     </div>
-                </div>
-            `);
+                `);
+            } else if (response.next_question_response) {
+                // Append the user's answer to the responses div
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>You: ${userResponse}</p>
+                        </div>
+                    </div>
+                `);
 
-            // Check if the next_question_response exists in the response
-            if (response.next_question_response) {
-                // Append the new question from the server to the responses div
+                // Append the next question to the responses div
                 $('#responses').append(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
@@ -313,25 +323,23 @@ $('#response-form').on('submit', function(event) {
                     </div>
                 `);
 
-                // Store the new question in store_questions_asked
                 store_questions_asked.push(response.next_question_response);
                 console.log("Stored questions:", store_questions_asked);
 
-                // Clear the answer input field
                 $('#answer_1').val('');
-                startAnswerTimer();  // Reset the timer when a new question is received
+                startAnswerTimer();  
             } else {
-                console.error("No next_question_response found in the server response.");
+                console.error("No next_question_response or final_message found in the server response.");
                 $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
             }
         },
         error: function(error) {
             console.log('Error:', error);
-            // Show error message
             $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
         }
     });
 });
+
 
 
 
@@ -437,15 +445,30 @@ document.getElementById('wrap-up-interview').addEventListener('click', function(
         success: function(response) {
             console.log("Server response:", response);
             $('#status-message').fadeOut();
-            $('#responses').append(`
-                <div class="chat-block">
-                    <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
-                    <div class="speech-bubble">
-                        <p>Beans-bot: ${response.next_question_response}</p>
-                        ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
+
+            if (response.final_message) {
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>Beans-bot: ${response.final_message}</p>
+                        </div>
                     </div>
-                </div>
-            `);
+                `);
+            } else if (response.next_question_response) {
+                $('#responses').append(`
+                    <div class="chat-block">
+                        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+                        <div class="speech-bubble">
+                            <p>Beans-bot: ${response.next_question_response}</p>
+                            ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
+                        </div>
+                    </div>
+                `);
+            } else {
+                console.error("No final_message or next_question_response found in the server response.");
+                $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
+            }
         },
         error: function(error) {
             console.error('Error wrapping up interview:', error);

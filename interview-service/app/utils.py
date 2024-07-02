@@ -1133,32 +1133,37 @@ def generate_final_message(user_id, session_id):
         company_name = job_description.company_name
         industry = job_description.company_industry
 
+        print("Running session summary functions")
         # Execute session summary functions
         session_score_average(session_id)
         session_top_score(session_id)
         session_low_score(session_id)
         session_summary = session_summary_next_steps(session_id, job_title, company_name, industry)
 
+        print("Fetching updated session stats")
         # Fetch updated session stats
         session_avg = db_session.query(InterviewHistory.session_score_average).filter_by(session_id=session_id).first()[0]
         session_top = db_session.query(InterviewHistory.session_top_score).filter_by(session_id=session_id).first()[0]
         session_low = db_session.query(InterviewHistory.session_low_score).filter_by(session_id=session_id).first()[0]
 
         response_message = (
-            f"Beans-Bot: Thank you {user.username} for practicing your interview skills with me today. "
+            f"Thank you {user.username} for practicing your interview skills with me today. "
             "I know for a lot of job seekers, the in-person or video conducted job interview can be a source of anxiety. "
-            "I want you to know that I’m here for you 24/7. I hope that through practice and feedback you will build your confidence and land your next job. 🎉 🔥💸\n\n"
+            "I want you to know that I’m here for you 24/7. I hope that through practice and feedback you will build your confidence and land your next job. 🎉 🔥💸<br><br>"
             "Below is a summary of your performance today. Please do not be discouraged if it is lower than you expected. "
-            "You are already doing more than the average job seeker by spending this time with me. Every time you practice you get a little better. 💪🤓\n\n"
-            f"Today’s Average Score Was: {session_avg} 🎉\n\n"
-            f"Your Highest Score Was: {session_top} 🔥\n\n"
-            "Here’s a Summary on Your Performance and Some Action Items to Consider Before Your Next Mock Interview:\n\n"
-            f"{session_summary}\n"
+            "You are already doing more than the average job seeker by spending this time with me. Every time you practice you get a little better. 💪🤓<br><br>"
+            f"<b>Today’s Average Score Was:</b> {session_avg} 🎉<br><br>"
+            f"<b>Your Highest Score Was:</b> {session_top} 🔥<br><br>"
+            "<b>Here’s a Summary on Your Performance and Some Action Items to Consider Before Your Next Mock Interview:</b><br>"
+            f"<b>Summary:</b><br><br>"
+            f"{session_summary}<br>"
         )
 
+        print(f"Generated final message: {response_message}")
         return response_message
     except Exception as e:
         logger.error(f"Error in generate_final_message function: {e}")
+        print(f"Error in generate_final_message function: {e}")
         return "Error: Could not generate final message."
 
 

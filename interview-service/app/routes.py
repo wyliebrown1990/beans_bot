@@ -30,6 +30,9 @@ def first_round():
         company_name = request.args.get('company_name')
         industry = request.args.get('industry')
 
+        # Clear the last question flag
+        session.pop('last_question', None)
+
         # Generate a session ID if not already provided in the URL
         session_id = request.args.get('session_id')
         if not session_id:
@@ -45,6 +48,7 @@ def first_round():
         current_app.logger.error(f"Error in first_round route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
+
 @main.route('/submit_answer', methods=['POST'])
 def submit_answer():
     try:
@@ -59,6 +63,21 @@ def submit_answer():
         # Determine the current cycle and set the conditions for transitioning to the next questions
         current_cycle = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).count()
         print(f"Current cycle: {current_cycle}")
+
+        if 'last_question' in session:
+            print("Handling last question feedback")
+            response = get_last_question_feedback(user_id, session_id)
+            if 'error' in response:
+                print(f"Error in last question feedback: {response['error']}")
+                return jsonify(response)
+            # Generate the final message
+            final_message = generate_final_message(user_id, session_id)
+            print(f"Generated final message: {final_message}")
+            response['final_message'] = final_message
+
+            current_app.logger.debug(f"Server response: {response}")
+
+            return jsonify(response)
 
         if current_cycle == 1:
             response = get_intro_question_feedback(user_id, session_id)
@@ -91,7 +110,6 @@ def submit_answer():
         if current_cycle >= 12:
             session['last_question'] = True
 
-        # Debugging print statement to check the response
         print(f"Response: {response}")
 
         next_question = response.get('next_question_response', 'No next question found')
@@ -103,13 +121,13 @@ def submit_answer():
 
         print(f"Next question: {next_question}")
 
+        current_app.logger.debug(f"Server response: {response}")
+
         return jsonify(response)
     except Exception as e:
         current_app.logger.error(f"Error in submit_answer route: {e}")
         print(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
-
-
 
 
 @main.route('/get_last_question', methods=['GET'])
@@ -130,23 +148,20 @@ def get_last_question_route():
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
 
+
 @main.route('/wrap_up_early', methods=['POST'])
 def wrap_up_early():
     try:
         user_id = request.form.get('user_id')
         session_id = request.form.get('session_id')
-        
+
         print(f"Wrap up early triggered for user_id: {user_id}, session_id: {session_id}")
 
-        # Step 1: Fill in skipped answers
+        # Fill in skipped answers and generate the last question
         fill_in_skipped_answers(session_id)
-        
-        # Step 2: Generate the last question
         last_question = get_last_question(user_id, session_id)
-        
-        # Step 3: Set the session flag to indicate the last question was asked
         session['last_question'] = True
-        
+
         print(f"Last question generated: {last_question}")
 
         return jsonify({"next_question_response": last_question})
@@ -155,20 +170,23 @@ def wrap_up_early():
         print(f"Error in wrap_up_early route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
+
 @main.route('/send_final_message', methods=['GET'])
 def send_final_message():
-    try:
-        user_id = request.args.get('user_id')
-        session_id = request.args.get('session_id')
+   try:
+       user_id = request.args.get('user_id')
+       session_id = request.args.get('session_id')
 
-        if not user_id or not session_id:
-            raise ValueError("user_id or session_id missing from request")
-        
-        response = generate_final_message(user_id, session_id)
-        return jsonify(response)
-    except Exception as e:
-        current_app.logger.error(f"Error in send_final_message route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+       if not user_id or not session_id:
+           raise ValueError("user_id or session_id missing from request")
+
+       response_message = generate_final_message(user_id, session_id)
+       print(f"Final message generated: {response_message}")
+
+       return jsonify({"final_message": response_message})
+   except Exception as e:
+       current_app.logger.error(f"Error in send_final_message route: {e}")
+       return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
 
 @main.route('/transcribe_audio', methods=['POST'])
