@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -19,16 +19,16 @@ class InterviewHistory(Base):
     job_level = Column(String(50), nullable=True)
     company_name = Column(String(100), nullable=True)
     company_industry = Column(String(100), nullable=True)
-    question = Column(Text, nullable=False)  # Changed to Text
+    question = Column(Text, nullable=False)
     question_id = Column(Integer, ForeignKey('questions.id'), nullable=False)
-    answer = Column(Text, nullable=True)  # Changed to Text
-    feedback = Column(Text, nullable=True)  # Changed to Text
+    answer = Column(Text, nullable=True)
+    feedback = Column(Text, nullable=True)
     score = Column(Integer, nullable=True)
     skip_next_time = Column(Boolean, nullable=False, default=False)
-    session_score_average = Column(Integer, nullable=True)
+    session_score_average = Column(Float, nullable=True)  # Change to Float
     session_top_score = Column(String(100), nullable=True)
     session_low_score = Column(String(100), nullable=True)
-    session_summary_next_steps = Column(Text, nullable=True)  # Changed to Text
+    session_summary_next_steps = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="interview_history")
     question_rel = relationship("Questions", back_populates="interview_history")
