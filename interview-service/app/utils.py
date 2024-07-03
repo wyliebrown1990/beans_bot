@@ -26,20 +26,32 @@ from app.models import JobDescriptionAnalysis, User, InterviewHistory, Questions
 
 load_dotenv()
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure ffmpeg is found
-ffmpeg_location = os.getenv('FFMPEG_LOCATION')
-AudioSegment.converter = which("ffmpeg") or ffmpeg_location
-
 # Initialize the OpenAI chat model
 openai_api_key = os.getenv("OPENAI_API_KEY")
 model = ChatOpenAI(model="gpt-3.5-turbo", api_key=openai_api_key, temperature=0.5)
+
+# Ensure environment variables are set
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+if not ELEVENLABS_API_KEY:
+    print("ELEVENLABS_API_KEY environment variable not set")
+else:
+    print(f"ELEVENLABS_API_KEY is set")
+
+ffmpeg_location = os.getenv('FFMPEG_LOCATION')
+if not ffmpeg_location:
+    print("FFMPEG_LOCATION environment variable not set")
+else:
+    print(f"FFMPEG_LOCATION is set to {ffmpeg_location}")
+
+# Set the converter for pydub
+AudioSegment.converter = which("ffmpeg") or ffmpeg_location
+
+# Initialize ElevenLabs client
+elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 # Initialize database session
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -52,10 +64,55 @@ most_recent_answer = None
 most_recent_row = None
 used_questions_table_ids = []
 
+#generates audio files for questions
+def text_to_speech_file(text: str, voice_id: str, current_app) -> str:
+    if not text.strip():
+        print("Text is empty, skipping text-to-speech conversion.")
+        return ""
+
+    try:
+        response = elevenlabs_client.text_to_speech.convert(
+            voice_id=voice_id,
+            optimize_streaming_latency="0",
+            output_format="mp3_22050_32",
+            text=text,
+            model_id="eleven_turbo_v2",
+            voice_settings=VoiceSettings(
+                stability=0.0,
+                similarity_boost=1.0,
+                style=0.0,
+                use_speaker_boost=True,
+            ),
+        )
+
+        audio_folder = os.path.join(current_app.root_path, 'audio_files')
+        # Remove existing files in the folder
+        for filename in os.listdir(audio_folder):
+            file_path = os.path.join(audio_folder, filename)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+
+        save_file_path = os.path.join(audio_folder, f"{uuid.uuid4()}.mp3")
+        os.makedirs(os.path.dirname(save_file_path), exist_ok=True)
+
+        with open(save_file_path, "wb") as f:
+            for chunk in response:
+                if chunk:
+                    f.write(chunk)
+
+        print(f"{save_file_path}: A new audio file was saved successfully!")
+        return save_file_path
+    except ApiError as e:
+        print(f"Error generating speech: {e}")
+        return ""
+
+
+
+
+
 #Cleans up values from questions table:
 def capitalize_sentences(text):
     return '. '.join(sentence.capitalize() for sentence in text.split('. '))
-
 
 #Start of generating unique IDs:
 

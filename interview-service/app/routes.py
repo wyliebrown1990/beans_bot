@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 import os
@@ -12,7 +12,7 @@ from .utils import (
     get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
     get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
     get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
-    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, db_session
+    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, db_session
 )
 
 main = Blueprint('main', __name__)
@@ -55,6 +55,8 @@ def submit_answer():
         answer = request.form.get('answer_1')
         user_id = request.form.get('user_id')
         session_id = request.form.get('session_id')
+        generate_audio = request.form.get('generate_audio') == 'true'
+        voice_id = request.form.get('voice')
 
         print(f"Submitting answer: {answer} for user_id: {user_id}, session_id: {session_id}")
 
@@ -115,11 +117,25 @@ def submit_answer():
         next_question = response.get('next_question_response', 'No next question found')
         response_message = response.get('response_message', '')
 
+        # Convert text to speech for the next question response only if the box is checked
+        next_question_audio_path = None
+        if generate_audio and next_question:
+            print("Generating audio for the next question...")
+            next_question_audio_path = text_to_speech_file(next_question, voice_id, current_app)
+            if next_question_audio_path:
+                print(f"Generated audio file path: {next_question_audio_path}")
+                next_question_audio_url = url_for('main.uploaded_file', filename=os.path.basename(next_question_audio_path))
+                response['next_question_audio'] = next_question_audio_url
+            else:
+                print("Failed to generate audio file.")
+                response['next_question_audio'] = None
+
         response['session_id'] = session_id
         response['next_question'] = next_question
         response['response_message'] = response_message
 
         print(f"Next question: {next_question}")
+        print(f"Next question audio: {response['next_question_audio']}")
 
         current_app.logger.debug(f"Server response: {response}")
 
@@ -129,6 +145,9 @@ def submit_answer():
         print(f"Error in submit_answer route: {e}")
         return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
 
+@main.route('/audio_files/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(os.path.join(current_app.root_path, 'audio_files'), filename)
 
 @main.route('/get_last_question', methods=['GET'])
 def get_last_question_route():

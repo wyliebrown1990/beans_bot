@@ -100,8 +100,6 @@ function getLastQuestion() {
     });
 }
 
-
-
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -131,7 +129,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 });
 
-
 document.getElementById('generate_audio').addEventListener('click', function() {
     const voiceSelection = document.getElementById('voice-selection');
     if (voiceSelection.style.display === 'none' || voiceSelection.style.display === '') {
@@ -141,18 +138,41 @@ document.getElementById('generate_audio').addEventListener('click', function() {
         voiceSelection.style.display = 'none';
         this.innerHTML = '💬';
     }
+});
+
+document.getElementById('response-form').addEventListener('submit', function(event) {
+    const selectedVoice = document.getElementById('voice').value;
     const generateAudioInput = document.createElement('input');
     generateAudioInput.type = 'hidden';
     generateAudioInput.name = 'generate_audio';
     generateAudioInput.value = 'true';
     document.getElementById('response-form').appendChild(generateAudioInput);
 
-    const selectedVoice = document.getElementById('voice').value;
-    if (selectedVoice === 'none') {
-        generateAudioInput.value = 'false';
-    }
+    const voiceIdInput = document.createElement('input');
+    voiceIdInput.type = 'hidden';
+    voiceIdInput.name = 'voice_id';
+    voiceIdInput.value = selectedVoice;
+    document.getElementById('response-form').appendChild(voiceIdInput);
+
     console.log("Selected voice:", selectedVoice); // Verify the selected value
 });
+
+function toggleAudio(audioPath, button) {
+    if (currentAudio && !currentAudio.paused) {
+        currentAudio.pause();
+        button.style.backgroundColor = '';
+        button.innerText = 'Play Next Question';
+        return;
+    }
+    currentAudio = new Audio(audioPath);
+    currentAudio.play();
+    button.style.backgroundColor = 'burnt orange';
+    button.innerText = 'Stop Audio';
+    currentAudio.onended = () => {
+        button.style.backgroundColor = '';
+        button.innerText = 'Play Next Question';
+    };
+}
 
 document.getElementById('record-answer').addEventListener('click', function() {
     if (!recording) {
@@ -276,23 +296,21 @@ $('#response-form').on('submit', function(event) {
     event.preventDefault();
     const form = $(this);
     const userResponse = $('#answer_1').val();
-    const username = $('#responses').data('username'); // Get the username from data attribute
-    const sessionId = $('input[name="session_id"]').val(); // Get the session_id from hidden input
+    const username = $('#responses').data('username'); 
+    const sessionId = $('input[name="session_id"]').val(); 
+
     console.log("User response:", userResponse);
-    // Show status message
     $('#status-message').text("Processing your response...").fadeIn();
-    
+
     $.ajax({
         type: 'POST',
         url: '/submit_answer',
         data: form.serialize() + `&session_id=${sessionId}`,
         success: function(response) {
-            console.log("Server response:", response); // This will help us see the actual response
+            console.log("Server response:", response);
             $('#status-message').fadeOut();
 
-            // Handle the response
             if (response.final_message) {
-                // Append the final message to the responses div
                 $('#responses').append(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
@@ -302,7 +320,6 @@ $('#response-form').on('submit', function(event) {
                     </div>
                 `);
             } else if (response.next_question_response) {
-                // Append the user's answer to the responses div
                 $('#responses').append(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User" class="chat-image">
@@ -312,7 +329,6 @@ $('#response-form').on('submit', function(event) {
                     </div>
                 `);
 
-                // Append the next question to the responses div
                 $('#responses').append(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
@@ -339,9 +355,6 @@ $('#response-form').on('submit', function(event) {
         }
     });
 });
-
-
-
 
 
 function toggleAudio(audioPath, button) {
@@ -406,7 +419,6 @@ function startNewInterviewSession() {
 function generateSessionId() {
     return Math.floor(Math.random() * 1000000000); // Generate a simple session ID
 }
-
 
 document.getElementById('nav-toggle').addEventListener('click', function() {
     const navLinks = document.getElementById('nav-links');
@@ -476,4 +488,3 @@ document.getElementById('wrap-up-interview').addEventListener('click', function(
         }
     });
 });
-
