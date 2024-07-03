@@ -425,13 +425,14 @@ function startNewInterviewSession() {
     const username = urlParams.get('username');
     const user_id = urlParams.get('user_id');
     const session_id = generateSessionId(); // Function to generate session ID
+
     // Clear Flask session data on the server
     $.ajax({
         type: 'POST',
-        url: clearSessionUrl,
+        url: '/clear_session',
         success: function() {
             // Redirect to the same URL to start a new session with session_id
-            window.location.href = `${startInterviewUrl}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}&session_id=${session_id}`;
+            window.location.href = `${window.location.pathname}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}&session_id=${session_id}`;
         },
         error: function(error) {
             console.error('Error clearing session:', error);

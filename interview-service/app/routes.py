@@ -261,3 +261,14 @@ def transcribe_audio():
             os.remove(wav_path)
 
         return jsonify({'transcription': text})
+
+@main.route('/clear_session', methods=['POST'])
+def clear_session():
+    try:
+        print("Clearing session for user...")
+        session.clear()
+        print("Session cleared successfully.")
+        return jsonify({"message": "Session cleared successfully"}), 200
+    except Exception as e:
+        print(f"Error clearing session: {str(e)}")
+        return jsonify({"error": str(e)}), 500

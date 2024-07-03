@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from .config import Config
 from .models import Base
-import logging
 
 # Database setup
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
@@ -26,4 +25,3 @@ def create_app():
     return app
 
 app = create_app()
-
