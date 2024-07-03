@@ -292,6 +292,19 @@ function stopVideoRecording() {
     };
 }
 
+function scrollToBottom() {
+    const chatContainer = document.getElementById('content-wrap');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function addHighlightEffect(element) {
+    element.classList.add('highlight');
+    setTimeout(() => {
+        element.classList.remove('highlight');
+    }, 2000);
+}
+
+
 $('#response-form').on('submit', function(event) {
     event.preventDefault();
     const form = $(this);
@@ -310,26 +323,28 @@ $('#response-form').on('submit', function(event) {
             console.log("Server response:", response);
             $('#status-message').fadeOut();
 
+            let userChatBlock, botChatBlock;
+
             if (response.final_message) {
-                $('#responses').append(`
+                botChatBlock = $(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
                         <div class="speech-bubble">
                             <p>Beans-bot: ${response.final_message}</p>
                         </div>
                     </div>
-                `);
+                `).appendTo('#responses');
             } else if (response.next_question_response) {
-                $('#responses').append(`
+                userChatBlock = $(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/user_logo_500.PNG" alt="User" class="chat-image">
                         <div class="speech-bubble">
                             <p>You: ${userResponse}</p>
                         </div>
                     </div>
-                `);
+                `).appendTo('#responses');
 
-                $('#responses').append(`
+                botChatBlock = $(`
                     <div class="chat-block">
                         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
                         <div class="speech-bubble">
@@ -337,7 +352,7 @@ $('#response-form').on('submit', function(event) {
                             ${response.next_question_audio ? `<button class="play-button" onclick="toggleAudio('${response.next_question_audio}', this)">Play Next Question</button>` : ''}
                         </div>
                     </div>
-                `);
+                `).appendTo('#responses');
 
                 store_questions_asked.push(response.next_question_response);
                 console.log("Stored questions:", store_questions_asked);
@@ -348,6 +363,13 @@ $('#response-form').on('submit', function(event) {
                 console.error("No next_question_response or final_message found in the server response.");
                 $('#status-message').text("An error occurred. Please try again.").fadeIn().delay(3000).fadeOut();
             }
+
+            // Apply highlight effect to new chat blocks
+            if (userChatBlock) addHighlightEffect(userChatBlock[0]);
+            if (botChatBlock) addHighlightEffect(botChatBlock[0]);
+
+            // Scroll to bottom after new message
+            scrollToBottom();
         },
         error: function(error) {
             console.log('Error:', error);
@@ -355,6 +377,7 @@ $('#response-form').on('submit', function(event) {
         }
     });
 });
+
 
 
 function toggleAudio(audioPath, button) {

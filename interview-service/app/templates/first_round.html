@@ -21,15 +21,11 @@
                 <div id="answer-timer">90</div>
             </div>
             <div class="button-container">
+                <button id="home-button">Home <i class="fa fa-home" aria-hidden="true"></i></button>
                 <button id="record-video">Record Video of Interview<i class="fa fa-video-camera" aria-hidden="true"></i></button>
                 <button id="download-transcript">Download Transcript <i class="fa fa-download" aria-hidden="true"></i></button>
                 <button onclick="startNewInterviewSession()">Start New Session <i class="fa fa-redo" aria-hidden="true"></i></button>
                 <button id="wrap-up-interview">End interview early <i class="fa fa-stop-circle" aria-hidden="true"></i></button>
-                <div class="previous-sessions-container">
-                    <p>Previous Chat Sessions:</p>
-                    <button>June 12th 2024</button>
-                    <button>June 10th 2024</button>
-                </div>
             </div>
         </div>
     </div>
@@ -121,6 +117,11 @@
 
     // Update the header with the username
     document.querySelector('h1').textContent = `First Round Interview for ${username}`;
+
+    // Add event listener for Home button
+    document.getElementById('home-button').addEventListener('click', function() {
+        window.location.href = `http://localhost:5011/?username=${username}&user_id=${userId}`;
+    });
 </script>
 </body>
 </html>

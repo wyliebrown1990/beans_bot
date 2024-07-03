@@ -180,11 +180,10 @@ hr {
   color: white;
 }
 .chat-image {
-  float: left; /* Float the image to the left */
-  margin-right: 10px; /* Add margin to create space between the image and the speech bubble */
-  align-self: flex-start; /* Ensure the image stays at the top */
-  max-width: 40%;
-  max-height: 40%;
+  float: left; 
+  margin-right: 10px;
+  max-width: 200px;  /* Set a fixed max width */
+  max-height: 200px; /* Set a fixed max height */
 }
 p {
   text-align: center;
@@ -228,9 +227,12 @@ button {
   flex: 1;
   margin-left: 220px; /* Adjust this value to match the sidebar width + padding */
   padding: 20px; /* Add padding for better appearance */
-  padding-bottom: 100px;
-  position: relative; /* Add padding to the bottom to account for the response form */
+  padding-bottom: 150px; /* Add enough padding to account for the submit button container */
+  position: relative;
+  overflow-y: auto; /* Add vertical scroll */
+  height: calc(100vh - 100px); /* Set a height that considers the header and other fixed elements */
 }
+
 #user_response {
   width: 100%;
   box-sizing: border-box;
@@ -314,6 +316,12 @@ h5 {
   width: calc(100% - 40px); /* Adjust width to account for padding */
   color: white; /* Ensures text is readable on dark background */
 }
+
+.chat-block.highlight {
+  background-color: #d4f0fc;
+  transition: background-color 2s ease;
+}
+
 .speech-bubble {
   float: left; /* Float the speech bubble to the left */
   clear: both; /* Clear the float to ensure proper alignment */
