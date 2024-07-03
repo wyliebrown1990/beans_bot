@@ -13,7 +13,7 @@ let videoRecording = false;
 let answerTimerInterval;
 let answerTimeLeft = 90;
 let interviewTimerInterval;
-let interviewTimeLeft = 330; // 30 minutes in seconds
+let interviewTimeLeft = 1800; // 30 minutes in seconds
 let currentAudio = null;
 let playButton = null;
 let store_questions_asked = [];

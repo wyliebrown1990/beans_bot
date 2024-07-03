@@ -155,11 +155,11 @@ def store_score(row_id, score):
         print(f"Error storing score: {e}")
 
 
-#Start of Scoring function: 
-def get_score(user_id, session_id):
+#Start of Scoring functions: 
+def get_intro_score(user_id, session_id):
     global most_recent_answer
     try:
-        print("Starting get_score function...")
+        print("Starting get_intro_score function...")
 
         user = db_session.query(User).filter_by(id=user_id).first()
         job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
@@ -207,9 +207,9 @@ def get_score(user_id, session_id):
         store_score(most_recent_row, score)
         return score
     except Exception as e:
-        print(f"Error in get_score function: {e}")
+        print(f"Error in get_intro_score function: {e}")
         return None
-
+    
 #Start of last question storing functions: 
 
 def store_last_feedback(feedback, session_id):
@@ -245,6 +245,65 @@ def store_last_score(score, session_id):
             raise ValueError("No matching interview history found to store last score.")
     except Exception as e:
         print(f"Error storing last score: {e}")
+    
+def get_score(user_id, session_id):
+    try:
+        user = db_session.query(User).filter_by(id=user_id).first()
+        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+
+        if not user or not job_description:
+            raise ValueError("User or job description not found")
+
+        job_title = job_description.job_title
+        company_name = job_description.company_name
+        industry = job_description.company_industry
+
+        # Get the most recent interview history
+        interview_history = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).order_by(InterviewHistory.created_at.desc()).first()
+        if not interview_history or not interview_history.question:
+            raise ValueError("No recent question stored")
+
+        most_recent_question = interview_history.question
+        print(f"Most recent question: {most_recent_question}")  # Print statement added
+
+        # Use the global variable most_recent_answer
+        global most_recent_answer
+        if not most_recent_answer:
+            raise ValueError("No recent answer found in global variable")
+
+        score_prompt = ChatPromptTemplate.from_messages([
+            ("system", f"You are a career coach conducting a mock job interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {industry} industry. "
+                       f"You just asked me this question: {most_recent_question} "
+                       "Your job is to give me an honest and critical score that ranges between 1-10. You are scoring me based on how accurate my answer was, how concise it was and how well I used realistic examples to illustrate my relevant experience. "
+                       "Don't return any text in your response. Only return a single integer for the score ranging between 1-10 where 10 is the best. For example your response should be: 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10."),
+            ("user", most_recent_answer),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+
+        score_chain = score_prompt | model
+        score_response = score_chain.invoke({"messages": [HumanMessage(content=most_recent_answer)]})
+
+        # Print the raw response from the chat model
+        print(f"Score response from chat model: {score_response}")
+
+        # Extract and clean the score from the response
+        score_text = score_response.content.strip() if score_response.content else None
+        print(f"Extracted score text: {score_text}")
+
+        # Use regex to find the first integer in the response
+        score_match = re.search(r'\b\d+\b', score_text)
+        if score_match:
+            score = int(score_match.group())
+            print(f"Extracted score: {score}")
+        else:
+            print("No integer found in score response, setting score to None")
+            score = None
+
+        return score
+
+    except Exception as e:
+        print(f"Error in get_score function: {e}")
+        return None
 
 
 
@@ -298,12 +357,13 @@ def get_intro_question_feedback(user_id, session_id):
         store_feedback(feedback, user_id, session_id)
 
         # Generate and store the score after the feedback
-        score = get_score(user_id, session_id)
+        score = get_intro_score(user_id, session_id)
         store_score(most_recent_row, score)  # Update to use most_recent_row
         return {"next_question_response": next_question, "feedback": feedback, "score": score}
     except Exception as e:
         print(f"Error in get_intro_question_feedback function: {e}")
         return {"error": "Could not generate feedback."}
+
 
     
 def get_resume_question_1_feedback(user_id, session_id):
@@ -327,6 +387,7 @@ def get_resume_question_1_feedback(user_id, session_id):
 
         # Get the most recent question
         most_recent_question = interview_history.question
+        print(f"Most recent question: {most_recent_question}")  # Print statement added
 
         # Generate the next question first
         next_question = get_resume_question_2(user_id, session_id)
@@ -368,6 +429,7 @@ def get_resume_question_1_feedback(user_id, session_id):
     except Exception as e:
         print(f"Error in get_resume_question_1_feedback function: {e}")
         return {"error": "Could not generate feedback."}
+
 
 
 

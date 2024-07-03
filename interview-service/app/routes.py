@@ -12,7 +12,7 @@ from .utils import (
     get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
     get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
     get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
-    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_score, fill_in_skipped_answers, generate_final_message, db_session
+    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, db_session
 )
 
 main = Blueprint('main', __name__)
