@@ -398,15 +398,24 @@ function toggleAudio(audioPath, button) {
 }
 
 document.getElementById('download-transcript').addEventListener('click', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const session_id = urlParams.get('session_id');
+
+    if (!session_id) {
+        console.error('session_id is missing from the URL');
+        return;
+    }
+
     $.ajax({
         type: 'GET',
-        url: downloadTranscriptUrl,
+        url: '/download_transcript',
+        data: { session_id: session_id },
         success: function(response) {
             const blob = new Blob([response], { type: 'text/csv;charset=utf-8;' });
             const downloadUrl = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
-            a.download = "interview_transcript.csv";
+            a.download = `interview_transcript_${session_id}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -416,6 +425,8 @@ document.getElementById('download-transcript').addEventListener('click', functio
         }
     });
 });
+
+
 
 function startNewInterviewSession() {
     const urlParams = new URLSearchParams(window.location.search);

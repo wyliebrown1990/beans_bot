@@ -1,8 +1,10 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for, send_from_directory
+from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for, send_from_directory, Response
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 import os
+import io
 import random
+import csv
 from openai import OpenAI
 from .models import JobDescriptionAnalysis, User, InterviewHistory, Questions
 from .utils import (
@@ -12,7 +14,7 @@ from .utils import (
     get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
     get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
     get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
-    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, db_session
+    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, fetch_interview_data, db_session
 )
 
 main = Blueprint('main', __name__)
@@ -272,3 +274,35 @@ def clear_session():
     except Exception as e:
         print(f"Error clearing session: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@main.route('/download_transcript', methods=['GET'])
+def download_transcript():
+    try:
+        session_id = request.args.get('session_id')
+        if not session_id:
+            return jsonify({"error": "session_id is required"}), 400
+
+        # Fetch interview data
+        interview_data = fetch_interview_data(db_session, session_id)
+        if not interview_data:
+            current_app.logger.error("No interview data found for the given session_id.")
+            return jsonify({"error": "No interview data found for the given session_id."}), 404
+
+        # Generate CSV
+        def generate_csv():
+            data = io.StringIO()
+            writer = csv.writer(data)
+            writer.writerow(["Question", "Answer", "Timestamp"])  # Write CSV header
+            for record in interview_data:
+                writer.writerow([record.question, record.answer, record.timestamp])
+            yield data.getvalue()
+            data.seek(0)
+            data.truncate(0)
+
+        response = Response(generate_csv(), mimetype='text/csv')
+        response.headers.set("Content-Disposition", "attachment", filename=f"interview_transcript_{session_id}.csv")
+        return response
+    except Exception as e:
+        current_app.logger.error(f"Error in download_transcript route: {e}")
+        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+    

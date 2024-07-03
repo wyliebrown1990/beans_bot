@@ -106,7 +106,12 @@ def text_to_speech_file(text: str, voice_id: str, current_app) -> str:
         print(f"Error generating speech: {e}")
         return ""
 
-
+#download transcript to CSV
+def fetch_interview_data(session, session_id: str):
+    interview_data = session.query(InterviewHistory).filter_by(session_id=session_id).all()
+    if not interview_data:
+        print("No interview data found for the given session_id.")
+    return interview_data
 
 
 
