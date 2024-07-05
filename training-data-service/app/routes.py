@@ -27,6 +27,7 @@ def extract_text_from_docx(file_path):
         text += paragraph.text + "\n"
     return text
 
+def setup_routes(app, db_session):
     @app.route('/file_upload', methods=['POST'])
     def file_upload():
         try:
@@ -67,26 +68,6 @@ def extract_text_from_docx(file_path):
         except Exception as e:
             logging.error(f"Exception in file_upload: {str(e)}")
             return jsonify({'error': str(e)}), 500
-
-    @app.route('/raw_text_submission', methods=['POST'])
-    def raw_text_submission():
-        try:
-            user_id = request.form.get('user_id')
-            raw_text = request.form.get('raw_text')
-
-            with app.app_context():
-                db_session = next(get_db())
-                user_data_count = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
-
-                if user_data_count > 0:
-                    return jsonify({'error': 'A job listing is already stored. If you would like to add another then please delete the existing job listing first.'}), 400
-
-            threading.Thread(target=process_text, args=(current_app._get_current_object(), raw_text, user_id)).start()
-            return jsonify({'pending': 'Raw text submission started successfully'}), 202
-        except Exception as e:
-            logging.error(f"Exception in raw_text_submission: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-
 
     @app.route('/raw_text_submission', methods=['POST'])
     def raw_text_submission():
@@ -156,7 +137,6 @@ def extract_text_from_docx(file_path):
 
         return render_template('index.html', username=username, user_id=user_id)
 
-
     @app.route('/api/job-description-analysis/<int:user_id>', methods=['GET'])
     def get_job_description(user_id):
         try:
@@ -194,13 +174,13 @@ def extract_text_from_docx(file_path):
             with app.app_context():
                 db_session = next(get_db())
                 job_descriptions = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).all()
-                
+
                 response_data = {
                     'job_titles': list(set([jd.job_title for jd in job_descriptions])),
                     'company_names': list(set([jd.company_name for jd in job_descriptions])),
                     'industries': list(set([jd.company_industry for jd in job_descriptions])),
                 }
-                
+
                 return jsonify(response_data)
         except Exception as e:
             logging.error(f"Failed to fetch job description details for user {user_id}: {str(e)}")
@@ -394,20 +374,24 @@ def extract_text_from_docx(file_path):
     @app.route('/api/questions', methods=['POST'])
     def create_question():
         data = request.json
-        new_question = add_question(db_session, data)
-        return jsonify({'id': new_question.id, 'message': 'Question created successfully'}), 201
+        with app.app_context():
+            db_session = next(get_db())
+            new_question = Questions(**data)
+            db_session.add(new_question)
+            db_session.commit()
+            return jsonify({'id': new_question.id, 'message': 'Question created successfully'}), 201
 
     @app.route('/api/questions', methods=['GET'])
     def get_questions():
         filters = request.args.to_dict()
-        query = db_session.query(Questions)
-        
-        for key, value in filters.items():
-            if hasattr(Questions, key):
-                query = query.filter(getattr(Questions, key) == value)
-        
-        questions = query.all()
-        return jsonify([q.to_dict() for q in questions])
+        with app.app_context():
+            db_session = next(get_db())
+            query = db_session.query(Questions)
+            for key, value in filters.items():
+                if hasattr(Questions, key):
+                    query = query.filter(getattr(Questions, key) == value)
+            questions = query.all()
+            return jsonify([q.to_dict() for q in questions])
     
     @app.route('/question_data.html')
     def question_data():
@@ -418,28 +402,38 @@ def extract_text_from_docx(file_path):
     @app.route('/api/questions/<int:question_id>', methods=['PUT'])
     def update_question_route(question_id):
         data = request.json
-        updated_question = update_question(db_session, question_id, data)
-        if updated_question:
-            return jsonify({'message': 'Question updated successfully'}), 200
-        return jsonify({'error': 'Question not found'}), 404
+        with app.app_context():
+            db_session = next(get_db())
+            updated_question = db_session.query(Questions).filter_by(id=question_id).first()
+            if updated_question:
+                for key, value in data.items():
+                    setattr(updated_question, key, value)
+                db_session.commit()
+                return jsonify({'message': 'Question updated successfully'}), 200
+            return jsonify({'error': 'Question not found'}), 404
 
     @app.route('/api/questions/<int:question_id>', methods=['DELETE'])
     def delete_question_route(question_id):
-        if delete_question(db_session, question_id):
-            return jsonify({'message': 'Question deleted successfully'}), 200
-        return jsonify({'error': 'Question not found'}), 404
+        with app.app_context():
+            db_session = next(get_db())
+            question = db_session.query(Questions).filter_by(id=question_id).first()
+            if question:
+                db_session.delete(question)
+                db_session.commit()
+                return jsonify({'message': 'Question deleted successfully'}), 200
+            return jsonify({'error': 'Question not found'}), 404
     
     @app.route('/save_interview_history', methods=['POST'])
     def save_interview_history():
-        session = Session()
-        new_history = InterviewHistory(
-            session_id=request.json['session_id'],
-            user_id=request.json['user_id'],
-            # ... other fields ...
-        )
-        session.add(new_history)
-        session.commit()
-        session.close()
+        with app.app_context():
+            db_session = next(get_db())
+            new_history = InterviewHistory(
+                session_id=request.json['session_id'],
+                user_id=request.json['user_id'],
+                # ... other fields ...
+            )
+            db_session.add(new_history)
+            db_session.commit()
         return jsonify({'status': 'success'})
     
     @app.route('/api/interview-history/sessions/<int:user_id>', methods=['GET'])
@@ -508,3 +502,4 @@ def extract_text_from_docx(file_path):
             return "Missing username or user_id parameters", 400
 
         return render_template('interview_history.html', username=username, user_id=user_id)
+

@@ -3,7 +3,8 @@ import json
 import logging
 import glob
 from sqlalchemy.orm import sessionmaker
-from flask import current_app
+from flask import Flask, current_app
+from flask_session import Session  # Add this import
 from app.models import JobDescriptionAnalysis, InterviewHistory
 from app.database import get_db
 from langchain_openai import ChatOpenAI
@@ -13,9 +14,9 @@ import requests
 import fitz  # PyMuPDF for PDF processing
 import docx
 import re
+from dotenv import load_dotenv
 
 # Load environment variables
-from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize the OpenAI chat model
@@ -86,7 +87,7 @@ def extract_text_from_docx(file_path):
         text += paragraph.text + "\n"
     return text
 
-#Don't change any of the code in this function. The Goal of the function is to take the job_description_text and invoke the openai chat model to return a JSON analysis. The JSON needs to be formatted correctly so that the response_json can then be stored in the database.
+# Don't change any of the code in this function. The Goal of the function is to take the job_description_text and invoke the openai chat model to return a JSON analysis. The JSON needs to be formatted correctly so that the response_json can then be stored in the database.
 def get_job_description_analysis(job_description_text):
     openai_api_key = os.getenv("OPENAI_API_KEY")
     model = ChatOpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
@@ -215,7 +216,7 @@ def cleanup_uploads_folder(app):
         except Exception as e:
             logging.error(f"Error deleting file {file}: {e}")
 
-#questions table functions: 
+# questions table functions:
 def add_question(db_session, question_data):
     new_question = Questions(**question_data)
     db_session.add(new_question)

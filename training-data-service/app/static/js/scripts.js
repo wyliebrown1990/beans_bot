@@ -29,13 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const interviewHistoryLink = document.getElementById('interview-history-link');
     const sessionSelect = document.getElementById('session-select');
 
-    if (username) {
-        const welcomeMessageElement = document.getElementById('welcome-message');
-        if (welcomeMessageElement) {
-            welcomeMessageElement.innerHTML = welcomeMessageElement.innerHTML.replace('wylie', username);
-        }
-    }
-    
     if (interviewHistoryLink) {
         interviewHistoryLink.addEventListener('click', function() {
             window.location.href = `/interview_history.html?user_id=${userId}&username=${username}`;
@@ -146,7 +139,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-
     function fetchSessionDates(userId) {
         fetch(`/api/interview-history/sessions/${userId}`)
             .then(response => response.json())
@@ -220,23 +212,23 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         container.innerHTML = ''; // Clear existing content
-    
-        const columns = ['id', 'created_at', 'updated_at', 'is_user_submitted', 'is_role_specific', 
-                         'is_resume_specific', 'is_question_ai_generated', 'question_type', 'question', 
+
+        const columns = ['id', 'created_at', 'updated_at', 'is_user_submitted', 'is_role_specific',
+                         'is_resume_specific', 'is_question_ai_generated', 'question_type', 'question',
                          'description', 'job_title', 'user_id'];
-    
+
         columns.forEach(column => {
             const values = [...new Set(data.map(item => item[column]))];
             const dropdownHtml = createDropdown(column, values);
             container.innerHTML += dropdownHtml;
         });
-    
+
         // Add event listeners to dropdowns
         container.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', handleDropdownChange);
         });
     }
-    
+
     function createDropdown(column, values) {
         let options = values.map(value => `<option value="${value}">${value === null ? 'NULL' : value}</option>`).join('');
         return `
@@ -249,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
     }
-    
+
     function handleDropdownChange(event) {
         const filters = {};
         document.querySelectorAll('#questions-data select').forEach(select => {
@@ -718,7 +710,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function waitForProcessingCompletion(processType) {
-        // Implement polling or WebSocket connection to check the processing status
         console.log(`Waiting for ${processType} processing completion...`);
+        setTimeout(checkProcessingStatus, 5000); // Polling every 5 seconds
+    }
+
+    function checkProcessingStatus() {
+        fetch(`/api/job-description-analysis/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                showSuccessMessageAndReload();
+            } else {
+                setTimeout(checkProcessingStatus, 5000);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking processing status:', error);
+        });
+    }
+
+    function showSuccessMessageAndReload() {
+        showStatusMessage('Your job listing has successfully been processed. Navigate to the “Edit Job Listing” to view and edit the results. Or, click the “Start Interview” button at the bottom of the page.');
+        setTimeout(() => {
+            location.reload();
+        }, 5000);
     }
 });
