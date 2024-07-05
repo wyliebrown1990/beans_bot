@@ -27,7 +27,6 @@ def extract_text_from_docx(file_path):
         text += paragraph.text + "\n"
     return text
 
-def setup_routes(app, db_session):
     @app.route('/file_upload', methods=['POST'])
     def file_upload():
         try:
@@ -68,6 +67,26 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Exception in file_upload: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/raw_text_submission', methods=['POST'])
+    def raw_text_submission():
+        try:
+            user_id = request.form.get('user_id')
+            raw_text = request.form.get('raw_text')
+
+            with app.app_context():
+                db_session = next(get_db())
+                user_data_count = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
+
+                if user_data_count > 0:
+                    return jsonify({'error': 'A job listing is already stored. If you would like to add another then please delete the existing job listing first.'}), 400
+
+            threading.Thread(target=process_text, args=(current_app._get_current_object(), raw_text, user_id)).start()
+            return jsonify({'pending': 'Raw text submission started successfully'}), 202
+        except Exception as e:
+            logging.error(f"Exception in raw_text_submission: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
 
     @app.route('/raw_text_submission', methods=['POST'])
     def raw_text_submission():
@@ -136,6 +155,7 @@ def setup_routes(app, db_session):
             return render_template('index.html', username=username, user_id=user_id, message=message)
 
         return render_template('index.html', username=username, user_id=user_id)
+
 
     @app.route('/api/job-description-analysis/<int:user_id>', methods=['GET'])
     def get_job_description(user_id):

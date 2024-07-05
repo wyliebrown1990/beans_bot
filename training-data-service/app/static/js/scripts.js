@@ -29,6 +29,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const interviewHistoryLink = document.getElementById('interview-history-link');
     const sessionSelect = document.getElementById('session-select');
 
+    if (username) {
+        const welcomeMessageElement = document.getElementById('welcome-message');
+        if (welcomeMessageElement) {
+            welcomeMessageElement.innerHTML = welcomeMessageElement.innerHTML.replace('wylie', username);
+        }
+    }
+    
     if (interviewHistoryLink) {
         interviewHistoryLink.addEventListener('click', function() {
             window.location.href = `/interview_history.html?user_id=${userId}&username=${username}`;
