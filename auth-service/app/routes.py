@@ -40,16 +40,23 @@ def load_user(user_id):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-   if request.method == 'POST':
-       email = request.form['email']
-       password = request.form['password']
-       user = get_user_by_email(email)
-       if user and user.check_password(password):
-           login_user(user)
-           return redirect(url_for('auth.home'))
-       else:
-           flash('Invalid email or password. Please try again.')
-   return render_template('login.html')
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = get_user_by_email(email)
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('auth.redirect_to_service', username=user.username, user_id=user.id))
+        else:
+            flash('Invalid email or password. Please try again.')
+    return render_template('login.html')
+
+@auth_bp.route('/redirect_to_service')
+@login_required
+def redirect_to_service():
+    username = request.args.get('username')
+    user_id = request.args.get('user_id')
+    return redirect(f'http://localhost:5011/?username={username}&user_id={user_id}')
 
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
