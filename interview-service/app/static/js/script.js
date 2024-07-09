@@ -64,7 +64,7 @@ function getLastQuestion() {
 
     $.ajax({
         type: 'GET',
-        url: getLastQuestionUrl,
+        url: '/first_round/get_last_question',
         data: {
             user_id: userId,
             session_id: sessionId
@@ -220,7 +220,7 @@ function stopRecording() {
         console.log("Sending audio blob to server...");
         $.ajax({
             type: 'POST',
-            url: transcribeAudioUrl,
+            url: '/first_round/transcribe_audio',
             data: formData,
             processData: false,
             contentType: false,
@@ -317,7 +317,7 @@ $('#response-form').on('submit', function(event) {
 
     $.ajax({
         type: 'POST',
-        url: '/submit_answer',
+        url: '/first_round/submit_answer',
         data: form.serialize() + `&session_id=${sessionId}`,
         success: function(response) {
             console.log("Server response:", response);
@@ -408,7 +408,7 @@ document.getElementById('download-transcript').addEventListener('click', functio
 
     $.ajax({
         type: 'GET',
-        url: '/download_transcript',
+        url: '/first_round/download_transcript',
         data: { session_id: session_id },
         success: function(response) {
             const blob = new Blob([response], { type: 'text/csv;charset=utf-8;' });
@@ -440,7 +440,7 @@ function startNewInterviewSession() {
     // Clear Flask session data on the server
     $.ajax({
         type: 'POST',
-        url: '/clear_session',
+        url: '/first_round/clear_session',
         success: function() {
             // Redirect to the same URL to start a new session with session_id
             window.location.href = `${window.location.pathname}?job_title=${job_title}&company_name=${company_name}&industry=${industry}&username=${username}&user_id=${user_id}&session_id=${session_id}`;
@@ -450,6 +450,7 @@ function startNewInterviewSession() {
         }
     });
 }
+
 
 function generateSessionId() {
     return Math.floor(Math.random() * 1000000000); // Generate a simple session ID
@@ -477,7 +478,7 @@ document.getElementById('wrap-up-interview').addEventListener('click', function(
 
     $.ajax({
         type: 'POST',
-        url: wrapUpInterviewUrl,
+        url: '/first_round/wrap_up_early',
         data: {
             session_id: sessionId,
             job_title: jobTitle,

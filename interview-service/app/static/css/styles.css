@@ -406,7 +406,8 @@ h5 {
    cursor: pointer; /* Change cursor to pointer on hover */
 }
 .button-container button:hover {
-   background-color: #01303f; /* Darker background color on hover */
+   background-color: #02577a; /* Darker background color on hover */
+   color: white;
 }
 .submit-button-container {
    display: flex;

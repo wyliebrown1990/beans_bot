@@ -3,6 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from .config import Config
 from .models import Base
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Database setup
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
@@ -15,8 +20,17 @@ def create_app():
 
     Base.metadata.create_all(bind=engine)
 
-    from .routes import main
-    app.register_blueprint(main)
+    try:
+        logger.debug("Attempting to import blueprints")
+        from .routes import first_round_bp, second_round_bp, third_round_bp
+        logger.debug("Imports successful")
+    except ImportError as e:
+        logger.error(f"Import error: {e}")
+        raise
+
+    app.register_blueprint(first_round_bp, url_prefix='/first_round')
+    app.register_blueprint(second_round_bp, url_prefix='/second_round')
+    app.register_blueprint(third_round_bp, url_prefix='/third_round')
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):
@@ -24,4 +38,6 @@ def create_app():
 
     return app
 
+logger.debug("Creating app")
 app = create_app()
+logger.debug("App created")

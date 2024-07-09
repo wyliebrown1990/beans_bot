@@ -11,7 +11,7 @@ body {
 
 #sidebar {
     background-color: #ffffff;
-    width: 250px;
+    width: 200px;
     padding: 20px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     display: flex;
@@ -55,11 +55,13 @@ body {
     color: #02577a;
     display: block;
     text-align: center;
-    padding: 15px;
+    padding: 10px;
     border-radius: 5px;
     background-color: #d4f0fc;;
-    width: 250px;
+    width: 200px;
+    margin: 5px 0;
     box-sizing: border-box;
+    font-size: 14px; /* Add this line to change the font size */
 }
 
 #sidebar nav ul li a:hover {
@@ -166,7 +168,15 @@ header h1 {
     border: 10px solid transparent;
 }
 
-#welcome-message, #job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
+#welcome-message {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 20px;
+    border: 2px solid #02577a;
+    margin-left: -20px;
+}
+
+#job-listings-message, #job-listings-manager, #interview-details, #file-upload-section {
     width: 100%;
     max-width: 900px;
     margin-top: 20px;
