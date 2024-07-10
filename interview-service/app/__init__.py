@@ -1,17 +1,12 @@
 from flask import Flask
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
 from .config import Config
 from .models import Base
+from .database import db_session, engine  # Import from the new database module
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Database setup
-engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 def create_app():
     app = Flask(__name__)

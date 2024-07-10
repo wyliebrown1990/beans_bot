@@ -7,15 +7,16 @@ import random
 import csv
 from openai import OpenAI
 from ..models import JobDescriptionAnalysis, User, InterviewHistory, Questions
-from ..utils import (
+from app.utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
     get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback,
     get_resume_question_4_feedback, get_behavioral_question_1_feedback, get_behavioral_question_2_feedback,
     get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
     get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
     get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
-    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, fetch_interview_data, db_session
+    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, fetch_interview_data
 )
+from app.database import db_session  # Import db_session from the database module
 
 import logging
 
@@ -124,7 +125,7 @@ def submit_answer():
         next_question_audio_path = None
         if generate_audio and next_question:
             print("Generating audio for the next question...")
-            next_question_audio_path = text_to_speech_file(next_question, voice_id, current_app)
+            next_question_audio_path = text_to_speech_file(next_question, voice_id)
             if next_question_audio_path:
                 print(f"Generated audio file path: {next_question_audio_path}")
                 next_question_audio_url = url_for('first_round.uploaded_file', filename=os.path.basename(next_question_audio_path))

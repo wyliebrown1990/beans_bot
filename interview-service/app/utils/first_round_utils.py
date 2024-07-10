@@ -23,6 +23,7 @@ from elevenlabs.client import ElevenLabs, ApiError
 
 # Import models from app package
 from app.models import JobDescriptionAnalysis, User, InterviewHistory, Questions
+from app.database import db_session
 
 load_dotenv()
 
@@ -33,25 +34,6 @@ logger = logging.getLogger(__name__)
 # Initialize the OpenAI chat model
 openai_api_key = os.getenv("OPENAI_API_KEY")
 model = ChatOpenAI(model="gpt-3.5-turbo", api_key=openai_api_key, temperature=0.5)
-
-# Ensure environment variables are set
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-if not ELEVENLABS_API_KEY:
-    print("ELEVENLABS_API_KEY environment variable not set")
-else:
-    print(f"ELEVENLABS_API_KEY is set")
-
-ffmpeg_location = os.getenv('FFMPEG_LOCATION')
-if not ffmpeg_location:
-    print("FFMPEG_LOCATION environment variable not set")
-else:
-    print(f"FFMPEG_LOCATION is set to {ffmpeg_location}")
-
-# Set the converter for pydub
-AudioSegment.converter = which("ffmpeg") or ffmpeg_location
-
-# Initialize ElevenLabs client
-elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 # Initialize database session
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -64,48 +46,6 @@ most_recent_answer = None
 most_recent_row = None
 used_questions_table_ids = []
 
-#generates audio files for questions
-def text_to_speech_file(text: str, voice_id: str, current_app) -> str:
-    if not text.strip():
-        print("Text is empty, skipping text-to-speech conversion.")
-        return ""
-
-    try:
-        response = elevenlabs_client.text_to_speech.convert(
-            voice_id=voice_id,
-            optimize_streaming_latency="0",
-            output_format="mp3_22050_32",
-            text=text,
-            model_id="eleven_turbo_v2",
-            voice_settings=VoiceSettings(
-                stability=0.0,
-                similarity_boost=1.0,
-                style=0.0,
-                use_speaker_boost=True,
-            ),
-        )
-
-        audio_folder = os.path.join(current_app.root_path, 'audio_files')
-        # Remove existing files in the folder
-        for filename in os.listdir(audio_folder):
-            file_path = os.path.join(audio_folder, filename)
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
-
-        save_file_path = os.path.join(audio_folder, f"{uuid.uuid4()}.mp3")
-        os.makedirs(os.path.dirname(save_file_path), exist_ok=True)
-
-        with open(save_file_path, "wb") as f:
-            for chunk in response:
-                if chunk:
-                    f.write(chunk)
-
-        print(f"{save_file_path}: A new audio file was saved successfully!")
-        return save_file_path
-    except ApiError as e:
-        print(f"Error generating speech: {e}")
-        return ""
-
 #download transcript to CSV
 def fetch_interview_data(session, session_id: str):
     interview_data = session.query(InterviewHistory).filter_by(session_id=session_id).all()
@@ -113,23 +53,9 @@ def fetch_interview_data(session, session_id: str):
         print("No interview data found for the given session_id.")
     return interview_data
 
-
-
 #Cleans up values from questions table:
 def capitalize_sentences(text):
     return '. '.join(sentence.capitalize() for sentence in text.split('. '))
-
-#Start of generating unique IDs:
-
-def generate_session_id():
-    return random.randint(100000, 999999)
-
-def ensure_unique_session_id(user_id):
-    while True:
-        session_id = generate_session_id()
-        existing_session = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).first()
-        if not existing_session:
-            return session_id
 
 #Start of interview_history storing functions:
         
@@ -367,8 +293,6 @@ def get_score(user_id, session_id):
         print(f"Error in get_score function: {e}")
         return None
 
-
-
 #Start of Feedback functions: 
 
 def get_intro_question_feedback(user_id, session_id):
@@ -425,9 +349,7 @@ def get_intro_question_feedback(user_id, session_id):
     except Exception as e:
         print(f"Error in get_intro_question_feedback function: {e}")
         return {"error": "Could not generate feedback."}
-
-
-    
+  
 def get_resume_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
@@ -492,9 +414,6 @@ def get_resume_question_1_feedback(user_id, session_id):
         print(f"Error in get_resume_question_1_feedback function: {e}")
         return {"error": "Could not generate feedback."}
 
-
-
-
 def get_resume_question_2_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
@@ -557,8 +476,7 @@ def get_resume_question_2_feedback(user_id, session_id):
     except Exception as e:
         logger.error(f"Error in get_resume_question_2_feedback function: {e}")
         return {"error": "Could not generate feedback."}
-
-    
+  
 def get_resume_question_3_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
@@ -683,8 +601,7 @@ def get_resume_question_4_feedback(user_id, session_id):
     except Exception as e:
         logger.error(f"Error in get_resume_question_4_feedback function: {e}")
         return {"error": "Could not generate feedback."}
-
-    
+   
 def get_behavioral_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
@@ -1244,7 +1161,6 @@ def get_last_question_feedback(user_id, session_id):
         print(f"Error in get_last_question_feedback function: {e}")
         return {"error": "Could not generate feedback."}
 
-
 def generate_final_message(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
@@ -1289,7 +1205,6 @@ def generate_final_message(user_id, session_id):
         logger.error(f"Error in generate_final_message function: {e}")
         print(f"Error in generate_final_message function: {e}")
         return "Error: Could not generate final message."
-
 
 #Start of question functions: 
 
@@ -1436,7 +1351,6 @@ def get_resume_question_3(user_id, session_id):
     except Exception as e:
         logger.error(f"Unexpected error in get_resume_question_3 function: {e}")
         return "Error: Could not generate resume question 3."
-
 
 def get_resume_question_4(user_id, session_id):
     try:
@@ -1725,10 +1639,8 @@ def get_last_question(user_id, session_id):
     except Exception as e:
         logger.error(f"Error in get_last_question function: {e}")
         return "Error: Could not generate the last question."
-
-
-    
-#Called by the get_lat_question function to fill in any skipped answers from previous questions: 
+   
+#Called by the get_last_question function to fill in any skipped answers from previous questions: 
 def fill_in_skipped_answers(session_id):
     try:
         # Query for rows with the matching session_id that have no answer value
