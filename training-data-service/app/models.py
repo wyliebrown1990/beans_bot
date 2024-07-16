@@ -40,7 +40,6 @@ class JobDescriptionAnalysis(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Job Details
     job_title = Column(String(100), nullable=True)
     job_level = Column(String(50), nullable=True)
     job_location = Column(String(100), nullable=True)
@@ -48,14 +47,10 @@ class JobDescriptionAnalysis(Base):
     job_salary = Column(String(50), nullable=True)
     job_responsibilities = Column(Text, nullable=True)
     personal_qualifications = Column(Text, nullable=True)
-
-    # Company Information
     company_name = Column(String(100), nullable=True)
     company_size = Column(String(50), nullable=True)
     company_industry = Column(String(100), nullable=True)
     company_mission_and_values = Column(Text, nullable=True)
-
-    # Requirements and Qualifications
     education_background = Column(Text, nullable=True)
     required_professional_experiences = Column(Text, nullable=True)
     nice_to_have_experiences = Column(Text, nullable=True)
@@ -88,12 +83,11 @@ class User(UserMixin, Base):
     top_challenge = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # Add this line to create the relationship with InterviewHistory
     interview_history = relationship("InterviewHistory", back_populates="user")
 
 class Questions(Base):
     __tablename__ = 'questions'
-    
+
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -107,7 +101,6 @@ class Questions(Base):
     job_title = Column(String(50), nullable=True)
     user_id = Column(Integer, nullable=True)
 
-    # Add this line to create the relationship with InterviewHistory
     interview_history = relationship("InterviewHistory", back_populates="question_rel")
 
     def to_dict(self):

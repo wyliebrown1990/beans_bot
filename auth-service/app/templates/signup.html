@@ -1,79 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Sign Up</title>
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-  <script>
-    function showStatusBlock() {
-        document.getElementById('status-block').style.display = 'block';
-        document.getElementById('status-block').innerText = 'Processing your resume. This can take up to a minute...';
-    }
+    <meta charset="UTF-8">
+    <title>Sign Up</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        function showStatusBlock() {
+            document.getElementById('status-block').style.display = 'block';
+            document.getElementById('status-block').innerText = 'Processing your resume. This can take up to a minute...';
+        }
 
-    function showErrorStatusBlock() {
-        document.getElementById('status-block').style.display = 'block';
-        document.getElementById('status-block').innerText = 'We encountered an error. Try uploading your resume in a different format please.';
-    }
-  </script>
+        function showErrorStatusBlock() {
+            document.getElementById('status-block').style.display = 'block';
+            document.getElementById('status-block').innerText = 'We encountered an error. Try uploading your resume in a different format please.';
+        }
 
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+        function showPartialSuccessStatusBlock() {
+            document.getElementById('status-block').style.display = 'block';
+            document.getElementById('status-block').innerText = 'It looks like I ran into an issue processing your resume, however, your username was created. Please feel free to login and resubmit your resume from the user portal.';
+        }
+    </script>
 
-  gtag('config', 'G-S00G0YVEWV');
-</script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
 
+        gtag('config', 'G-S00G0YVEWV');
+    </script>
+
+    <!-- Include jQuery and jQuery UI for autocomplete -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+    <script>
+        $(function() {
+            var locations = [
+                "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware",
+                "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+                "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri",
+                "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York",
+                "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
+                "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia",
+                "Washington", "West Virginia", "Wisconsin", "Wyoming",
+                // Add countries as well
+                "Canada", "Mexico", "United Kingdom", "France", "Germany", "Italy", "Spain", "Australia", "India",
+                "China", "Japan", "Brazil", "South Africa", "Russia"
+            ];
+
+            $("#location").autocomplete({
+                source: locations
+            });
+        });
+
+        function toggleOtherJobSituation() {
+            var jobSituation = document.getElementById("job_situation").value;
+            var otherJobSituationDiv = document.getElementById("other_job_situation_div");
+            if (jobSituation === "Other") {
+                otherJobSituationDiv.style.display = "block";
+            } else {
+                otherJobSituationDiv.style.display = "none";
+            }
+        }
+    </script>
 </head>
 <body>
 <div id="page-container">
-   <div id="content-wrap">
-       <h1>Sign Up</h1>
-       {% with messages = get_flashed_messages(with_categories=true) %}
-           {% if messages %}
-               <ul class="flashes">
-                   {% for category, message in messages %}
-                       <li class="{{ category }}">{{ message }}</li>
-                   {% endfor %}
-               </ul>
-           {% endif %}
-       {% endwith %}
-       <form method="POST" enctype="multipart/form-data" onsubmit="showStatusBlock()">
-           <input type="text" name="username" placeholder="Username" required>
-           <input type="email" name="email" placeholder="Email" required>
-           <input type="password" name="password" placeholder="Password" required>
-           <input type="file" name="resume" accept=".txt,.pdf,.docx" required>
-           <button type="submit">Sign Up</button>
-       </form>
-       <div id="status-block" style="display: none;" class="status-block">
-           Processing your resume. This can take up to a minute...
-       </div>
-       <div class="center">
-           <form action="{{ url_for('auth.login') }}" method="get" style="display: inline;">
-               <button type="submit" class="button">Login</button>
-           </form>
-       </div>
-   </div>
-   <div style="background-color: #CC5500; color: white; padding: 10px; text-align: center;">
-       Disclaimer: We use your resume data to refine the output of our interview bot. Resume data is never shared with third parties. Your interview answers are stored in order to continue to improve our interview bot services but are not shared with third parties. If you ever want your data removed from our systems email wyliedeveloper@gmail.com
-   </div>
-   <footer>
-       <div>
-           <a href="#">About us</a><br>
-           <a href="#">Privacy Policy</a><br>
-           <a href="#">Contact us</a>
-       </div>
-       <div>
-           <a href="#">Pricing</a><br>
-           <a href="#">Github</a>
-       </div>
-       <div>
-           <a href="#">Blog</a><br>
-           <a href="#">Forum</a>
-       </div>
-   </footer>
+    <div id="content-wrap">
+        <h1>Sign Up</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form method="POST" enctype="multipart/form-data" onsubmit="showStatusBlock()">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="text" id="location" name="location_input" placeholder="Your Location" required>
+            <select id="job_situation" name="job_situation" onchange="toggleOtherJobSituation()" required>
+                <option value="" disabled selected>How Would You Describe Your Current Job Situation?</option>
+                <option value="Student Applying to Grad School">Student Applying to Grad School</option>
+                <option value="Student Applying to Internships">Student Applying to Internships</option>
+                <option value="Student Applying to MBA program">Student Applying to MBA program</option>
+                <option value="PHD Student transitioning to Corporate">PHD Student transitioning to Corporate</option>
+                <option value="Interviewing For First Job">Interviewing For First Job</option>
+                <option value="Interviewing For New Role">Interviewing For New Role</option>
+                <option value="Interviewing In New Industry">Interviewing In New Industry</option>
+                <option value="Interviewing After Multiple Years of Experience">Interviewing After Multiple Years of Experience</option>
+                <option value="Other">Other</option>
+            </select>
+            <div id="other_job_situation_div" style="display:none;">
+                <input type="text" id="other_job_situation" name="other_job_situation" placeholder="Please describe your job situation">
+            </div>
+            <label for="resume">Upload Your Most Recent Resume:</label>
+            <input type="file" name="resume" id="resume" accept=".txt,.pdf,.docx">
+            <p>**uploading your resume isn’t mandatory but it will help to customize your job experience. If you don’t have one don’t sweat it, I’ll help you create it once you’re ready!</p>
+            <button type="submit">Sign Up</button>
+        </form>
+        <div id="status-block" style="display: none;" class="status-block">
+            Processing your resume. This can take up to a minute...
+        </div>
+        <div class="center">
+            <form action="{{ url_for('auth.login') }}" method="get" style="display: inline;">
+                <button type="submit" class="button">Login</button>
+            </form>
+        </div>
+    </div>
+    <div style="background-color: #CC5500; color: white; padding: 10px; text-align: center;">
+        Disclaimer: We use your resume data to refine the output of our interview bot. Resume data is never shared with third parties. Your interview answers are stored in order to continue to improve our interview bot services but are not shared with third parties. If you ever want your data removed from our systems email wyliedeveloper@gmail.com
+    </div>
+    <footer>
+        <div>
+            <a href="#">About us</a><br>
+            <a href="#">Privacy Policy</a><br>
+            <a href="#">Contact us</a>
+        </div>
+        <div>
+            <a href="#">Pricing</a><br>
+            <a href="#">Github</a>
+        </div>
+        <div>
+            <a href="#">Blog</a><br>
+            <a href="#">Forum</a>
+        </div>
+    </footer>
 </div>
 </body>
 </html>

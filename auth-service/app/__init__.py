@@ -6,23 +6,18 @@ from dotenv import load_dotenv
 from .config import Config
 from .models import init_db
 
-
 # Load environment variables from .env file
 load_dotenv()
-
 
 # Debugging: Print the loaded environment variables
 print(f"DATABASE_URL: {os.getenv('DATABASE_URL')}")
 print(f"SECRET_KEY: {os.getenv('SECRET_KEY')}")
 print(f"OPENAI_API_KEY: {os.getenv('OPENAI_API_KEY')}")
 
-
 # Add logging
 logging.basicConfig(level=logging.DEBUG)
 
-
 login_manager = LoginManager()
-
 
 def create_app():
    app = Flask(__name__)
@@ -35,7 +30,6 @@ def create_app():
    # Configure the app
    app.config.from_object(Config)
    app.config['SQLALCHEMY_DATABASE_URI'] = database_url  # Set the database URL
-
 
    login_manager.init_app(app)
    init_db(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -53,6 +47,5 @@ def create_app():
    app.debug = True  # Enable debug mode
   
    return app
-
 
 app = create_app()
