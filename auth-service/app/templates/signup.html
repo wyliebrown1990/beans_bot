@@ -80,31 +80,33 @@
                 </ul>
             {% endif %}
         {% endwith %}
-        <form method="POST" enctype="multipart/form-data" onsubmit="showStatusBlock()">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="text" id="location" name="location_input" placeholder="Your Location" required>
-            <select id="job_situation" name="job_situation" onchange="toggleOtherJobSituation()" required>
-                <option value="" disabled selected>How Would You Describe Your Current Job Situation?</option>
-                <option value="Student Applying to Grad School">Student Applying to Grad School</option>
-                <option value="Student Applying to Internships">Student Applying to Internships</option>
-                <option value="Student Applying to MBA program">Student Applying to MBA program</option>
-                <option value="PHD Student transitioning to Corporate">PHD Student transitioning to Corporate</option>
-                <option value="Interviewing For First Job">Interviewing For First Job</option>
-                <option value="Interviewing For New Role">Interviewing For New Role</option>
-                <option value="Interviewing In New Industry">Interviewing In New Industry</option>
-                <option value="Interviewing After Multiple Years of Experience">Interviewing After Multiple Years of Experience</option>
-                <option value="Other">Other</option>
-            </select>
-            <div id="other_job_situation_div" style="display:none;">
-                <input type="text" id="other_job_situation" name="other_job_situation" placeholder="Please describe your job situation">
-            </div>
-            <label for="resume">Upload Your Most Recent Resume:</label>
-            <input type="file" name="resume" id="resume" accept=".txt,.pdf,.docx">
-            <p>**uploading your resume isn’t mandatory but it will help to customize your job experience. If you don’t have one don’t sweat it, I’ll help you create it once you’re ready!</p>
-            <button type="submit">Sign Up</button>
-        </form>
+        <div id="form-container">
+            <form method="POST" enctype="multipart/form-data" onsubmit="showStatusBlock()">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" id="location" name="location_input" placeholder="Your Location" required>
+                <select id="job_situation" name="job_situation" onchange="toggleOtherJobSituation()" required>
+                    <option value="" disabled selected>How Would You Describe Your Current Job Situation?</option>
+                    <option value="Student Applying to Grad School">Student Applying to Grad School</option>
+                    <option value="Student Applying to Internships">Student Applying to Internships</option>
+                    <option value="Student Applying to MBA program">Student Applying to MBA program</option>
+                    <option value="PHD Student transitioning to Corporate">PHD Student transitioning to Corporate</option>
+                    <option value="Interviewing For First Job">Interviewing For First Job</option>
+                    <option value="Interviewing For New Role">Interviewing For New Role</option>
+                    <option value="Interviewing In New Industry">Interviewing In New Industry</option>
+                    <option value="Interviewing After Multiple Years of Experience">Interviewing After Multiple Years of Experience</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div id="other_job_situation_div" style="display:none;">
+                    <input type="text" id="other_job_situation" name="other_job_situation" placeholder="Please describe your job situation">
+                </div>
+                <label for="resume">Upload Your Most Recent Resume:</label>
+                <input type="file" name="resume" id="resume" accept=".txt,.pdf,.docx">
+                <p>**uploading your resume isn't mandatory but it will help to customize your job experience. If you don't have one don't sweat it, I'll help you create it once you're ready!</p>
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
         <div id="status-block" style="display: none;" class="status-block">
             Processing your resume. This can take up to a minute...
         </div>
