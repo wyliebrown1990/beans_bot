@@ -488,14 +488,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function fetchResumeData(userId) {
-        fetch(`/api/resume-data/${userId}`)
-            .then(response => response.json())
+        const url = `/api/resumes/${userId}`;
+        console.log(`Fetching resume data from: ${url}`);
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     console.error('Error fetching resume data:', data.error);
                     showStatusMessage('Error fetching resume data: ' + data.error);
                     if (resumeDataContainer) resumeDataContainer.innerHTML = 'Error fetching resume data.';
                 } else {
+                    console.log('Fetched resume data:', data);
                     populateResumeData(data); // Populate resume data
                 }
             })
@@ -504,6 +513,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 showStatusMessage('Error fetching resume data: ' + error.message);
             });
     }
+    
+    
 
     function populateResumeData(data) {
         if (!resumeDataContainer) {
@@ -579,6 +590,178 @@ document.addEventListener('DOMContentLoaded', function () {
             <div>
                 <label>Top Challenge:</label>
                 <textarea id="top_challenge" readonly>${data.top_challenge}</textarea>
+            </div>
+            <div>
+                <label>File Uploaded:</label>
+                <input type="text" id="file_uploaded" value="${data.file_uploaded}" readonly>
+            </div>
+            <div>
+                <label>Header Text:</label>
+                <textarea id="header_text" readonly>${data.header_text}</textarea>
+            </div>
+            <div>
+                <label>Top Section Summary:</label>
+                <textarea id="top_section_summary" readonly>${data.top_section_summary}</textarea>
+            </div>
+            <div>
+                <label>Top Section List of Achievements:</label>
+                <textarea id="top_section_list_of_achievements" readonly>${data.top_section_list_of_achievements}</textarea>
+            </div>
+            <div>
+                <label>Education:</label>
+                <textarea id="education" readonly>${data.education}</textarea>
+            </div>
+            <div>
+                <label>Bottom Section List of Achievements:</label>
+                <textarea id="bottom_section_list_of_achievements" readonly>${data.bottom_section_list_of_achievements}</textarea>
+            </div>
+            <div>
+                <label>Achievements and Awards:</label>
+                <textarea id="achievements_and_awards" readonly>${data.achievements_and_awards}</textarea>
+            </div>
+            <div>
+                <label>Job Title 1:</label>
+                <input type="text" id="job_title_1" value="${data.job_title_1}" readonly>
+            </div>
+            <div>
+                <label>Job Title 1 Start Date:</label>
+                <input type="text" id="job_title_1_start_date" value="${data.job_title_1_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 1 End Date:</label>
+                <input type="text" id="job_title_1_end_date" value="${data.job_title_1_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 1 Length:</label>
+                <input type="text" id="job_title_1_length" value="${data.job_title_1_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 1 Location:</label>
+                <input type="text" id="job_title_1_location" value="${data.job_title_1_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 1 Description:</label>
+                <textarea id="job_title_1_description" readonly>${data.job_title_1_description}</textarea>
+            </div>
+            <div>
+                <label>Job Title 2:</label>
+                <input type="text" id="job_title_2" value="${data.job_title_2}" readonly>
+            </div>
+            <div>
+                <label>Job Title 2 Start Date:</label>
+                <input type="text" id="job_title_2_start_date" value="${data.job_title_2_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 2 End Date:</label>
+                <input type="text" id="job_title_2_end_date" value="${data.job_title_2_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 2 Length:</label>
+                <input type="text" id="job_title_2_length" value="${data.job_title_2_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 2 Location:</label>
+                <input type="text" id="job_title_2_location" value="${data.job_title_2_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 2 Description:</label>
+                <textarea id="job_title_2_description" readonly>${data.job_title_2_description}</textarea>
+            </div>
+            <div>
+                <label>Job Title 3:</label>
+                <input type="text" id="job_title_3" value="${data.job_title_3}" readonly>
+            </div>
+            <div>
+                <label>Job Title 3 Start Date:</label>
+                <input type="text" id="job_title_3_start_date" value="${data.job_title_3_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 3 End Date:</label>
+                <input type="text" id="job_title_3_end_date" value="${data.job_title_3_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 3 Length:</label>
+                <input type="text" id="job_title_3_length" value="${data.job_title_3_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 3 Location:</label>
+                <input type="text" id="job_title_3_location" value="${data.job_title_3_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 3 Description:</label>
+                <textarea id="job_title_3_description" readonly>${data.job_title_3_description}</textarea>
+            </div>
+            <div>
+                <label>Job Title 4:</label>
+                <input type="text" id="job_title_4" value="${data.job_title_4}" readonly>
+            </div>
+            <div>
+                <label>Job Title 4 Start Date:</label>
+                <input type="text" id="job_title_4_start_date" value="${data.job_title_4_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 4 End Date:</label>
+                <input type="text" id="job_title_4_end_date" value="${data.job_title_4_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 4 Length:</label>
+                <input type="text" id="job_title_4_length" value="${data.job_title_4_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 4 Location:</label>
+                <input type="text" id="job_title_4_location" value="${data.job_title_4_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 4 Description:</label>
+                <textarea id="job_title_4_description" readonly>${data.job_title_4_description}</textarea>
+            </div>
+            <div>
+                <label>Job Title 5:</label>
+                <input type="text" id="job_title_5" value="${data.job_title_5}" readonly>
+            </div>
+            <div>
+                <label>Job Title 5 Start Date:</label>
+                <input type="text" id="job_title_5_start_date" value="${data.job_title_5_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 5 End Date:</label>
+                <input type="text" id="job_title_5_end_date" value="${data.job_title_5_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 5 Length:</label>
+                <input type="text" id="job_title_5_length" value="${data.job_title_5_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 5 Location:</label>
+                <input type="text" id="job_title_5_location" value="${data.job_title_5_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 5 Description:</label>
+                <textarea id="job_title_5_description" readonly>${data.job_title_5_description}</textarea>
+            </div>
+            <div>
+                <label>Job Title 6:</label>
+                <input type="text" id="job_title_6" value="${data.job_title_6}" readonly>
+            </div>
+            <div>
+                <label>Job Title 6 Start Date:</label>
+                <input type="text" id="job_title_6_start_date" value="${data.job_title_6_start_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 6 End Date:</label>
+                <input type="text" id="job_title_6_end_date" value="${data.job_title_6_end_date}" readonly>
+            </div>
+            <div>
+                <label>Job Title 6 Length:</label>
+                <input type="text" id="job_title_6_length" value="${data.job_title_6_length}" readonly>
+            </div>
+            <div>
+                <label>Job Title 6 Location:</label>
+                <input type="text" id="job_title_6_location" value="${data.job_title_6_location}" readonly>
+            </div>
+            <div>
+                <label>Job Title 6 Description:</label>
+                <textarea id="job_title_6_description" readonly>${data.job_title_6_description}</textarea>
             </div>
         `;
     }
@@ -672,6 +855,49 @@ document.addEventListener('DOMContentLoaded', function () {
             questions_about_experience: document.getElementById('questions_about_experience').value,
             resume_length: document.getElementById('resume_length').value,
             top_challenge: document.getElementById('top_challenge').value,
+            file_uploaded: document.getElementById('file_uploaded').value,
+            header_text: document.getElementById('header_text').value,
+            top_section_summary: document.getElementById('top_section_summary').value,
+            top_section_list_of_achievements: document.getElementById('top_section_list_of_achievements').value,
+            education: document.getElementById('education').value,
+            bottom_section_list_of_achievements: document.getElementById('bottom_section_list_of_achievements').value,
+            achievements_and_awards: document.getElementById('achievements_and_awards').value,
+            job_title_1: document.getElementById('job_title_1').value,
+            job_title_1_start_date: document.getElementById('job_title_1_start_date').value,
+            job_title_1_end_date: document.getElementById('job_title_1_end_date').value,
+            job_title_1_length: document.getElementById('job_title_1_length').value,
+            job_title_1_location: document.getElementById('job_title_1_location').value,
+            job_title_1_description: document.getElementById('job_title_1_description').value,
+            job_title_2: document.getElementById('job_title_2').value,
+            job_title_2_start_date: document.getElementById('job_title_2_start_date').value,
+            job_title_2_end_date: document.getElementById('job_title_2_end_date').value,
+            job_title_2_length: document.getElementById('job_title_2_length').value,
+            job_title_2_location: document.getElementById('job_title_2_location').value,
+            job_title_2_description: document.getElementById('job_title_2_description').value,
+            job_title_3: document.getElementById('job_title_3').value,
+            job_title_3_start_date: document.getElementById('job_title_3_start_date').value,
+            job_title_3_end_date: document.getElementById('job_title_3_end_date').value,
+            job_title_3_length: document.getElementById('job_title_3_length').value,
+            job_title_3_location: document.getElementById('job_title_3_location').value,
+            job_title_3_description: document.getElementById('job_title_3_description').value,
+            job_title_4: document.getElementById('job_title_4').value,
+            job_title_4_start_date: document.getElementById('job_title_4_start_date').value,
+            job_title_4_end_date: document.getElementById('job_title_4_end_date').value,
+            job_title_4_length: document.getElementById('job_title_4_length').value,
+            job_title_4_location: document.getElementById('job_title_4_location').value,
+            job_title_4_description: document.getElementById('job_title_4_description').value,
+            job_title_5: document.getElementById('job_title_5').value,
+            job_title_5_start_date: document.getElementById('job_title_5_start_date').value,
+            job_title_5_end_date: document.getElementById('job_title_5_end_date').value,
+            job_title_5_length: document.getElementById('job_title_5_length').value,
+            job_title_5_location: document.getElementById('job_title_5_location').value,
+            job_title_5_description: document.getElementById('job_title_5_description').value,
+            job_title_6: document.getElementById('job_title_6').value,
+            job_title_6_start_date: document.getElementById('job_title_6_start_date').value,
+            job_title_6_end_date: document.getElementById('job_title_6_end_date').value,
+            job_title_6_length: document.getElementById('job_title_6_length').value,
+            job_title_6_location: document.getElementById('job_title_6_location').value,
+            job_title_6_description: document.getElementById('job_title_6_description').value,
         };
 
         showStatusMessage('Changes being written to database');

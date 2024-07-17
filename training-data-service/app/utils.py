@@ -4,8 +4,8 @@ import logging
 import glob
 from sqlalchemy.orm import sessionmaker
 from flask import Flask, current_app
-from flask_session import Session  # Add this import
-from app.models import JobDescriptionAnalysis, InterviewHistory
+from flask_session import Session
+from app.models import JobDescriptionAnalysis, InterviewHistory, Resumes, Users
 from app.database import get_db
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -87,7 +87,6 @@ def extract_text_from_docx(file_path):
         text += paragraph.text + "\n"
     return text
 
-# Don't change any of the code in this function. The Goal of the function is to take the job_description_text and invoke the openai chat model to return a JSON analysis. The JSON needs to be formatted correctly so that the response_json can then be stored in the database.
 def get_job_description_analysis(job_description_text):
     openai_api_key = os.getenv("OPENAI_API_KEY")
     model = ChatOpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
@@ -204,6 +203,81 @@ def store_analysis_data(response_json, user_id):
             logging.info(f"Stored job description analysis for user_id: {user_id}")
         except Exception as e:
             logging.error(f"Error storing job description analysis: {str(e)}")
+            db_session.rollback()
+
+def store_resume_data(response_json, user_id):
+    with current_app.app_context():
+        db_session = next(get_db())
+        
+        # Create a new Resume object
+        resume = Resume(
+            user_id=user_id,
+            username=response_json.get('username'),
+            email=response_json.get('email'),
+            file_uploaded=response_json.get('file_uploaded'),
+            header_text=response_json.get('header_text'),
+            top_section_summary=response_json.get('top_section_summary'),
+            top_section_list_of_achievements=response_json.get('top_section_list_of_achievements'),
+            education=response_json.get('education'),
+            bottom_section_list_of_achievements=response_json.get('bottom_section_list_of_achievements'),
+            achievements_and_awards=response_json.get('achievements_and_awards'),
+            job_title_1=response_json.get('job_title_1'),
+            job_title_1_start_date=response_json.get('job_title_1_start_date'),
+            job_title_1_end_date=response_json.get('job_title_1_end_date'),
+            job_title_1_length=response_json.get('job_title_1_length'),
+            job_title_1_location=response_json.get('job_title_1_location'),
+            job_title_1_description=response_json.get('job_title_1_description'),
+            job_title_2=response_json.get('job_title_2'),
+            job_title_2_start_date=response_json.get('job_title_2_start_date'),
+            job_title_2_end_date=response_json.get('job_title_2_end_date'),
+            job_title_2_length=response_json.get('job_title_2_length'),
+            job_title_2_location=response_json.get('job_title_2_location'),
+            job_title_2_description=response_json.get('job_title_2_description'),
+            job_title_3=response_json.get('job_title_3'),
+            job_title_3_start_date=response_json.get('job_title_3_start_date'),
+            job_title_3_end_date=response_json.get('job_title_3_end_date'),
+            job_title_3_length=response_json.get('job_title_3_length'),
+            job_title_3_location=response_json.get('job_title_3_location'),
+            job_title_3_description=response_json.get('job_title_3_description'),
+            job_title_4=response_json.get('job_title_4'),
+            job_title_4_start_date=response_json.get('job_title_4_start_date'),
+            job_title_4_end_date=response_json.get('job_title_4_end_date'),
+            job_title_4_length=response_json.get('job_title_4_length'),
+            job_title_4_location=response_json.get('job_title_4_location'),
+            job_title_4_description=response_json.get('job_title_4_description'),
+            job_title_5=response_json.get('job_title_5'),
+            job_title_5_start_date=response_json.get('job_title_5_start_date'),
+            job_title_5_end_date=response_json.get('job_title_5_end_date'),
+            job_title_5_length=response_json.get('job_title_5_length'),
+            job_title_5_location=response_json.get('job_title_5_location'),
+            job_title_5_description=response_json.get('job_title_5_description'),
+            job_title_6=response_json.get('job_title_6'),
+            job_title_6_start_date=response_json.get('job_title_6_start_date'),
+            job_title_6_end_date=response_json.get('job_title_6_end_date'),
+            job_title_6_length=response_json.get('job_title_6_length'),
+            job_title_6_location=response_json.get('job_title_6_location'),
+            job_title_6_description=response_json.get('job_title_6_description'),
+            key_technical_skills=response_json.get('key_technical_skills'),
+            key_soft_skills=response_json.get('key_soft_skills'),
+            top_listed_skill_keyword=response_json.get('top_listed_skill_keyword'),
+            second_most_top_listed_skill_keyword=response_json.get('second_most_top_listed_skill_keyword'),
+            third_most_top_listed_skill_keyword=response_json.get('third_most_top_listed_skill_keyword'),
+            fourth_most_top_listed_skill_keyword=response_json.get('fourth_most_top_listed_skill_keyword'),
+            certifications_and_awards=response_json.get('certifications_and_awards'),
+            most_recent_successful_project=response_json.get('most_recent_successful_project'),
+            areas_for_improvement=response_json.get('areas_for_improvement'),
+            questions_about_experience=response_json.get('questions_about_experience'),
+            resume_length=response_json.get('resume_length'),
+            top_challenge=response_json.get('top_challenge')
+        )
+
+        # Add the new resume data to the session and commit
+        try:
+            db_session.add(resume)
+            db_session.commit()
+            logging.info(f"Stored resume data for user_id: {user_id}")
+        except Exception as e:
+            logging.error(f"Error storing resume data: {str(e)}")
             db_session.rollback()
 
 def cleanup_uploads_folder(app):
