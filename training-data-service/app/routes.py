@@ -4,7 +4,7 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import JobDescriptionAnalysis, User, Questions, InterviewHistory
+from app.models import JobDescriptionAnalysis, Users, Questions, InterviewHistory, Resumes
 from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
@@ -264,25 +264,10 @@ def setup_routes(app, db_session):
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
-                    'resume_text_full': user.resume_text_full,
-                    'key_technical_skills': user.key_technical_skills,
-                    'key_soft_skills': user.key_soft_skills,
-                    'most_recent_job_title': user.most_recent_job_title,
-                    'second_most_recent_job_title': user.second_most_recent_job_title,
-                    'most_recent_job_title_summary': user.most_recent_job_title_summary,
-                    'second_most_recent_job_title_summary': user.second_most_recent_job_title_summary,
-                    'top_listed_skill_keyword': user.top_listed_skill_keyword,
-                    'second_most_top_listed_skill_keyword': user.second_most_top_listed_skill_keyword,
-                    'third_most_top_listed_skill_keyword': user.third_most_top_listed_skill_keyword,
-                    'fourth_most_top_listed_skill_keyword': user.fourth_most_top_listed_skill_keyword,
-                    'educational_background': user.educational_background,
-                    'certifications_and_awards': user.certifications_and_awards,
-                    'most_recent_successful_project': user.most_recent_successful_project,
-                    'areas_for_improvement': user.areas_for_improvement,
-                    'questions_about_experience': user.questions_about_experience,
-                    'resume_length': user.resume_length,
-                    'top_challenge': user.top_challenge,
-                    'created_at': user.created_at
+                    'location_input': user.location_input,
+                    'job_situation': user.job_situation,
+                    'created_at': user.account_created_at,
+                    'resumes': [resume.to_dict() for resume in user.resumes]  # Serialize resumes
                 }
 
                 return jsonify(user_data)
@@ -305,64 +290,148 @@ def setup_routes(app, db_session):
         try:
             with app.app_context():
                 db_session = next(get_db())
-                user = db_session.query(User).filter_by(id=user_id).first()
-                if not user:
-                    return jsonify({'error': 'User not found'}), 404
+                resume = db_session.query(Resumes).filter_by(user_id=user_id).first()
+                if not resume:
+                    logging.debug(f"No resume found for user {user_id}")
+                    return jsonify({'error': 'Resume not found'}), 404
 
                 response_data = {
-                    'key_technical_skills': user.key_technical_skills,
-                    'key_soft_skills': user.key_soft_skills,
-                    'most_recent_job_title': user.most_recent_job_title,
-                    'second_most_recent_job_title': user.second_most_recent_job_title,
-                    'most_recent_job_title_summary': user.most_recent_job_title_summary,
-                    'second_most_recent_job_title_summary': user.second_most_recent_job_title_summary,
-                    'top_listed_skill_keyword': user.top_listed_skill_keyword,
-                    'second_most_top_listed_skill_keyword': user.second_most_top_listed_skill_keyword,
-                    'third_most_top_listed_skill_keyword': user.third_most_top_listed_skill_keyword,
-                    'fourth_most_top_listed_skill_keyword': user.fourth_most_top_listed_skill_keyword,
-                    'educational_background': user.educational_background,
-                    'certifications_and_awards': user.certifications_and_awards,
-                    'most_recent_successful_project': user.most_recent_successful_project,
-                    'areas_for_improvement': user.areas_for_improvement,
-                    'questions_about_experience': user.questions_about_experience,
-                    'resume_length': user.resume_length,
-                    'top_challenge': user.top_challenge
+                    'id': resume.id,
+                    'user_id': resume.user_id,
+                    'created_at': resume.created_at,
+                    'username': resume.username,
+                    'email': resume.email,
+                    'file_uploaded': resume.file_uploaded,
+                    'header_text': resume.header_text,
+                    'top_section_summary': resume.top_section_summary,
+                    'top_section_list_of_achievements': resume.top_section_list_of_achievements,
+                    'education': resume.education,
+                    'bottom_section_list_of_achievements': resume.bottom_section_list_of_achievements,
+                    'achievements_and_awards': resume.achievements_and_awards,
+                    'job_title_1': resume.job_title_1,
+                    'job_title_1_start_date': resume.job_title_1_start_date,
+                    'job_title_1_end_date': resume.job_title_1_end_date,
+                    'job_title_1_length': resume.job_title_1_length,
+                    'job_title_1_location': resume.job_title_1_location,
+                    'job_title_1_description': resume.job_title_1_description,
+                    'job_title_2': resume.job_title_2,
+                    'job_title_2_start_date': resume.job_title_2_start_date,
+                    'job_title_2_end_date': resume.job_title_2_end_date,
+                    'job_title_2_length': resume.job_title_2_length,
+                    'job_title_2_location': resume.job_title_2_location,
+                    'job_title_2_description': resume.job_title_2_description,
+                    'job_title_3': resume.job_title_3,
+                    'job_title_3_start_date': resume.job_title_3_start_date,
+                    'job_title_3_end_date': resume.job_title_3_end_date,
+                    'job_title_3_length': resume.job_title_3_length,
+                    'job_title_3_location': resume.job_title_3_location,
+                    'job_title_3_description': resume.job_title_3_description,
+                    'job_title_4': resume.job_title_4,
+                    'job_title_4_start_date': resume.job_title_4_start_date,
+                    'job_title_4_end_date': resume.job_title_4_end_date,
+                    'job_title_4_length': resume.job_title_4_length,
+                    'job_title_4_location': resume.job_title_4_location,
+                    'job_title_4_description': resume.job_title_4_description,
+                    'job_title_5': resume.job_title_5,
+                    'job_title_5_start_date': resume.job_title_5_start_date,
+                    'job_title_5_end_date': resume.job_title_5_end_date,
+                    'job_title_5_length': resume.job_title_5_length,
+                    'job_title_5_location': resume.job_title_5_location,
+                    'job_title_5_description': resume.job_title_5_description,
+                    'job_title_6': resume.job_title_6,
+                    'job_title_6_start_date': resume.job_title_6_start_date,
+                    'job_title_6_end_date': resume.job_title_6_end_date,
+                    'job_title_6_length': resume.job_title_6_length,
+                    'job_title_6_location': resume.job_title_6_location,
+                    'job_title_6_description': resume.job_title_6_description,
+                    'key_technical_skills': resume.key_technical_skills,
+                    'key_soft_skills': resume.key_soft_skills,
+                    'top_listed_skill_keyword': resume.top_listed_skill_keyword,
+                    'second_most_top_listed_skill_keyword': resume.second_most_top_listed_skill_keyword,
+                    'third_most_top_listed_skill_keyword': resume.third_most_top_listed_skill_keyword,
+                    'fourth_most_top_listed_skill_keyword': resume.fourth_most_top_listed_skill_keyword,
+                    'certifications_and_awards': resume.certifications_and_awards,
+                    'most_recent_successful_project': resume.most_recent_successful_project,
+                    'areas_for_improvement': resume.areas_for_improvement,
+                    'questions_about_experience': resume.questions_about_experience,
+                    'resume_length': resume.resume_length,
+                    'top_challenge': resume.top_challenge
                 }
+
+                logging.debug(f"Resume data for user {user_id}: {response_data}")
 
                 return jsonify(response_data)
         except Exception as e:
             logging.error(f"Failed to fetch resume data for user {user_id}: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/resume-data/<int:user_id>', methods=['PUT'])
-    def update_resume_data(user_id):
+
+    @app.route('/api/resume-data/<int:resume_id>', methods=['PUT'])
+    def update_resume_data(resume_id):
         try:
             data = request.json
 
             with app.app_context():
                 db_session = next(get_db())
-                user = db_session.query(User).filter_by(id=user_id).first()
+                resume = db_session.query(Resume).filter_by(id=resume_id).first()
 
-                if not user:
-                    return jsonify({'error': 'User not found'}), 404
+                if not resume:
+                    return jsonify({'error': 'Resume not found'}), 404
 
-                user.key_technical_skills = data.get('key_technical_skills', user.key_technical_skills)
-                user.key_soft_skills = data.get('key_soft_skills', user.key_soft_skills)
-                user.most_recent_job_title = data.get('most_recent_job_title', user.most_recent_job_title)
-                user.second_most_recent_job_title = data.get('second_most_recent_job_title', user.second_most_recent_job_title)
-                user.most_recent_job_title_summary = data.get('most_recent_job_title_summary', user.most_recent_job_title_summary)
-                user.second_most_recent_job_title_summary = data.get('second_most_recent_job_title_summary', user.second_most_recent_job_title_summary)
-                user.top_listed_skill_keyword = data.get('top_listed_skill_keyword', user.top_listed_skill_keyword)
-                user.second_most_top_listed_skill_keyword = data.get('second_most_top_listed_skill_keyword', user.second_most_top_listed_skill_keyword)
-                user.third_most_top_listed_skill_keyword = data.get('third_most_top_listed_skill_keyword', user.third_most_top_listed_skill_keyword)
-                user.fourth_most_top_listed_skill_keyword = data.get('fourth_most_top_listed_skill_keyword', user.fourth_most_top_listed_skill_keyword)
-                user.educational_background = data.get('educational_background', user.educational_background)
-                user.certifications_and_awards = data.get('certifications_and_awards', user.certifications_and_awards)
-                user.most_recent_successful_project = data.get('most_recent_successful_project', user.most_recent_successful_project)
-                user.areas_for_improvement = data.get('areas_for_improvement', user.areas_for_improvement)
-                user.questions_about_experience = data.get('questions_about_experience', user.questions_about_experience)
-                user.resume_length = data.get('resume_length', user.resume_length)
-                user.top_challenge = data.get('top_challenge', user.top_challenge)
+                resume.header_text = data.get('header_text', resume.header_text)
+                resume.top_section_summary = data.get('top_section_summary', resume.top_section_summary)
+                resume.top_section_list_of_achievements = data.get('top_section_list_of_achievements', resume.top_section_list_of_achievements)
+                resume.education = data.get('education', resume.education)
+                resume.bottom_section_list_of_achievements = data.get('bottom_section_list_of_achievements', resume.bottom_section_list_of_achievements)
+                resume.achievements_and_awards = data.get('achievements_and_awards', resume.achievements_and_awards)
+                resume.job_title_1 = data.get('job_title_1', resume.job_title_1)
+                resume.job_title_1_start_date = data.get('job_title_1_start_date', resume.job_title_1_start_date)
+                resume.job_title_1_end_date = data.get('job_title_1_end_date', resume.job_title_1_end_date)
+                resume.job_title_1_length = data.get('job_title_1_length', resume.job_title_1_length)
+                resume.job_title_1_location = data.get('job_title_1_location', resume.job_title_1_location)
+                resume.job_title_1_description = data.get('job_title_1_description', resume.job_title_1_description)
+                resume.job_title_2 = data.get('job_title_2', resume.job_title_2)
+                resume.job_title_2_start_date = data.get('job_title_2_start_date', resume.job_title_2_start_date)
+                resume.job_title_2_end_date = data.get('job_title_2_end_date', resume.job_title_2_end_date)
+                resume.job_title_2_length = data.get('job_title_2_length', resume.job_title_2_length)
+                resume.job_title_2_location = data.get('job_title_2_location', resume.job_title_2_location)
+                resume.job_title_2_description = data.get('job_title_2_description', resume.job_title_2_description)
+                resume.job_title_3 = data.get('job_title_3', resume.job_title_3)
+                resume.job_title_3_start_date = data.get('job_title_3_start_date', resume.job_title_3_start_date)
+                resume.job_title_3_end_date = data.get('job_title_3_end_date', resume.job_title_3_end_date)
+                resume.job_title_3_length = data.get('job_title_3_length', resume.job_title_3_length)
+                resume.job_title_3_location = data.get('job_title_3_location', resume.job_title_3_location)
+                resume.job_title_3_description = data.get('job_title_3_description', resume.job_title_3_description)
+                resume.job_title_4 = data.get('job_title_4', resume.job_title_4)
+                resume.job_title_4_start_date = data.get('job_title_4_start_date', resume.job_title_4_start_date)
+                resume.job_title_4_end_date = data.get('job_title_4_end_date', resume.job_title_4_end_date)
+                resume.job_title_4_length = data.get('job_title_4_length', resume.job_title_4_length)
+                resume.job_title_4_location = data.get('job_title_4_location', resume.job_title_4_location)
+                resume.job_title_4_description = data.get('job_title_4_description', resume.job_title_4_description)
+                resume.job_title_5 = data.get('job_title_5', resume.job_title_5)
+                resume.job_title_5_start_date = data.get('job_title_5_start_date', resume.job_title_5_start_date)
+                resume.job_title_5_end_date = data.get('job_title_5_end_date', resume.job_title_5_end_date)
+                resume.job_title_5_length = data.get('job_title_5_length', resume.job_title_5_length)
+                resume.job_title_5_location = data.get('job_title_5_location', resume.job_title_5_location)
+                resume.job_title_5_description = data.get('job_title_5_description', resume.job_title_5_description)
+                resume.job_title_6 = data.get('job_title_6', resume.job_title_6)
+                resume.job_title_6_start_date = data.get('job_title_6_start_date', resume.job_title_6_start_date)
+                resume.job_title_6_end_date = data.get('job_title_6_end_date', resume.job_title_6_end_date)
+                resume.job_title_6_length = data.get('job_title_6_length', resume.job_title_6_length)
+                resume.job_title_6_location = data.get('job_title_6_location', resume.job_title_6_location)
+                resume.job_title_6_description = data.get('job_title_6_description', resume.job_title_6_description)
+                resume.key_technical_skills = data.get('key_technical_skills', resume.key_technical_skills)
+                resume.key_soft_skills = data.get('key_soft_skills', resume.key_soft_skills)
+                resume.top_listed_skill_keyword = data.get('top_listed_skill_keyword', resume.top_listed_skill_keyword)
+                resume.second_most_top_listed_skill_keyword = data.get('second_most_top_listed_skill_keyword', resume.second_most_top_listed_skill_keyword)
+                resume.third_most_top_listed_skill_keyword = data.get('third_most_top_listed_skill_keyword', resume.third_most_top_listed_skill_keyword)
+                resume.fourth_most_top_listed_skill_keyword = data.get('fourth_most_top_listed_skill_keyword', resume.fourth_most_top_listed_skill_keyword)
+                resume.certifications_and_awards = data.get('certifications_and_awards', resume.certifications_and_awards)
+                resume.most_recent_successful_project = data.get('most_recent_successful_project', resume.most_recent_successful_project)
+                resume.areas_for_improvement = data.get('areas_for_improvement', resume.areas_for_improvement)
+                resume.questions_about_experience = data.get('questions_about_experience', resume.questions_about_experience)
+                resume.resume_length = data.get('resume_length', resume.resume_length)
+                resume.top_challenge = data.get('top_challenge', resume.top_challenge)
 
                 db_session.commit()
 
@@ -502,4 +571,3 @@ def setup_routes(app, db_session):
             return "Missing username or user_id parameters", 400
 
         return render_template('interview_history.html', username=username, user_id=user_id)
-
