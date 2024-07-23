@@ -276,3 +276,11 @@ form button:hover, form input[type="submit"]:hover, .start-interview-button:hove
 .transcript-group p {
     margin: 5px 0;
 }
+
+/* Additional styles for readonly fields */
+input[readonly], textarea[readonly] {
+    background-color: white;
+    color: black;
+    border: 1px solid #ccc;
+    padding: 5px;
+}

@@ -488,282 +488,141 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function fetchResumeData(userId) {
-        const url = `/api/resumes/${userId}`;
-        console.log(`Fetching resume data from: ${url}`);
-        
-        fetch(url)
+        console.log(`Fetching resume data from: /api/resume-data/${userId}`);
+        fetch(`/api/resume-data/${userId}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                    throw new Error('Network response was not ok: ' + response.statusText);
                 }
                 return response.json();
             })
             .then(data => {
                 if (data.error) {
-                    console.error('Error fetching resume data:', data.error);
                     showStatusMessage('Error fetching resume data: ' + data.error);
-                    if (resumeDataContainer) resumeDataContainer.innerHTML = 'Error fetching resume data.';
-                } else {
-                    console.log('Fetched resume data:', data);
-                    populateResumeData(data); // Populate resume data
+                    return;
                 }
+                console.log('Resume data:', data);
+                populateResumeData(data);
             })
             .catch(error => {
-                console.error('Error fetching resume data:', error);
                 showStatusMessage('Error fetching resume data: ' + error.message);
             });
     }
     
-    
-
     function populateResumeData(data) {
         if (!resumeDataContainer) {
             console.error('Element with id "resume-data" not found.');
             return;
         }
 
-        resumeDataContainer.innerHTML = `
+        resumeDataContainer.innerHTML = generateInputField('Header Text', 'header_text', data.header_text) +
+            generateInputField('Top Section Summary', 'top_section_summary', data.top_section_summary) +
+            generateInputField('Top Section List of Achievements', 'top_section_list_of_achievements', data.top_section_list_of_achievements) +
+            generateInputField('Education', 'education', data.education) +
+            generateInputField('Bottom Section List of Achievements', 'bottom_section_list_of_achievements', data.bottom_section_list_of_achievements) +
+            generateInputField('Achievements and Awards', 'achievements_and_awards', data.achievements_and_awards) +
+            generateInputField('Job Title 1', 'job_title_1', data.job_title_1) +
+            generateInputField('Job Title 1 Start Date', 'job_title_1_start_date', data.job_title_1_start_date) +
+            generateInputField('Job Title 1 End Date', 'job_title_1_end_date', data.job_title_1_end_date) +
+            generateInputField('Job Title 1 Length', 'job_title_1_length', data.job_title_1_length) +
+            generateInputField('Job Title 1 Location', 'job_title_1_location', data.job_title_1_location) +
+            generateInputField('Job Title 1 Description', 'job_title_1_description', data.job_title_1_description) +
+            generateInputField('Job Title 2', 'job_title_2', data.job_title_2) +
+            generateInputField('Job Title 2 Start Date', 'job_title_2_start_date', data.job_title_2_start_date) +
+            generateInputField('Job Title 2 End Date', 'job_title_2_end_date', data.job_title_2_end_date) +
+            generateInputField('Job Title 2 Length', 'job_title_2_length', data.job_title_2_length) +
+            generateInputField('Job Title 2 Location', 'job_title_2_location', data.job_title_2_location) +
+            generateInputField('Job Title 2 Description', 'job_title_2_description', data.job_title_2_description) +
+            generateInputField('Job Title 3', 'job_title_3', data.job_title_3) +
+            generateInputField('Job Title 3 Start Date', 'job_title_3_start_date', data.job_title_3_start_date) +
+            generateInputField('Job Title 3 End Date', 'job_title_3_end_date', data.job_title_3_end_date) +
+            generateInputField('Job Title 3 Length', 'job_title_3_length', data.job_title_3_length) +
+            generateInputField('Job Title 3 Location', 'job_title_3_location', data.job_title_3_location) +
+            generateInputField('Job Title 3 Description', 'job_title_3_description', data.job_title_3_description) +
+            generateInputField('Job Title 4', 'job_title_4', data.job_title_4) +
+            generateInputField('Job Title 4 Start Date', 'job_title_4_start_date', data.job_title_4_start_date) +
+            generateInputField('Job Title 4 End Date', 'job_title_4_end_date', data.job_title_4_end_date) +
+            generateInputField('Job Title 4 Length', 'job_title_4_length', data.job_title_4_length) +
+            generateInputField('Job Title 4 Location', 'job_title_4_location', data.job_title_4_location) +
+            generateInputField('Job Title 4 Description', 'job_title_4_description', data.job_title_4_description) +
+            generateInputField('Job Title 5', 'job_title_5', data.job_title_5) +
+            generateInputField('Job Title 5 Start Date', 'job_title_5_start_date', data.job_title_5_start_date) +
+            generateInputField('Job Title 5 End Date', 'job_title_5_end_date', data.job_title_5_end_date) +
+            generateInputField('Job Title 5 Length', 'job_title_5_length', data.job_title_5_length) +
+            generateInputField('Job Title 5 Location', 'job_title_5_location', data.job_title_5_location) +
+            generateInputField('Job Title 5 Description', 'job_title_5_description', data.job_title_5_description) +
+            generateInputField('Job Title 6', 'job_title_6', data.job_title_6) +
+            generateInputField('Job Title 6 Start Date', 'job_title_6_start_date', data.job_title_6_start_date) +
+            generateInputField('Job Title 6 End Date', 'job_title_6_end_date', data.job_title_6_end_date) +
+            generateInputField('Job Title 6 Length', 'job_title_6_length', data.job_title_6_length) +
+            generateInputField('Job Title 6 Location', 'job_title_6_location', data.job_title_6_location) +
+            generateInputField('Job Title 6 Description', 'job_title_6_description', data.job_title_6_description) +
+            generateInputField('Key Technical Skills', 'key_technical_skills', data.key_technical_skills) +
+            generateInputField('Key Soft Skills', 'key_soft_skills', data.key_soft_skills) +
+            generateInputField('Top Listed Skill Keyword', 'top_listed_skill_keyword', data.top_listed_skill_keyword) +
+            generateInputField('Second Most Top Listed Skill Keyword', 'second_most_top_listed_skill_keyword', data.second_most_top_listed_skill_keyword) +
+            generateInputField('Third Most Top Listed Skill Keyword', 'third_most_top_listed_skill_keyword', data.third_most_top_listed_skill_keyword) +
+            generateInputField('Fourth Most Top Listed Skill Keyword', 'fourth_most_top_listed_skill_keyword', data.fourth_most_top_listed_skill_keyword) +
+            generateInputField('Certifications and Awards', 'certifications_and_awards', data.certifications_and_awards) +
+            generateInputField('Most Recent Successful Project', 'most_recent_successful_project', data.most_recent_successful_project) +
+            generateInputField('Areas for Improvement', 'areas_for_improvement', data.areas_for_improvement) +
+            generateInputField('Questions About Experience', 'questions_about_experience', data.questions_about_experience) +
+            generateInputField('Resume Length', 'resume_length', data.resume_length) +
+            generateInputField('Top Challenge', 'top_challenge', data.top_challenge);
+    }
+
+    function generateInputField(label, field, value) {
+        return `
             <div>
-                <label>Key Technical Skills:</label>
-                <textarea id="key_technical_skills" readonly>${data.key_technical_skills}</textarea>
-            </div>
-            <div>
-                <label>Key Soft Skills:</label>
-                <textarea id="key_soft_skills" readonly>${data.key_soft_skills}</textarea>
-            </div>
-            <div>
-                <label>Most Recent Job Title:</label>
-                <input type="text" id="most_recent_job_title" value="${data.most_recent_job_title}" readonly>
-            </div>
-            <div>
-                <label>Second Most Recent Job Title:</label>
-                <input type="text" id="second_most_recent_job_title" value="${data.second_most_recent_job_title}" readonly>
-            </div>
-            <div>
-                <label>Most Recent Job Title Summary:</label>
-                <textarea id="most_recent_job_title_summary" readonly>${data.most_recent_job_title_summary}</textarea>
-            </div>
-            <div>
-                <label>Second Most Recent Job Title Summary:</label>
-                <textarea id="second_most_recent_job_title_summary" readonly>${data.second_most_recent_job_title_summary}</textarea>
-            </div>
-            <div>
-                <label>Top Listed Skill Keyword:</label>
-                <input type="text" id="top_listed_skill_keyword" value="${data.top_listed_skill_keyword}" readonly>
-            </div>
-            <div>
-                <label>Second Most Top Listed Skill Keyword:</label>
-                <input type="text" id="second_most_top_listed_skill_keyword" value="${data.second_most_top_listed_skill_keyword}" readonly>
-            </div>
-            <div>
-                <label>Third Most Top Listed Skill Keyword:</label>
-                <input type="text" id="third_most_top_listed_skill_keyword" value="${data.third_most_top_listed_skill_keyword}" readonly>
-            </div>
-            <div>
-                <label>Fourth Most Top Listed Skill Keyword:</label>
-                <input type="text" id="fourth_most_top_listed_skill_keyword" value="${data.fourth_most_top_listed_skill_keyword}" readonly>
-            </div>
-            <div>
-                <label>Educational Background:</label>
-                <textarea id="educational_background" readonly>${data.educational_background}</textarea>
-            </div>
-            <div>
-                <label>Certifications and Awards:</label>
-                <textarea id="certifications_and_awards" readonly>${data.certifications_and_awards}</textarea>
-            </div>
-            <div>
-                <label>Most Recent Successful Project:</label>
-                <textarea id="most_recent_successful_project" readonly>${data.most_recent_successful_project}</textarea>
-            </div>
-            <div>
-                <label>Areas for Improvement:</label>
-                <textarea id="areas_for_improvement" readonly>${data.areas_for_improvement}</textarea>
-            </div>
-            <div>
-                <label>Questions About Experience:</label>
-                <textarea id="questions_about_experience" readonly>${data.questions_about_experience}</textarea>
-            </div>
-            <div>
-                <label>Resume Length:</label>
-                <textarea id="resume_length" readonly>${data.resume_length}</textarea>
-            </div>
-            <div>
-                <label>Top Challenge:</label>
-                <textarea id="top_challenge" readonly>${data.top_challenge}</textarea>
-            </div>
-            <div>
-                <label>File Uploaded:</label>
-                <input type="text" id="file_uploaded" value="${data.file_uploaded}" readonly>
-            </div>
-            <div>
-                <label>Header Text:</label>
-                <textarea id="header_text" readonly>${data.header_text}</textarea>
-            </div>
-            <div>
-                <label>Top Section Summary:</label>
-                <textarea id="top_section_summary" readonly>${data.top_section_summary}</textarea>
-            </div>
-            <div>
-                <label>Top Section List of Achievements:</label>
-                <textarea id="top_section_list_of_achievements" readonly>${data.top_section_list_of_achievements}</textarea>
-            </div>
-            <div>
-                <label>Education:</label>
-                <textarea id="education" readonly>${data.education}</textarea>
-            </div>
-            <div>
-                <label>Bottom Section List of Achievements:</label>
-                <textarea id="bottom_section_list_of_achievements" readonly>${data.bottom_section_list_of_achievements}</textarea>
-            </div>
-            <div>
-                <label>Achievements and Awards:</label>
-                <textarea id="achievements_and_awards" readonly>${data.achievements_and_awards}</textarea>
-            </div>
-            <div>
-                <label>Job Title 1:</label>
-                <input type="text" id="job_title_1" value="${data.job_title_1}" readonly>
-            </div>
-            <div>
-                <label>Job Title 1 Start Date:</label>
-                <input type="text" id="job_title_1_start_date" value="${data.job_title_1_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 1 End Date:</label>
-                <input type="text" id="job_title_1_end_date" value="${data.job_title_1_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 1 Length:</label>
-                <input type="text" id="job_title_1_length" value="${data.job_title_1_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 1 Location:</label>
-                <input type="text" id="job_title_1_location" value="${data.job_title_1_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 1 Description:</label>
-                <textarea id="job_title_1_description" readonly>${data.job_title_1_description}</textarea>
-            </div>
-            <div>
-                <label>Job Title 2:</label>
-                <input type="text" id="job_title_2" value="${data.job_title_2}" readonly>
-            </div>
-            <div>
-                <label>Job Title 2 Start Date:</label>
-                <input type="text" id="job_title_2_start_date" value="${data.job_title_2_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 2 End Date:</label>
-                <input type="text" id="job_title_2_end_date" value="${data.job_title_2_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 2 Length:</label>
-                <input type="text" id="job_title_2_length" value="${data.job_title_2_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 2 Location:</label>
-                <input type="text" id="job_title_2_location" value="${data.job_title_2_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 2 Description:</label>
-                <textarea id="job_title_2_description" readonly>${data.job_title_2_description}</textarea>
-            </div>
-            <div>
-                <label>Job Title 3:</label>
-                <input type="text" id="job_title_3" value="${data.job_title_3}" readonly>
-            </div>
-            <div>
-                <label>Job Title 3 Start Date:</label>
-                <input type="text" id="job_title_3_start_date" value="${data.job_title_3_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 3 End Date:</label>
-                <input type="text" id="job_title_3_end_date" value="${data.job_title_3_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 3 Length:</label>
-                <input type="text" id="job_title_3_length" value="${data.job_title_3_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 3 Location:</label>
-                <input type="text" id="job_title_3_location" value="${data.job_title_3_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 3 Description:</label>
-                <textarea id="job_title_3_description" readonly>${data.job_title_3_description}</textarea>
-            </div>
-            <div>
-                <label>Job Title 4:</label>
-                <input type="text" id="job_title_4" value="${data.job_title_4}" readonly>
-            </div>
-            <div>
-                <label>Job Title 4 Start Date:</label>
-                <input type="text" id="job_title_4_start_date" value="${data.job_title_4_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 4 End Date:</label>
-                <input type="text" id="job_title_4_end_date" value="${data.job_title_4_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 4 Length:</label>
-                <input type="text" id="job_title_4_length" value="${data.job_title_4_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 4 Location:</label>
-                <input type="text" id="job_title_4_location" value="${data.job_title_4_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 4 Description:</label>
-                <textarea id="job_title_4_description" readonly>${data.job_title_4_description}</textarea>
-            </div>
-            <div>
-                <label>Job Title 5:</label>
-                <input type="text" id="job_title_5" value="${data.job_title_5}" readonly>
-            </div>
-            <div>
-                <label>Job Title 5 Start Date:</label>
-                <input type="text" id="job_title_5_start_date" value="${data.job_title_5_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 5 End Date:</label>
-                <input type="text" id="job_title_5_end_date" value="${data.job_title_5_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 5 Length:</label>
-                <input type="text" id="job_title_5_length" value="${data.job_title_5_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 5 Location:</label>
-                <input type="text" id="job_title_5_location" value="${data.job_title_5_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 5 Description:</label>
-                <textarea id="job_title_5_description" readonly>${data.job_title_5_description}</textarea>
-            </div>
-            <div>
-                <label>Job Title 6:</label>
-                <input type="text" id="job_title_6" value="${data.job_title_6}" readonly>
-            </div>
-            <div>
-                <label>Job Title 6 Start Date:</label>
-                <input type="text" id="job_title_6_start_date" value="${data.job_title_6_start_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 6 End Date:</label>
-                <input type="text" id="job_title_6_end_date" value="${data.job_title_6_end_date}" readonly>
-            </div>
-            <div>
-                <label>Job Title 6 Length:</label>
-                <input type="text" id="job_title_6_length" value="${data.job_title_6_length}" readonly>
-            </div>
-            <div>
-                <label>Job Title 6 Location:</label>
-                <input type="text" id="job_title_6_location" value="${data.job_title_6_location}" readonly>
-            </div>
-            <div>
-                <label>Job Title 6 Description:</label>
-                <textarea id="job_title_6_description" readonly>${data.job_title_6_description}</textarea>
+                <label>${label}:</label>
+                ${field.includes('description') || field.includes('skills') || field.includes('project') || field.includes('areas') || field.includes('questions') ? `<textarea data-field="${field}" readonly>${value}</textarea>` : `<input type="text" data-field="${field}" value="${value}" readonly>`}
             </div>
         `;
+    }
+
+    function makeResumeFieldsEditable() {
+        if (!resumeDataContainer) {
+            console.error('Element with id "resume-data" not found.');
+            return;
+        }
+
+        const inputs = resumeDataContainer.querySelectorAll('input, textarea');
+        inputs.forEach(input => input.removeAttribute('readonly'));
+        editResumeButton.style.display = 'none';
+        applyResumeChangesButton.style.display = 'block';
+    }
+
+    function applyResumeChanges(userId) {
+        const updatedData = {};
+        resumeDataContainer.querySelectorAll('input[data-field], textarea[data-field]').forEach(input => {
+            const fieldName = input.getAttribute('data-field');
+            updatedData[fieldName] = input.value;
+        });
+
+        showStatusMessage('Changes being written to database');
+
+        fetch(`/api/resume-data/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showStatusMessage('Error saving changes: ' + data.error);
+            } else {
+                showStatusMessage('Changes saved');
+                editResumeButton.style.display = 'block';
+                applyResumeChangesButton.style.display = 'none';
+                const inputs = resumeDataContainer.querySelectorAll('input, textarea');
+                inputs.forEach(input => input.setAttribute('readonly', true));
+            }
+        })
+        .catch(error => {
+            showStatusMessage('Error saving changes: ' + error.message);
+        });
     }
 
     function makeJobListingFieldsEditable() {
@@ -815,109 +674,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 editJobListingButton.style.display = 'block';
                 applyChangesButton.style.display = 'none';
                 const inputs = jobListingDataContainer.querySelectorAll('input, textarea');
-                inputs.forEach(input => input.setAttribute('readonly', true));
-            }
-        })
-        .catch(error => {
-            console.error('Error saving changes:', error);
-            showStatusMessage('Error saving changes: ' + error.message);
-        });
-    }
-
-    function makeResumeFieldsEditable() {
-        if (!resumeDataContainer) {
-            console.error('Element with id "resume-data" not found.');
-            return;
-        }
-
-        const inputs = resumeDataContainer.querySelectorAll('input, textarea');
-        inputs.forEach(input => input.removeAttribute('readonly'));
-        editResumeButton.style.display = 'none';
-        applyResumeChangesButton.style.display = 'block';
-    }
-
-    function applyResumeChanges(userId) {
-        const updatedData = {
-            key_technical_skills: document.getElementById('key_technical_skills').value,
-            key_soft_skills: document.getElementById('key_soft_skills').value,
-            most_recent_job_title: document.getElementById('most_recent_job_title').value,
-            second_most_recent_job_title: document.getElementById('second_most_recent_job_title').value,
-            most_recent_job_title_summary: document.getElementById('most_recent_job_title_summary').value,
-            second_most_recent_job_title_summary: document.getElementById('second_most_recent_job_title_summary').value,
-            top_listed_skill_keyword: document.getElementById('top_listed_skill_keyword').value,
-            second_most_top_listed_skill_keyword: document.getElementById('second_most_top_listed_skill_keyword').value,
-            third_most_top_listed_skill_keyword: document.getElementById('third_most_top_listed_skill_keyword').value,
-            fourth_most_top_listed_skill_keyword: document.getElementById('fourth_most_top_listed_skill_keyword').value,
-            educational_background: document.getElementById('educational_background').value,
-            certifications_and_awards: document.getElementById('certifications_and_awards').value,
-            most_recent_successful_project: document.getElementById('most_recent_successful_project').value,
-            areas_for_improvement: document.getElementById('areas_for_improvement').value,
-            questions_about_experience: document.getElementById('questions_about_experience').value,
-            resume_length: document.getElementById('resume_length').value,
-            top_challenge: document.getElementById('top_challenge').value,
-            file_uploaded: document.getElementById('file_uploaded').value,
-            header_text: document.getElementById('header_text').value,
-            top_section_summary: document.getElementById('top_section_summary').value,
-            top_section_list_of_achievements: document.getElementById('top_section_list_of_achievements').value,
-            education: document.getElementById('education').value,
-            bottom_section_list_of_achievements: document.getElementById('bottom_section_list_of_achievements').value,
-            achievements_and_awards: document.getElementById('achievements_and_awards').value,
-            job_title_1: document.getElementById('job_title_1').value,
-            job_title_1_start_date: document.getElementById('job_title_1_start_date').value,
-            job_title_1_end_date: document.getElementById('job_title_1_end_date').value,
-            job_title_1_length: document.getElementById('job_title_1_length').value,
-            job_title_1_location: document.getElementById('job_title_1_location').value,
-            job_title_1_description: document.getElementById('job_title_1_description').value,
-            job_title_2: document.getElementById('job_title_2').value,
-            job_title_2_start_date: document.getElementById('job_title_2_start_date').value,
-            job_title_2_end_date: document.getElementById('job_title_2_end_date').value,
-            job_title_2_length: document.getElementById('job_title_2_length').value,
-            job_title_2_location: document.getElementById('job_title_2_location').value,
-            job_title_2_description: document.getElementById('job_title_2_description').value,
-            job_title_3: document.getElementById('job_title_3').value,
-            job_title_3_start_date: document.getElementById('job_title_3_start_date').value,
-            job_title_3_end_date: document.getElementById('job_title_3_end_date').value,
-            job_title_3_length: document.getElementById('job_title_3_length').value,
-            job_title_3_location: document.getElementById('job_title_3_location').value,
-            job_title_3_description: document.getElementById('job_title_3_description').value,
-            job_title_4: document.getElementById('job_title_4').value,
-            job_title_4_start_date: document.getElementById('job_title_4_start_date').value,
-            job_title_4_end_date: document.getElementById('job_title_4_end_date').value,
-            job_title_4_length: document.getElementById('job_title_4_length').value,
-            job_title_4_location: document.getElementById('job_title_4_location').value,
-            job_title_4_description: document.getElementById('job_title_4_description').value,
-            job_title_5: document.getElementById('job_title_5').value,
-            job_title_5_start_date: document.getElementById('job_title_5_start_date').value,
-            job_title_5_end_date: document.getElementById('job_title_5_end_date').value,
-            job_title_5_length: document.getElementById('job_title_5_length').value,
-            job_title_5_location: document.getElementById('job_title_5_location').value,
-            job_title_5_description: document.getElementById('job_title_5_description').value,
-            job_title_6: document.getElementById('job_title_6').value,
-            job_title_6_start_date: document.getElementById('job_title_6_start_date').value,
-            job_title_6_end_date: document.getElementById('job_title_6_end_date').value,
-            job_title_6_length: document.getElementById('job_title_6_length').value,
-            job_title_6_location: document.getElementById('job_title_6_location').value,
-            job_title_6_description: document.getElementById('job_title_6_description').value,
-        };
-
-        showStatusMessage('Changes being written to database');
-
-        fetch(`/api/resume-data/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatedData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                showStatusMessage('Error saving changes: ' + data.error);
-            } else {
-                showStatusMessage('Changes saved');
-                editResumeButton.style.display = 'block';
-                applyResumeChangesButton.style.display = 'none';
-                const inputs = resumeDataContainer.querySelectorAll('input, textarea');
                 inputs.forEach(input => input.setAttribute('readonly', true));
             }
         })

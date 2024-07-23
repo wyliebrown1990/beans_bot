@@ -49,28 +49,38 @@ class InterviewHistory(Base):
     user = relationship("Users", back_populates="interview_history")
     question_rel = relationship("Questions", back_populates="interview_history")
 
-class JobDescriptionAnalysis(Base):
-    __tablename__ = 'job_description_analysis'
+class JobDescriptions(Base):
+    __tablename__ = 'job_descriptions'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    # Job Details
     job_title = Column(String(100), nullable=True)
     job_level = Column(String(50), nullable=True)
     job_location = Column(String(100), nullable=True)
     job_type = Column(String(50), nullable=True)
     job_salary = Column(String(50), nullable=True)
-    job_responsibilities = Column(Text, nullable=True)
-    personal_qualifications = Column(Text, nullable=True)
+    job_responsibilities = Column(ARRAY(String), nullable=True)
+    personal_qualifications = Column(ARRAY(String), nullable=True)
+    Required_technical_skills = Column(ARRAY(String), nullable=True)
+    Required_soft_skills = Column(ARRAY(String), nullable=True)
+
+    # Company Information
     company_name = Column(String(100), nullable=True)
     company_size = Column(String(50), nullable=True)
     company_industry = Column(String(100), nullable=True)
     company_mission_and_values = Column(Text, nullable=True)
-    education_background = Column(Text, nullable=True)
-    required_professional_experiences = Column(Text, nullable=True)
-    nice_to_have_experiences = Column(Text, nullable=True)
-    required_skill_sets = Column(Text, nullable=True)
+
+    # Requirements and Qualifications
+    education_background = Column(ARRAY(String), nullable=True)
+    required_professional_experiences = Column(ARRAY(String), nullable=True)
+    nice_to_have_experiences = Column(ARRAY(String), nullable=True)
+    required_skill_sets = Column(ARRAY(String), nullable=True)
+
+    # Keywords Analysis
+    keywords_analysis = Column(ARRAY(String), nullable=True)
 
 class Resumes(Base):
     __tablename__ = 'resumes'

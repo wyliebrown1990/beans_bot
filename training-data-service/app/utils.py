@@ -5,7 +5,7 @@ import glob
 from sqlalchemy.orm import sessionmaker
 from flask import Flask, current_app
 from flask_session import Session
-from app.models import JobDescriptionAnalysis, InterviewHistory, Resumes, Users
+from app.models import JobDescriptions, InterviewHistory, Resumes, Users
 from app.database import get_db
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -92,13 +92,32 @@ def get_job_description_analysis(job_description_text):
     model = ChatOpenAI(api_key=openai_api_key, model="gpt-3.5-turbo")
 
     prompt_text = (
-        "You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. "
-        "Please extract the relevant information from the following job description and return the results in JSON format. If a job description is missing any detail, then return a JSON value of null for that field. "
-        "Desired Output in JSON Format: {{\"job_details\": {{\"title\": \"Senior Software Engineer\", \"level\": \"Mid-Senior level\", \"location\": \"New York, NY (Hybrid)\", \"type\": \"Full-time\", \"salary\": \"$175K/yr - $205K/yr\", \"responsibilities\": [\"Lead design and implementation of technical solutions\", \"Collaborate with product designers, product managers, and other engineers\", \"Investigate design approaches, prototype technology\", \"Continuous improvement in software and development processes\", \"Write automated tests\", \"Mentor other engineers\"], "
-        "\"personal_qualifications\": [\"Excellent written, verbal, and presentation skills\", \"Ability to thrive in a fast-paced startup environment\", \"Detail oriented with excellent organizational skills\", \"Ability to work independently and be a self-motivator\"]}}, "
-        "\"company_information\": {{\"name\": \"K Health\", \"size\": \"201-500 employees\", \"industry\": \"Telehealth and AI Healthcare\", \"mission_and_values\": \"Use the power of AI to get everyone access to higher quality healthcare at more affordable costs\"}}, "
-        "\"requirements_and_qualifications\": {{\"education_background\": [\"Bachelor's degree in Computer Science, Engineering, or a related field\"], \"required_professional_experiences\": [\"5+ years of software engineering experience\", \"Experience with highly-scalable, distributed systems\", \"Experience in designing and developing services with APIs\"], \"nice_to_have_experiences\": [\"Experience with modern cloud technologies such as Docker, Kubernetes, Kafka, GCP/AWS suite\"]}}, \"required_skill_sets\": [\"Node.js\", \"TypeScript\", \"GraphQL\", \"Apollo Federation\", \"Problem Solving\", \"Excellent verbal and written communication skills\"]}}"
-    )
+    "You are a professional Job Description analyst. Your job is to take the job description that I am sending you in my user message and extract the details below. "
+    "Please extract the relevant information from the following job description and return the results in JSON format. If a job description is missing any detail, then return a JSON value of null for that field. "
+    "Desired Output in JSON Format: {{\"job_details\": {{\"title\": \"\", \"level\": \"\", \"location\": \"\", \"type\": \"\", \"salary\": \"\", \"responsibilities\": [], \"personal_qualifications\": []}}, "
+    "\"company_information\": {{\"name\": \"\", \"size\": \"\", \"industry\": \"\", \"mission_and_values\": \"\"}}, "
+    "\"requirements_and_qualifications\": {{\"education_background\": [], \"required_professional_experiences\": [], \"nice_to_have_experiences\": []}}, "
+    "\"required_skill_sets\": [], \"required_technical_skills\": [], \"required_soft_skills\": [], \"keywords_analysis\": []}}"
+    "\n"
+    "1. Job Title: Extract the job title (e.g., Senior Software Engineer). "
+    "2. Job Level: Extract the job level (e.g., Mid-Senior level). "
+    "3. Job Location: Extract the job location (e.g., New York, NY (Hybrid)). "
+    "4. Job Type: Extract the job type (e.g., Full-time). "
+    "5. Job Salary: Extract the salary range (e.g., $175K/yr - $205K/yr). "
+    "6. Job Responsibilities: List the responsibilities mentioned in the job description. "
+    "7. Personal Qualifications: List the personal qualifications mentioned in the job description. "
+    "8. Company Name: Extract the company name (e.g., K Health). "
+    "9. Company Size: Extract the company size (e.g., 201-500 employees). "
+    "10. Company Industry: Extract the industry the company operates in (e.g., Telehealth and AI Healthcare). "
+    "11. Company Mission and Values: Summarize the company's mission and values (e.g., Use the power of AI to get everyone access to higher quality healthcare at more affordable costs). "
+    "12. Education Background: Summarize the educational background required (e.g., Bachelor's degree in Computer Science, Engineering, or a related field). "
+    "13. Required Professional Experiences: List the required professional experiences (e.g., 5+ years of software engineering experience, Experience with highly-scalable, distributed systems). "
+    "14. Nice to Have Experiences: List any nice to have experiences (e.g., Experience with modern cloud technologies such as Docker, Kubernetes, Kafka, GCP/AWS suite). "
+    "15. Required Skill Sets: List the required skill sets (e.g., Node.js, TypeScript, GraphQL, Apollo Federation, Problem Solving, Excellent verbal and written communication skills). "
+    "16. Required Technical Skills: Identify and list the technical skills required (e.g., Node.js, TypeScript, GraphQL). "
+    "17. Required Soft Skills: Identify and list the soft skills required (e.g., Problem Solving, Excellent verbal and written communication skills). "
+    "18. Keywords detected: Identify the top keywords in the job listing describing what skills and experiences the company is looking for in a candidate. Separate each key word as separate values for the key \"keywords_analysis\"."
+)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", prompt_text),
@@ -125,18 +144,15 @@ def get_job_description_analysis(job_description_text):
         raise ValueError("Received empty response from chain.invoke")
 
     try:
-        # Remove markdown formatting if present
         if response_content.startswith("```json") and response_content.endswith("```"):
             response_content = response_content[7:-3].strip()
         
-        # Attempt to parse the JSON response
         response_json = json.loads(response_content)
         logging.debug(f"Response JSON: {response_json}")
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON response: {str(e)}")
-        logging.error(f"Response content was: {response_content}")  # Log the problematic response
+        logging.error(f"Response content was: {response_content}")
         
-        # Attempt to handle and fix minor formatting issues
         response_content = response_content.replace("```json", "").replace("```", "").strip()
         try:
             response_json = json.loads(response_content)
@@ -145,20 +161,22 @@ def get_job_description_analysis(job_description_text):
             logging.error(f"Error decoding JSON response after recovery attempt: {str(e)}")
             raise ValueError(f"Error decoding JSON response: {str(e)}")
 
-    # Validate that essential keys are present
-    required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets"]
+    required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets", "Required_technical_skills", "Required_soft_skills", "keywords_analysis"]
     for key in required_keys:
         if key not in response_json:
             response_json[key] = None
 
     return response_json
 
+
+
+
 def store_analysis_data(response_json, user_id):
     with current_app.app_context():
         db_session = next(get_db())
-        
+
         # Ensure all required keys are present in response_json
-        required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets"]
+        required_keys = ["job_details", "company_information", "requirements_and_qualifications", "required_skill_sets", "Required_technical_skills", "Required_soft_skills", "keywords_analysis"]
         for key in required_keys:
             if key not in response_json:
                 response_json[key] = None
@@ -167,33 +185,31 @@ def store_analysis_data(response_json, user_id):
         company_information = response_json.get("company_information", {})
         requirements_and_qualifications = response_json.get("requirements_and_qualifications", {})
         required_skill_sets = response_json.get("required_skill_sets", [])
+        required_technical_skills = response_json.get("Required_technical_skills", [])
+        required_soft_skills = response_json.get("Required_soft_skills", [])
+        keywords_analysis = response_json.get("keywords_analysis", [])
 
-        # Safely join fields if they are lists, otherwise use an empty string
-        job_responsibilities = "\n".join(job_details.get("responsibilities", [])) if isinstance(job_details.get("responsibilities"), list) else ""
-        personal_qualifications = "\n".join(job_details.get("personal_qualifications", [])) if isinstance(job_details.get("personal_qualifications"), list) else ""
-        education_background = "\n".join(requirements_and_qualifications.get("education_background", [])) if isinstance(requirements_and_qualifications.get("education_background"), list) else ""
-        required_professional_experiences = "\n".join(requirements_and_qualifications.get("required_professional_experiences", [])) if isinstance(requirements_and_qualifications.get("required_professional_experiences"), list) else ""
-        nice_to_have_experiences = "\n".join(requirements_and_qualifications.get("nice_to_have_experiences", [])) if isinstance(requirements_and_qualifications.get("nice_to_have_experiences"), list) else ""
-        required_skill_sets_str = "\n".join(required_skill_sets) if isinstance(required_skill_sets, list) else ""
-
-        # Create a new JobDescriptionAnalysis object
-        job_description = JobDescriptionAnalysis(
+        # Create a new JobDescriptions object
+        job_description = JobDescriptions(
             user_id=user_id,
             job_title=job_details.get("title"),
             job_level=job_details.get("level"),
             job_location=job_details.get("location"),
             job_type=job_details.get("type"),
             job_salary=job_details.get("salary"),
-            job_responsibilities=job_responsibilities,
-            personal_qualifications=personal_qualifications,
+            job_responsibilities=job_details.get("responsibilities"),
+            personal_qualifications=job_details.get("personal_qualifications"),
+            Required_technical_skills=required_technical_skills,
+            Required_soft_skills=required_soft_skills,
             company_name=company_information.get("name"),
             company_size=company_information.get("size"),
             company_industry=company_information.get("industry"),
             company_mission_and_values=company_information.get("mission_and_values"),
-            education_background=education_background,
-            required_professional_experiences=required_professional_experiences,
-            nice_to_have_experiences=nice_to_have_experiences,
-            required_skill_sets=required_skill_sets_str
+            education_background=requirements_and_qualifications.get("education_background"),
+            required_professional_experiences=requirements_and_qualifications.get("required_professional_experiences"),
+            nice_to_have_experiences=requirements_and_qualifications.get("nice_to_have_experiences"),
+            required_skill_sets=required_skill_sets,
+            keywords_analysis=keywords_analysis
         )
 
         # Add the new job description analysis to the session and commit
@@ -204,6 +220,7 @@ def store_analysis_data(response_json, user_id):
         except Exception as e:
             logging.error(f"Error storing job description analysis: {str(e)}")
             db_session.rollback()
+
 
 def store_resume_data(response_json, user_id):
     with current_app.app_context():

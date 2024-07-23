@@ -4,7 +4,7 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import JobDescriptionAnalysis, Users, Questions, InterviewHistory, Resumes
+from app.models import JobDescriptions, Users, Questions, Resumes
 from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
@@ -37,7 +37,7 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                user_data_count = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
+                user_data_count = db_session.query(JobDescriptions).filter_by(user_id=user_id).count()
 
                 if user_data_count > 0:
                     return jsonify({'error': 'A job listing is already stored. If you would like to add another then please delete the existing job listing first.'}), 400
@@ -69,6 +69,7 @@ def setup_routes(app, db_session):
             logging.error(f"Exception in file_upload: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+
     @app.route('/raw_text_submission', methods=['POST'])
     def raw_text_submission():
         try:
@@ -77,7 +78,7 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                user_data_count = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).count()
+                user_data_count = db_session.query(JobDescriptions).filter_by(user_id=user_id).count()
 
                 if user_data_count > 0:
                     return jsonify({'error': 'A job listing is already stored. If you would like to add another then please delete the existing job listing first.'}), 400
@@ -87,6 +88,7 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Exception in raw_text_submission: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
 
     @app.route('/api/job-description-analysis/delete', methods=['DELETE'])
     def delete_selected_files():
@@ -99,12 +101,13 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                db_session.query(JobDescriptionAnalysis).filter(JobDescriptionAnalysis.id.in_(ids)).delete(synchronize_session=False)
+                db_session.query(JobDescriptions).filter(JobDescriptions.id.in_(ids)).delete(synchronize_session=False)
                 db_session.commit()
             return jsonify({'success': True})
         except Exception as e:
             logging.error(f"Failed to delete selected files: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
 
     @app.route('/', methods=['GET', 'POST'])
     def index():
@@ -142,7 +145,7 @@ def setup_routes(app, db_session):
         try:
             with app.app_context():
                 db_session = next(get_db())
-                job_descriptions = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).all()
+                job_descriptions = db_session.query(JobDescriptions).filter_by(user_id=user_id).all()
                 logging.debug(f"Job descriptions fetched for user {user_id}: {job_descriptions}")
                 response_data = [{
                     'id': job_description.id,  # Include the id field
@@ -153,6 +156,8 @@ def setup_routes(app, db_session):
                     'job_salary': job_description.job_salary,
                     'job_responsibilities': job_description.job_responsibilities,
                     'personal_qualifications': job_description.personal_qualifications,
+                    'Required_technical_skills': job_description.Required_technical_skills,
+                    'Required_soft_skills': job_description.Required_soft_skills,
                     'company_name': job_description.company_name,
                     'company_size': job_description.company_size,
                     'company_industry': job_description.company_industry,
@@ -160,7 +165,8 @@ def setup_routes(app, db_session):
                     'education_background': job_description.education_background,
                     'required_professional_experiences': job_description.required_professional_experiences,
                     'nice_to_have_experiences': job_description.nice_to_have_experiences,
-                    'required_skill_sets': job_description.required_skill_sets
+                    'required_skill_sets': job_description.required_skill_sets,
+                    'keywords_analysis': job_description.keywords_analysis
                 } for job_description in job_descriptions]
                 logging.debug(f"Response data for user {user_id}: {response_data}")
                 return jsonify(response_data)
@@ -168,12 +174,13 @@ def setup_routes(app, db_session):
             logging.error(f"Failed to fetch job description for user {user_id}: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+
     @app.route('/api/job-description-details/<int:user_id>', methods=['GET'])
     def get_job_description_details(user_id):
         try:
             with app.app_context():
                 db_session = next(get_db())
-                job_descriptions = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).all()
+                job_descriptions = db_session.query(JobDescriptions).filter_by(user_id=user_id).all()
 
                 response_data = {
                     'job_titles': list(set([jd.job_title for jd in job_descriptions])),
@@ -186,6 +193,7 @@ def setup_routes(app, db_session):
             logging.error(f"Failed to fetch job description details for user {user_id}: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+
     @app.route('/api/job-description-analysis/<int:user_id>', methods=['PUT'])
     def update_job_description(user_id):
         try:
@@ -194,7 +202,7 @@ def setup_routes(app, db_session):
 
             with app.app_context():
                 db_session = next(get_db())
-                job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+                job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
                 if not job_description:
                     return jsonify({'error': 'Job description not found'}), 404
@@ -206,6 +214,8 @@ def setup_routes(app, db_session):
                 job_description.job_salary = data.get('job_salary', job_description.job_salary)
                 job_description.job_responsibilities = data.get('job_responsibilities', job_description.job_responsibilities)
                 job_description.personal_qualifications = data.get('personal_qualifications', job_description.personal_qualifications)
+                job_description.Required_technical_skills = data.get('Required_technical_skills', job_description.Required_technical_skills)
+                job_description.Required_soft_skills = data.get('Required_soft_skills', job_description.Required_soft_skills)
                 job_description.company_name = data.get('company_name', job_description.company_name)
                 job_description.company_size = data.get('company_size', job_description.company_size)
                 job_description.company_industry = data.get('company_industry', job_description.company_industry)
@@ -214,6 +224,7 @@ def setup_routes(app, db_session):
                 job_description.required_professional_experiences = data.get('required_professional_experiences', job_description.required_professional_experiences)
                 job_description.nice_to_have_experiences = data.get('nice_to_have_experiences', job_description.nice_to_have_experiences)
                 job_description.required_skill_sets = data.get('required_skill_sets', job_description.required_skill_sets)
+                job_description.keywords_analysis = data.get('keywords_analysis', job_description.keywords_analysis)
 
                 db_session.commit()
 
@@ -221,6 +232,7 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Failed to update job description: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
 
     @app.route('/edit_job_listing.html')
     def edit_job_listing():
@@ -292,7 +304,6 @@ def setup_routes(app, db_session):
                 db_session = next(get_db())
                 resume = db_session.query(Resumes).filter_by(user_id=user_id).first()
                 if not resume:
-                    logging.debug(f"No resume found for user {user_id}")
                     return jsonify({'error': 'Resume not found'}), 404
 
                 response_data = {
@@ -358,22 +369,20 @@ def setup_routes(app, db_session):
                     'top_challenge': resume.top_challenge
                 }
 
-                logging.debug(f"Resume data for user {user_id}: {response_data}")
-
-                return jsonify(response_data)
+                return jsonify(response_data), 200
         except Exception as e:
-            logging.error(f"Failed to fetch resume data for user {user_id}: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
 
-    @app.route('/api/resume-data/<int:resume_id>', methods=['PUT'])
-    def update_resume_data(resume_id):
+
+    @app.route('/api/resume-data/<int:user_id>', methods=['PUT'])
+    def update_resume_data(user_id):
         try:
             data = request.json
 
             with app.app_context():
                 db_session = next(get_db())
-                resume = db_session.query(Resume).filter_by(id=resume_id).first()
+                resume = db_session.query(Resumes).filter_by(user_id=user_id).first()
 
                 if not resume:
                     return jsonify({'error': 'Resume not found'}), 404
@@ -439,6 +448,7 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Failed to update resume data: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
         
     @app.route('/api/questions', methods=['POST'])
     def create_question():
