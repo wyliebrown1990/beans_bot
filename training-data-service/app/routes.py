@@ -581,3 +581,50 @@ def setup_routes(app, db_session):
             return "Missing username or user_id parameters", 400
 
         return render_template('interview_history.html', username=username, user_id=user_id)
+    
+    @app.route('/job_resume_comparison.html')
+    def job_resume_comparison():
+        username = request.args.get('username')
+        user_id = request.args.get('user_id')
+
+        if not username or not user_id:
+            return "Missing username or user_id parameters", 400
+
+        return render_template('job_resume_comparison.html', username=username, user_id=user_id)
+
+    @app.route('/api/job_resume_comparison/<int:user_id>', methods=['GET'])
+    def get_job_resume_comparison(user_id):
+        with app.app_context():
+            db_session = next(get_db())
+
+            user_resume = db_session.query(Resumes).filter_by(user_id=user_id).first()
+            job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
+
+            if not user_resume and not job_description:
+                return jsonify({
+                    'error': "It looks like you haven’t uploaded your resume or a job listing yet. To do a skill set comparison between your resume and a job listing you need to provide both."
+                }), 404
+
+            if not user_resume:
+                return jsonify({
+                    'error': "It looks like you haven’t uploaded your resume yet. To do a skill set comparison between your resume and a job listing you need to provide both a resume and a job listing.",
+                    'link': 'edit_resume.html'
+                }), 404
+
+            if not job_description:
+                return jsonify({
+                    'error': "It looks like you haven’t uploaded a job listing yet. To do a skill set comparison between your resume and a job listing you need to provide both a resume and a job listing.",
+                    'link': 'edit_job_listing.html'
+                }), 404
+
+            resume_skills = (user_resume.key_technical_skills or []) + (user_resume.key_soft_skills or [])
+            job_keywords = (job_description.required_skill_sets or []) + (job_description.Required_technical_skills or []) + (job_description.Required_soft_skills or []) + (job_description.keywords_analysis or [])
+
+            missing_skills = [skill for skill in job_keywords if skill not in resume_skills]
+
+            return jsonify({
+                'resume_skills': resume_skills,
+                'job_keywords': job_keywords,
+                'missing_skills': missing_skills
+            })
+

@@ -29,6 +29,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const interviewHistoryLink = document.getElementById('interview-history-link');
     const sessionSelect = document.getElementById('session-select');
 
+    const jobResumeComparisonLink = document.getElementById('job-resume-comparison-link');
+    if (jobResumeComparisonLink && userId && username) {
+        jobResumeComparisonLink.addEventListener('click', function () {
+            window.location.href = `/job_resume_comparison.html?user_id=${userId}&username=${username}`;
+        });
+    }
+
+
     if (interviewHistoryLink) {
         interviewHistoryLink.addEventListener('click', function() {
             window.location.href = `/interview_history.html?user_id=${userId}&username=${username}`;
