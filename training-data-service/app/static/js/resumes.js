@@ -2,105 +2,82 @@ document.addEventListener('DOMContentLoaded', function () {
     const userId = new URLSearchParams(window.location.search).get('user_id');
     const username = new URLSearchParams(window.location.search).get('username');
 
-    const resumeDataContainer = document.getElementById('resume-data');
-    const editResumeButton = document.getElementById('edit-resume-button');
-    const applyResumeChangesButton = document.getElementById('apply-resume-changes-button');
-    const statusMessage = document.getElementById('status-message');
-
     const homeLink = document.getElementById('home-link');
-    const editJobListingLink = document.getElementById('edit-job-listing-link');
     const editResumeLink = document.getElementById('edit-resume-link');
+    const editJobListingLink = document.getElementById('edit-job-listing-link');
     const profileLink = document.getElementById('profile-link');
     const plansLink = document.getElementById('plans-link');
     const interviewHistoryLink = document.getElementById('interview-history-link');
     const questionDataLink = document.getElementById('question-data-link');
-    const jobResumeComparisonLink = document.getElementById('job-resume-comparison-link');
+    const resumeUploadForm = document.getElementById('resume-upload-form');
+    const resumeStatus = document.getElementById('resume-status');
+    const resumeDataContainer = document.getElementById('resume-data');
+    const editResumeButton = document.getElementById('edit-resume-button');
+    const applyResumeChangesButton = document.getElementById('apply-resume-changes-button');
+    const statusMessage = document.getElementById('status-message');
+    const deleteResumeButton = document.getElementById('delete-resume-btn');
 
+    // Navigation bar buttons
     if (homeLink && userId && username) {
         homeLink.addEventListener('click', function () {
             window.location.href = `/?username=${username}&user_id=${userId}`;
         });
     }
-
-    if (editJobListingLink && userId && username) {
-        editJobListingLink.href = `edit_job_listing.html?user_id=${userId}&username=${username}`;
-    }
-
     if (editResumeLink && userId && username) {
-        editResumeLink.href = `edit_resume.html?user_id=${userId}&username=${username}`;
+        editResumeLink.addEventListener('click', function () {
+            window.location.href = `edit_resume.html?user_id=${userId}&username=${username}`;
+        });
     }
-
+    if (editJobListingLink && userId && username) {
+        editJobListingLink.addEventListener('click', function () {
+            window.location.href = `edit_job_listing.html?user_id=${userId}&username=${username}`;
+        });
+    }
     if (profileLink && userId && username) {
-        profileLink.href = `profile.html?user_id=${userId}&username=${username}`;
+        profileLink.addEventListener('click', function () {
+            window.location.href = `/profile.html?user_id=${userId}&username=${username}`;
+        });
     }
-
     if (plansLink && userId && username) {
-        plansLink.href = `plans.html?user_id=${userId}&username=${username}`;
+        plansLink.addEventListener('click', function () {
+            window.location.href = `/plans.html?user_id=${userId}&username=${username}`;
+        });
     }
-
     if (interviewHistoryLink && userId && username) {
         interviewHistoryLink.addEventListener('click', function () {
             window.location.href = `/interview_history.html?user_id=${userId}&username=${username}`;
         });
     }
-
     if (questionDataLink && userId && username) {
         questionDataLink.addEventListener('click', function () {
             window.location.href = `/question_data.html?user_id=${userId}&username=${username}`;
         });
     }
 
-    if (jobResumeComparisonLink && userId && username) {
-        jobResumeComparisonLink.addEventListener('click', function () {
-            window.location.href = `/job_resume_comparison.html?user_id=${userId}&username=${username}`;
-        });
-    }
-
-    if (userId && username) {
-        console.log(`Fetching resume data for user ID: ${userId}`);
-        fetchResumeData(userId);
-    }
-
-    if (editResumeButton) {
-        editResumeButton.addEventListener('click', function () {
-            makeResumeFieldsEditable();
-        });
-    }
-
-    if (applyResumeChangesButton) {
-        applyResumeChangesButton.addEventListener('click', function () {
-            applyResumeChanges(userId);
-        });
-    }
-
+    // Fetch and display resume data
     function fetchResumeData(userId) {
-        console.log(`Fetching resume data from: /api/resume-data/${userId}`);
         fetch(`/api/resume-data/${userId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    showStatusMessage('Error fetching resume data: ' + data.error);
-                    return;
+                    resumeStatus.textContent = "It looks like you haven’t uploaded a resume yet.";
+                } else {
+                    resumeStatus.innerHTML = `
+                        <label>
+                            <input type="radio" name="selected_resume" value="${data.id}">
+                            Uploaded resume: ${data.file_uploaded}
+                        </label>`;
+                    deleteResumeButton.style.display = 'block';
+                    populateResumeData(data);
                 }
-                console.log('Resume data:', data);
-                populateResumeData(data);
             })
             .catch(error => {
                 showStatusMessage('Error fetching resume data: ' + error.message);
             });
     }
-    
-    function populateResumeData(data) {
-        if (!resumeDataContainer) {
-            console.error('Element with id "resume-data" not found.');
-            return;
-        }
 
+    // Populate resume data in the UI
+    function populateResumeData(data) {
         resumeDataContainer.innerHTML = generateInputField('Header Text', 'header_text', data.header_text) +
             generateInputField('Top Section Summary', 'top_section_summary', data.top_section_summary) +
             generateInputField('Top Section List of Achievements', 'top_section_list_of_achievements', data.top_section_list_of_achievements) +
@@ -166,18 +143,15 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
     }
 
+    // Make resume fields editable
     function makeResumeFieldsEditable() {
-        if (!resumeDataContainer) {
-            console.error('Element with id "resume-data" not found.');
-            return;
-        }
-
         const inputs = resumeDataContainer.querySelectorAll('input, textarea');
         inputs.forEach(input => input.removeAttribute('readonly'));
         editResumeButton.style.display = 'none';
         applyResumeChangesButton.style.display = 'block';
     }
 
+    // Apply resume changes
     function applyResumeChanges(userId) {
         const updatedData = {};
         resumeDataContainer.querySelectorAll('input[data-field], textarea[data-field]').forEach(input => {
@@ -211,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Show status message
     function showStatusMessage(message) {
         statusMessage.textContent = message;
         statusMessage.style.display = 'block';
@@ -219,30 +194,63 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     }
 
-    function waitForProcessingCompletion(processType) {
-        console.log(`Waiting for ${processType} processing completion...`);
-        setTimeout(checkProcessingStatus, 5000); // Polling every 5 seconds
-    }
+    // Handle resume upload form submission
+    resumeUploadForm.addEventListener('submit', function (event) {
+        event.preventDefault();
 
-    function checkProcessingStatus() {
-        fetch(`/api/job-description-analysis/${userId}`)
+        const formData = new FormData(resumeUploadForm);
+        fetch('/resume_upload', {
+            method: 'POST',
+            body: formData
+        })
         .then(response => response.json())
         .then(data => {
-            if (data.length > 0) {
-                showSuccessMessageAndReload();
-            } else {
-                setTimeout(checkProcessingStatus, 5000);
+            if (data.message) {
+                showStatusMessage(data.message);
+                fetchResumeData(userId);
+            } else if (data.error) {
+                showStatusMessage('Error: ' + data.error);
             }
         })
         .catch(error => {
-            console.error('Error checking processing status:', error);
+            showStatusMessage('Error uploading resume: ' + error.message);
         });
+    });
+
+    // Fetch resume data for the current user
+    if (userId) {
+        fetchResumeData(userId);
     }
 
-    function showSuccessMessageAndReload() {
-        showStatusMessage('Your job listing has successfully been processed. Navigate to the “Edit Job Listing” to view and edit the results. Or, click the “Start Interview” button at the bottom of the page.');
-        setTimeout(() => {
-            location.reload();
-        }, 5000);
-    }
+    // Edit resume button event
+    editResumeButton.addEventListener('click', makeResumeFieldsEditable);
+
+    // Apply resume changes button event
+    applyResumeChangesButton.addEventListener('click', function () {
+        applyResumeChanges(userId);
+    });
+
+    // Delete resume button event
+    deleteResumeButton.addEventListener('click', function () {
+        const selectedResumeId = document.querySelector('input[name="selected_resume"]:checked').value;
+        if (selectedResumeId) {
+            fetch(`/api/resume-data/${selectedResumeId}`, {
+                method: 'DELETE',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showStatusMessage(data.message);
+                    fetchResumeData(userId);
+                } else if (data.error) {
+                    showStatusMessage('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                showStatusMessage('Error deleting resume: ' + error.message);
+            });
+        } else {
+            showStatusMessage('No resume selected for deletion');
+        }
+    });
 });

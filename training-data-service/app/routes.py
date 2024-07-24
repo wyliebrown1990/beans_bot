@@ -5,7 +5,7 @@ from flask import render_template, request, redirect, url_for, jsonify, current_
 from werkzeug.utils import secure_filename
 from app.database import get_db
 from app.models import JobDescriptions, Users, Questions, Resumes
-from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status
+from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status, extract_text_from_file, store_resume_data, get_resume_analysis, convert_to_date_format
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
 import docx
@@ -374,7 +374,6 @@ def setup_routes(app, db_session):
             return jsonify({'error': str(e)}), 500
 
 
-
     @app.route('/api/resume-data/<int:user_id>', methods=['PUT'])
     def update_resume_data(user_id):
         try:
@@ -449,7 +448,70 @@ def setup_routes(app, db_session):
             logging.error(f"Failed to update resume data: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/resume_upload', methods=['POST'])
+    def resume_upload():
+        try:
+            user_id = request.form.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'Missing user_id'}), 400
+
+            file = request.files.get('file')
+            if not file:
+                return jsonify({'error': 'No file uploaded'}), 400
+
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+
+            # Process the file in a separate thread
+            threading.Thread(target=process_file, args=(current_app._get_current_object(), file_path, user_id)).start()
+
+            return jsonify({'message': 'Resume uploaded successfully'}), 202
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
+
+    @app.route('/api/resume-manager/<int:user_id>', methods=['GET'])
+    def resume_manager(user_id):
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                resume = db_session.query(Resumes).filter_by(user_id=user_id).first()
+
+                if not resume:
+                    return jsonify({'message': "It looks like you haven't uploaded a resume yet."}), 200
+
+                response_data = {
+                    'file_uploaded': resume.file_uploaded,
+                }
+                return jsonify(response_data), 200
+        except Exception as e:
+            logging.error(f"Exception in resume_manager: {str(e)}")
+            return jsonify({'error': str(e)}), 500
         
+    @app.route('/api/resume-data/<int:resume_id>', methods=['DELETE'])
+    def delete_resume(resume_id):
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                resume = db_session.query(Resumes).filter_by(id=resume_id).first()
+
+                if not resume:
+                    return jsonify({'error': 'Resume not found'}), 404
+
+                db_session.delete(resume)
+                db_session.commit()
+                return jsonify({'message': 'Resume deleted successfully'}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/question_data.html')
+    def question_data():
+        username = request.args.get('username')
+        user_id = request.args.get('user_id')
+        return render_template('question_data.html', username=username, user_id=user_id)
+
     @app.route('/api/questions', methods=['POST'])
     def create_question():
         data = request.json
@@ -471,12 +533,6 @@ def setup_routes(app, db_session):
                     query = query.filter(getattr(Questions, key) == value)
             questions = query.all()
             return jsonify([q.to_dict() for q in questions])
-    
-    @app.route('/question_data.html')
-    def question_data():
-        username = request.args.get('username')
-        user_id = request.args.get('user_id')
-        return render_template('question_data.html', username=username, user_id=user_id)
 
     @app.route('/api/questions/<int:question_id>', methods=['PUT'])
     def update_question_route(question_id):
@@ -501,7 +557,7 @@ def setup_routes(app, db_session):
                 db_session.commit()
                 return jsonify({'message': 'Question deleted successfully'}), 200
             return jsonify({'error': 'Question not found'}), 404
-    
+
     @app.route('/save_interview_history', methods=['POST'])
     def save_interview_history():
         with app.app_context():
@@ -514,7 +570,7 @@ def setup_routes(app, db_session):
             db_session.add(new_history)
             db_session.commit()
         return jsonify({'status': 'success'})
-    
+
     @app.route('/api/interview-history/sessions/<int:user_id>', methods=['GET'])
     def get_interview_sessions(user_id):
         try:
@@ -524,7 +580,7 @@ def setup_routes(app, db_session):
                     InterviewHistory.session_id,
                     func.min(InterviewHistory.created_at).label('date')
                 ).filter_by(user_id=user_id).group_by(InterviewHistory.session_id).all()
-                
+
                 return jsonify([
                     {'session_id': session.session_id, 'date': session.date.isoformat()}
                     for session in sessions
@@ -541,7 +597,7 @@ def setup_routes(app, db_session):
                 summary = db_session.query(InterviewHistory).filter_by(
                     user_id=user_id, session_id=session_id
                 ).first()
-                
+
                 transcript = db_session.query(
                     InterviewHistory.question,
                     InterviewHistory.answer,
@@ -551,7 +607,7 @@ def setup_routes(app, db_session):
                 ).filter_by(user_id=user_id, session_id=session_id).order_by(
                     InterviewHistory.created_at, InterviewHistory.id
                 ).all()
-                
+
                 return jsonify({
                     'summary': {
                         'top_score': summary.session_top_score,
@@ -571,7 +627,7 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Error fetching interview history: {str(e)}")
             return jsonify({'error': str(e)}), 500
-        
+
     @app.route('/interview_history.html')
     def interview_history():
         username = request.args.get('username')
@@ -581,7 +637,7 @@ def setup_routes(app, db_session):
             return "Missing username or user_id parameters", 400
 
         return render_template('interview_history.html', username=username, user_id=user_id)
-    
+
     @app.route('/job_resume_comparison.html')
     def job_resume_comparison():
         username = request.args.get('username')
@@ -627,4 +683,3 @@ def setup_routes(app, db_session):
                 'job_keywords': job_keywords,
                 'missing_skills': missing_skills
             })
-
