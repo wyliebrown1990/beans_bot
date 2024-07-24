@@ -4,16 +4,14 @@
     <meta charset="utf-8">
     <title>Question Data</title>
     <link rel="stylesheet" href="../static/css/styles.css">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-S00G0YVEWV');
-</script>
-
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-S00G0YVEWV');
+    </script>
 </head>
 <body>
     <div id="sidebar">
@@ -28,7 +26,7 @@
                 <li><a href="javascript:void(0)" id="edit-job-listing-link">Edit Job Listing</a></li>
                 <li><a href="#">Profile</a></li>
                 <li><a href="#">Plans</a></li>
-                <li><a href="#">Interview History</a></li>
+                <li><a href="javascript:void(0)" id="interview-history-link">Interview History</a></li>
                 <li><a href="javascript:void(0)" id="question-data-link">Question Data</a></li>
             </ul>
         </nav>
@@ -47,6 +45,6 @@
             <!-- This section will be populated dynamically by JavaScript -->
         </div>
     </div>
-    <script src="../static/js/scripts.js"></script>
+    <script src="../static/js/questions.js"></script>
 </body>
 </html>

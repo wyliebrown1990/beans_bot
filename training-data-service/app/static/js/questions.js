@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const interviewHistoryLink = document.getElementById('interview-history-link');
     const questionDataLink = document.getElementById('question-data-link');
     const jobResumeComparisonLink = document.getElementById('job-resume-comparison-link');
+    const questionsDataContainer = document.getElementById('questions-data');
+    const statusMessage = document.getElementById('status-message');
 
     // Home link navigation
     if (homeLink && userId && username) {
@@ -65,5 +67,76 @@ document.addEventListener('DOMContentLoaded', function () {
         jobResumeComparisonLink.addEventListener('click', function () {
             window.location.href = `/job_resume_comparison.html?user_id=${userId}&username=${username}`;
         });
+    }
+
+    if (questionsDataContainer) {
+        fetchQuestionData();
+    }
+
+    function fetchQuestionData(filters = {}) {
+        fetch(`/api/questions?${new URLSearchParams(filters)}`)
+            .then(response => response.json())
+            .then(data => {
+                populateQuestionDataDropdowns(data);
+            })
+            .catch(error => {
+                console.error('Error fetching question data:', error);
+                showStatusMessage('Error fetching question data: ' + error.message);
+            });
+    }
+
+    function populateQuestionDataDropdowns(data) {
+        const container = document.getElementById('questions-data');
+        if (!container) {
+            console.error('Questions data container not found');
+            return;
+        }
+        container.innerHTML = ''; // Clear existing content
+
+        const columns = ['id', 'created_at', 'updated_at', 'is_user_submitted', 'is_role_specific',
+                         'is_resume_specific', 'is_question_ai_generated', 'question_type', 'question',
+                         'description', 'job_title', 'user_id'];
+
+        columns.forEach(column => {
+            const values = [...new Set(data.map(item => item[column]))];
+            const dropdownHtml = createDropdown(column, values);
+            container.innerHTML += dropdownHtml;
+        });
+
+        // Add event listeners to dropdowns
+        container.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', handleDropdownChange);
+        });
+    }
+
+    function createDropdown(column, values) {
+        let options = values.map(value => `<option value="${value}">${value === null ? 'NULL' : value}</option>`).join('');
+        return `
+            <div class="dropdown-container">
+                <label for="${column}">${column}:</label>
+                <select id="${column}" name="${column}">
+                    <option value="">All</option>
+                    ${options}
+                </select>
+            </div>
+        `;
+    }
+
+    function handleDropdownChange(event) {
+        const filters = {};
+        document.querySelectorAll('#questions-data select').forEach(select => {
+            if (select.value) {
+                filters[select.name] = select.value;
+            }
+        });
+        fetchQuestionData(filters);
+    }
+
+    function showStatusMessage(message) {
+        statusMessage.textContent = message;
+        statusMessage.style.display = 'block';
+        setTimeout(() => {
+            statusMessage.style.display = 'none';
+        }, 5000);
     }
 });
