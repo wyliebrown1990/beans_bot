@@ -4,16 +4,14 @@
    <meta charset="utf-8">
    <title>Edit Job Listing</title>
    <link rel="stylesheet" href="../static/css/styles.css">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-S00G0YVEWV');
-</script>
-
+   <!-- Google tag (gtag.js) -->
+   <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
+   <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-S00G0YVEWV');
+   </script>
 </head>
 <body>
 <div id="sidebar">
@@ -23,12 +21,14 @@
    </div>
    <nav>
        <ul>
-        <li><a href="javascript:void(0)" id="home-link">Home</a></li>
-           <li><a href="#">Edit Resume</a></li>
-           <li><a href="#">Edit Job Listing</a></li>
-           <li><a href="#">Profile</a></li>
-           <li><a href="#">Plans</a></li>
-           <li><a href="#">Interview History</a></li>
+           <li><a href="javascript:void(0)" id="home-link">Home</a></li>
+           <li><a href="javascript:void(0)" id="edit-resume-link">Edit Resume</a></li>
+           <li><a href="javascript:void(0)" id="edit-job-listing-link">Edit Job Listing</a></li>
+           <li><a href="javascript:void(0)" id="profile-link">Profile</a></li>
+           <li><a href="javascript:void(0)" id="plans-link">Plans</a></li>
+           <li><a href="javascript:void(0)" id="interview-history-link">Interview History</a></li>
+           <li><a href="javascript:void(0)" id="question-data-link">Question Data</a></li>
+           <li><a href="javascript:void(0)" id="job-resume-comparison-link">Job / Resume Comparison</a></li>
        </ul>
    </nav>
 </div>
@@ -50,6 +50,32 @@
        <button id="edit-job-listing-button">Edit</button>
        <button id="apply-changes-button" style="display:none;">Apply Changes</button>
        <div id="status-message" style="display:none; background-color: #CC5500; color: white; padding: 10px; text-align: center;"></div>
+   </div>
+   <div id="job-listings-manager" class="forms">
+       <h2>Job Listings Manager:</h2>
+       <form id="delete-job-listing-form">
+           <div id="files-list"></div>
+           <button type="submit" id="delete-job-listing-button" style="display:none;">Delete Job Listing</button>
+       </form>
+   </div>
+   <div id="file-upload-section">
+       <h2>Feel free to upload text files from your computer:</h2>
+       <form id="file-upload-form" method="post" enctype="multipart/form-data" action="/file_upload">
+           <input type="hidden" name="user_id" value="{{ user_id }}">
+           <label for="files">File Upload:</label>
+           <input type="file" id="files" name="files" multiple required>
+           <br>
+           <input type="submit" value="Upload Files">
+       </form>
+       <br>
+       <h2>Or if you prefer paste some text here and submit it:</h2>
+       <form id="raw-text-submission-form" method="post" action="/raw_text_submission">
+           <input type="hidden" name="user_id" value="{{ user_id }}">
+           <label for="raw_text">Raw Text:</label>
+           <textarea id="raw_text" name="raw_text" rows="10" cols="50" required></textarea>
+           <br>
+           <input type="submit" value="Submit Text">
+       </form>
    </div>
 </div>
 <script src="../static/js/scripts.js"></script>

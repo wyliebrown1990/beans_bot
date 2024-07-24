@@ -284,3 +284,33 @@ input[readonly], textarea[readonly] {
     border: 1px solid #ccc;
     padding: 5px;
 }
+
+/* This section is for the comparison page */
+#comparison-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#comparison-content th, #comparison-content td {
+    padding: 15px;
+    text-align: left;
+}
+
+#comparison-content th {
+    background-color: #02577a;
+    color: white;
+}
+
+#comparison-content td {
+    border-bottom: 1px solid #ddd;
+}
+
+#comparison-content tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+#comparison-content tr:hover {
+    background-color: #ddd;
+}

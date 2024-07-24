@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-
     if (interviewHistoryLink) {
         interviewHistoryLink.addEventListener('click', function() {
             window.location.href = `/interview_history.html?user_id=${userId}&username=${username}`;
@@ -305,34 +304,53 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             console.debug('Fetched job listings:', data);
-            if (data.error) {
-                filesListContainer.innerHTML = 'Error fetching job listings: ' + data.error;
-                jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
-            } else if (data.length === 0) {
-                filesListContainer.innerHTML = 'No job listings found. Below here you can upload a file or submit the text from the job listing you wish to interview for.';
-                deleteJobListingButton.style.display = 'none';
-                jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
-            } else {
-                filesListContainer.innerHTML = '';
-                data.forEach(item => {
-                    const listItem = document.createElement('div');
-                    listItem.innerHTML = `
-                        <input type="radio" name="selected_job" value="${item.id}">
-                        Job Title: ${item.job_title}, Company Name: ${item.company_name}
-                    `;
-                    filesListContainer.appendChild(listItem);
-                });
-                deleteJobListingButton.style.display = 'block';
-                jobListingsMessage.innerHTML = `Hey ${username}! It looks like you’ve already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.`;
+            if (filesListContainer) {
+                if (data.error) {
+                    filesListContainer.innerHTML = 'Error fetching job listings: ' + data.error;
+                    if (jobListingsMessage) {
+                        jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
+                    }
+                } else if (data.length === 0) {
+                    filesListContainer.innerHTML = 'No job listings found. Below here you can upload a file or submit the text from the job listing you wish to interview for.';
+                    if (deleteJobListingButton) {
+                        deleteJobListingButton.style.display = 'none';
+                    }
+                    if (jobListingsMessage) {
+                        jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
+                    }
+                } else {
+                    filesListContainer.innerHTML = '';
+                    data.forEach(item => {
+                        const listItem = document.createElement('div');
+                        listItem.innerHTML = `
+                            <input type="radio" name="selected_job" value="${item.id}">
+                            Job Title: ${item.job_title}, Company Name: ${item.company_name}
+                        `;
+                        filesListContainer.appendChild(listItem);
+                    });
+                    if (deleteJobListingButton) {
+                        deleteJobListingButton.style.display = 'block';
+                    }
+                    if (jobListingsMessage) {
+                        jobListingsMessage.innerHTML = `Hey ${username}! It looks like you’ve already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.`;
+                    }
+                }
             }
         })
         .catch(error => {
             console.error('Error fetching job listings:', error);
-            if (filesListContainer) filesListContainer.innerHTML = 'Error fetching job listings: ' + error.message;
-            if (jobListingsMessage) jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
-            if (deleteJobListingButton) deleteJobListingButton.style.display = 'none';
+            if (filesListContainer) {
+                filesListContainer.innerHTML = 'Error fetching job listings: ' + error.message;
+            }
+            if (jobListingsMessage) {
+                jobListingsMessage.innerHTML = `Hey ${username}! It looks like you haven't uploaded a job description yet. To do so, please use the file or text uploading forms below. Once submitted, you may need to refresh the page to see your job listing in the Job Listings Manager.`;
+            }
+            if (deleteJobListingButton) {
+                deleteJobListingButton.style.display = 'none';
+            }
         });
     }
+    
 
     function fetchJobDescriptionDetails(userId) {
         fetch(`/api/job-description-details/${userId}`)
