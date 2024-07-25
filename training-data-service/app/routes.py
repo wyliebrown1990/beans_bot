@@ -109,36 +109,26 @@ def setup_routes(app, db_session):
             return jsonify({'error': str(e)}), 500
 
 
-    @app.route('/', methods=['GET', 'POST'])
+    @app.route('/')
     def index():
         username = request.args.get('username')
         user_id = request.args.get('user_id')
+        
+        db_session = next(get_db())
+        
+        resume_exists = db_session.query(Resumes).filter_by(user_id=user_id).first() is not None
+        job_description_exists = db_session.query(JobDescriptions).filter_by(user_id=user_id).first() is not None
+        
+        if resume_exists and job_description_exists:
+            message = f"Hey {username}! Welcome back! It looks like you’ve already uploaded your resume and job listing, you rock. I currently allow users to store 1 resume and 1 job listing at a time. Please feel free to review what I’ve captured in the Edit Resume and Edit Job Listing pages in my left navigation menu. Remember, if you’ve updated your resume or want to practice for a different job listing simply delete what you have on file and upload new versions. If all looks good to go, then feel free to move forward with an interview. Feel free to go ahead and select the type of interview round that you would like to practice at any time and then hit Start Interview."
+        elif resume_exists:
+            message = f"Hey {username}! It looks like you’ve uploaded your resume, you rock. Please feel free to review what I’ve captured in the Edit Resume page in my left navigation menu. If you plan to conduct an interview related to a specific job then please submit a job listing below. If you want to conduct a mock interview that’s non-job-listing specific (i.e. behavioral questions, job role questions, etc.) then feel free to skip down to the Interview Type section. Remember, if you’ve updated your resume or want to practice for a different job listing simply delete what you have on file and upload new versions. Feel free to go ahead and select the type of interview round that you would like to practice at any time and then hit Start Interview."
+        elif job_description_exists:
+            message = f"Hey {username}! It looks like you’ve uploaded a job description, you rock. Please feel free to review what I’ve captured in the Edit Job Listing page in my left navigation menu. If you plan to conduct an interview that references your resume then please upload your resume before moving forward. If you want to conduct a mock interview that’s non-resume specific (i.e. behavioral questions, job role questions, etc.) then feel free to skip down to the Interview Type section. Remember, if you want to practice for a different job listing simply delete what you have on file and upload a new listing. Feel free to go ahead and select the type of interview round that you would like to practice at any time and then hit Start Interview."
+        else:
+            message = f"Hey {username}! It looks like you haven’t provided a resume or job listing yet. That's not a problem! If you would like to have more specific mock interviews then feel free to navigate to the Edit Resume or Edit Job Listing pages in my left navigation menu and upload them at any time. Once you’ve uploaded anything, feel free to review what I’ve captured and make edits. If you want to conduct a mock interview that’s non-resume and non-job-listing specific (i.e. behavioral questions, job role questions, etc.) then feel free to skip down to the Interview Type section. Remember, if you want to practice for a different job listing at any time, simply delete what you have on file and upload a new listing. Feel free to go ahead and select the type of interview round that you would like to practice at any time and then hit Start Interview."
 
-        if not username or not user_id:
-            return "Missing username or user_id parameters", 400
-
-        if request.method == 'POST':
-            job_title = request.form['job_title'].lower().strip()
-            company_name = request.form['company_name'].lower().strip()
-            industry = request.form['industry']
-            username = request.form['username']
-            user_id = request.form['user_id']
-
-            with app.app_context():
-                db = next(get_db())
-                analysis_data_exists = db.query(JobDescriptionAnalysis).filter(
-                    func.lower(JobDescriptionAnalysis.job_title) == job_title,
-                    func.lower(JobDescriptionAnalysis.company_name) == company_name
-                ).first() is not None
-
-            if analysis_data_exists:
-                message = f"It looks like I already have analysis data on the {job_title} job at {company_name} company. Feel free to add more or proceed to interview now."
-            else:
-                message = f"It looks like I don't have any analysis data on the {job_title} job at {company_name} company. If you want a more targeted interview please add more, otherwise, feel free to move onto a more generic interview experience."
-
-            return render_template('index.html', username=username, user_id=user_id, message=message)
-
-        return render_template('index.html', username=username, user_id=user_id)
+        return render_template('index.html', username=username, user_id=user_id, message=message)
 
     @app.route('/api/job-description-analysis/<int:user_id>', methods=['GET'])
     def get_job_description(user_id):

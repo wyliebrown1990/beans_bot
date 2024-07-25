@@ -17,7 +17,7 @@
 <div id="sidebar">
     <div id="logo-container">
         <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot">
-        <h1>Beans Bot</h1>
+        <h1>Elevator Pitch</h1>
     </div>
     <nav>
         <ul>
@@ -33,7 +33,7 @@
 </div>
 <div id="main-content">
     <header>
-        <h1>Beans Bot</h1>
+        <h1>Elevator Pitch</h1>
         <div id="version">Version 2.0 - New feature releases will be explained here briefly upon page loading</div>
         <div class="hamburger-menu">
             <div class="bar"></div>
@@ -45,52 +45,45 @@
         <div class="chat-block">
             <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
             <div id="welcome-message" class="speech-bubble">
-                <p>Welcome {{ username }}! It's great to meet you. I'm excited to help you along your career search journey. My creator designed me to help him overcome 2 cat-astrophic pain points in his job search journey.</p>
-                <p>First, to overcome his anxiety. By interviewing frequently and purr-fecting your answers you can enter your next interview with confidence.</p>
-                <p>Second, he found that companies he interviewed at would never give critical feedback, if any. By getting real, claw-some feedback on your interview performance you can improve.</p>
-                <p>Here are some pawsome notes on how to get the most out of my services: Upload 1 file of data about the company, job listing or job role you want and see how it refines the interview experience. Each form of information you process is stored in my memory so that when I ask new questions and give you feedback. I'm fact checking you from the data you uploaded. If a file you already uploaded becomes irrelevant just delete it!</p>
-                <p>If you have any purr-spectives on how to improve my service please send them to: wyliedeveloper@gmail.com</p>
-                <p>Good Luck and lets go make those biscuits!</p>
+                <p>Hey {{ username }}!</p>
+                <p>Welcome to Elevator Pitch 👋. My name is Beans 🐈‍⬛, your career navigator, here to guide you to success in your job search 🚀.</p>
+                <p>Finding a job these days can be frustrating. Job sites often recycle old listings, applicant tracking systems reduce your value to keywords, and social media is full of “influencers” competing for engagement.</p>
+                <p>Elevator Pitch is different. We believe in the power of practice and that with enough of it every person can find the right job.</p>
+                <p>To get started, upload your resume or answer a few questions. Then submit a job listing you're interested in. Finally, select the interview format you want to practice. </p>
+                <p>I’ll be your interviewer, asking relevant questions based on the information you’ve shared and the type of interview you need to prepare for. At the end of each practice interview, I’ll provide feedback so that you can measure your growth over time. Each session will be stored in your Interview History tab.</p>
+                <p>Every practice interview brings you one step closer to landing your next job. No really. If you are actively searching for a new job then navigate to your Profile page and activate ‘game mode’. This setting notifies our team of in-house recruiters that you are on the market for a new job. They will immediately begin matching you with relevant, active, job listings with companies we work with. At any time, feel free to refine that search down even more with advanced settings in the Profile page. </p>
+                <p>That’s it for now but if you ever have any questions just feel free to ask! </p>
             </div>
         </div>
     </div>
     <div class="chat-container">
         <div class="chat-block">
             <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
-            <div id="job-listings-message" class="speech-bubble">
-                <p>It looks like you've already uploaded a job listing. I currently allow users to store 1 job listing at a time. Review the listing below and feel free to move forward with our interview or if you would like, delete the existing listing and upload a new one.</p>
+            <div id="resume-job-listing-message" class="speech-bubble">
+                {{ message }}
             </div>
         </div>
     </div>
-    <div id="interview-details">
-        <h2>Interview Details:</h2>
-        <form method="get" action="http://localhost:5013/first_round">
-            <input type="hidden" name="username" value="{{ username }}">
-            <input type="hidden" name="user_id" value="{{ user_id }}">
-            <label for="interview_type">Interview Round:</label>
-            <select id="interview_type" name="interview_round">
-                <option value="first_round">First Round</option>
-                <option value="coming_soon">More Options Coming Soon...</option>
-            </select>
-            <br>
-            <label for="job_title">Job Title:</label>
-            <select id="job_title" name="job_title" required>
-                <option value="">Upload a job description to get started here</option>
-            </select>
-            <br>
-            <label for="company_name">Company Name:</label>
-            <select id="company_name" name="company_name" required>
-                <option value="">Upload a job description to get started here</option>
-            </select>
-            <br>
-            <label for="industry">Industry:</label>
-            <select id="industry" name="industry" required>
-                <option value="">Upload a job description to get started here</option>
-            </select>
-            <button type="submit" class="start-interview-button">Start Interview</button>
-        </form>
+    <div class="chat-container">
+        <div class="chat-block">
+            <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot" class="chat-image">
+            <div class="speech-bubble">
+                <h2>Select an Interview:</h2>
+                <select id="interview-type-dropdown">
+                    <option value="">Click here</option>
+                    <option value="first_round">First Round Interview</option>
+                    <option value="behavioral_round">Behavioral Round Interview</option>
+                    <option value="personality_round">Personality Round Interview</option>
+                    <option value="situational_round">Situational Round Interview</option>
+                    <option value="motivational_round">Motivational Round Interview</option>
+                    <option value="competency_round">Competency Round Interview</option>
+                    <option value="ethical_round">Ethical Round Interview</option>
+                </select>
+                <div id="interview-details-content" class="interview-details-content"></div>
+            </div>
+        </div>
     </div>
-    <div id="status-message" style="display: none;"></div>
+    <div id="status-message" class="status-message" style="display: none; background-color: burntorange;"></div>
 </div>
 <script src="../static/js/scripts.js"></script>
 </body>
