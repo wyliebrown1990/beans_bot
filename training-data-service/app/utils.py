@@ -46,7 +46,7 @@ def process_text(app, text, user_id):
             update_process_status(app, user_id, "Processing text submission")
             cleaned_text = text.strip()  # Simple text cleaning
             analysis = get_job_description_analysis(cleaned_text)
-            store_analysis_data(analysis, user_id)
+            store_job_description_data(analysis, user_id)
             update_process_status(app, user_id, "Processing complete")
         except Exception as e:
             logging.error(f"Error in process_text: {str(e)}")
@@ -72,17 +72,16 @@ def process_file(app, file_path, user_id):
             if "resume" in file_path.lower():
                 update_process_status(app, user_id, "Analyzing resume")
                 analysis = get_resume_analysis(model, cleaned_text)
-                store_resume_data(analysis, user_id)
+                store_resume_analysis(user_id, analysis)
             else:
                 update_process_status(app, user_id, "Analyzing job description")
                 analysis = get_job_description_analysis(cleaned_text)
-                store_analysis_data(analysis, user_id)
+                store_job_description_data(analysis, user_id)
                 
             update_process_status(app, user_id, "Processing complete")
         except Exception as e:
             logging.error(f"Error in process_file: {str(e)}")
             update_process_status(app, user_id, f"Processing error: {str(e)}")
-
 
 def extract_text_from_pdf(file_path):
     text = ""
@@ -348,9 +347,7 @@ def get_resume_analysis(model, resume_text):
 
     return response_json
 
-
-
-def store_resume_data(response_json, user_id):
+def store_resume_analysis(user_id, response_json):
     with current_app.app_context():
         db_session = next(get_db())
         
@@ -463,74 +460,38 @@ def extract_text_from_file(file_path):
     else:
         raise ValueError("Unsupported file format")
 
-def store_resume_analysis(user_id, response_json):
-    print("Store Resume Analysis - User ID:", user_id)
-    print("Store Resume Analysis - Response JSON:", response_json)
-    
-    conn = engine.connect()
+def store_job_description_data(response_json, user_id):
+    with current_app.app_context():
+        db_session = next(get_db())
 
-    stmt = insert(Resume).values(
-        user_id=user_id,
-        header_text=response_json['header_text'],
-        top_section_summary=response_json['top_section_summary'],
-        top_section_list_of_achievements=json.dumps(response_json['top_section_list_of_achievements']),
-        education=response_json['education'],
-        bottom_section_list_of_achievements=json.dumps(response_json['bottom_section_list_of_achievements']),
-        achievements_and_awards=json.dumps(response_json['achievements_and_awards']),
-        job_title_1=response_json['job_title_1']['title'],
-        job_title_1_start_date=response_json['job_title_1']['start_date'],
-        job_title_1_end_date=response_json['job_title_1']['end_date'],
-        job_title_1_length=response_json['job_title_1']['length'],
-        job_title_1_location=response_json['job_title_1']['location'],
-        job_title_1_description=response_json['job_title_1']['description'],
-        job_title_2=response_json['job_title_2']['title'],
-        job_title_2_start_date=response_json['job_title_2']['start_date'],
-        job_title_2_end_date=response_json['job_title_2']['end_date'],
-        job_title_2_length=response_json['job_title_2']['length'],
-        job_title_2_location=response_json['job_title_2']['location'],
-        job_title_2_description=response_json['job_title_2']['description'],
-        job_title_3=response_json['job_title_3']['title'],
-        job_title_3_start_date=response_json['job_title_3']['start_date'],
-        job_title_3_end_date=response_json['job_title_3']['end_date'],
-        job_title_3_length=response_json['job_title_3']['length'],
-        job_title_3_location=response_json['job_title_3']['location'],
-        job_title_3_description=response_json['job_title_3']['description'],
-        job_title_4=response_json['job_title_4']['title'],
-        job_title_4_start_date=response_json['job_title_4']['start_date'],
-        job_title_4_end_date=response_json['job_title_4']['end_date'],
-        job_title_4_length=response_json['job_title_4']['length'],
-        job_title_4_location=response_json['job_title_4']['location'],
-        job_title_4_description=response_json['job_title_4']['description'],
-        job_title_5=response_json['job_title_5']['title'],
-        job_title_5_start_date=response_json['job_title_5']['start_date'],
-        job_title_5_end_date=response_json['job_title_5']['end_date'],
-        job_title_5_length=response_json['job_title_5']['length'],
-        job_title_5_location=response_json['job_title_5']['location'],
-        job_title_5_description=response_json['job_title_5']['description'],
-        job_title_6=response_json['job_title_6']['title'],
-        job_title_6_start_date=response_json['job_title_6']['start_date'],
-        job_title_6_end_date=response_json['job_title_6']['end_date'],
-        job_title_6_length=response_json['job_title_6']['length'],
-        job_title_6_location=response_json['job_title_6']['location'],
-        job_title_6_description=response_json['job_title_6']['description'],
-        key_technical_skills=response_json['key_technical_skills'],
-        key_soft_skills=response_json['key_soft_skills'],
-        top_listed_skill_keyword=response_json['top_listed_skill_keyword'],
-        second_most_top_listed_skill_keyword=response_json['second_most_top_listed_skill_keyword'],
-        third_most_top_listed_skill_keyword=response_json['third_most_top_listed_skill_keyword'],
-        fourth_most_top_listed_skill_keyword=response_json['fourth_most_top_listed_skill_keyword'],
-        certifications_and_awards=json.dumps(response_json['certifications_and_awards']),
-        most_recent_successful_project=response_json['most_recent_successful_project'],
-        areas_for_improvement=response_json['areas_for_improvement'],
-        questions_about_experience=response_json['questions_about_experience'],
-        resume_length=response_json['resume_length'],
-        top_challenge=response_json['top_challenge'],
-        created_at=datetime.utcnow()
-    )
-    
-    result = conn.execute(stmt)
-    conn.close()
-    
-    print("Store Resume Analysis - Inserted Primary Key:", result.inserted_primary_key)
-    
-    return result.inserted_primary_key
+        job_description = JobDescriptions(
+            user_id=user_id,
+            job_title=response_json['job_details'].get('title'),
+            job_level=response_json['job_details'].get('level'),
+            job_location=response_json['job_details'].get('location'),
+            job_type=response_json['job_details'].get('type'),
+            job_salary=response_json['job_details'].get('salary'),
+            job_responsibilities=response_json['job_details'].get('responsibilities'),
+            personal_qualifications=response_json['job_details'].get('personal_qualifications'),
+            Required_technical_skills=response_json.get('Required_technical_skills'),
+            Required_soft_skills=response_json.get('Required_soft_skills'),
+            company_name=response_json['company_information'].get('name'),
+            company_size=response_json['company_information'].get('size'),
+            company_industry=response_json['company_information'].get('industry'),
+            company_mission_and_values=response_json['company_information'].get('mission_and_values'),
+            education_background=response_json['requirements_and_qualifications'].get('education_background'),
+            required_professional_experiences=response_json['requirements_and_qualifications'].get('required_professional_experiences'),
+            nice_to_have_experiences=response_json['requirements_and_qualifications'].get('nice_to_have_experiences'),
+            required_skill_sets=response_json.get('required_skill_sets'),
+            keywords_analysis=response_json.get('keywords_analysis'),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+
+        try:
+            db_session.add(job_description)
+            db_session.commit()
+            logging.info(f"Stored job description for user_id: {user_id}")
+        except Exception as e:
+            logging.error(f"Error storing job description: {str(e)}")
+            db_session.rollback()

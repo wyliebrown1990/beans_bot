@@ -5,7 +5,7 @@ from flask import render_template, request, redirect, url_for, jsonify, current_
 from werkzeug.utils import secure_filename
 from app.database import get_db
 from app.models import JobDescriptions, Users, Questions, Resumes
-from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status, extract_text_from_file, store_resume_data, get_resume_analysis, convert_to_date_format
+from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status, extract_text_from_file, get_resume_analysis, convert_to_date_format
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
 import docx
@@ -673,3 +673,16 @@ def setup_routes(app, db_session):
                 'job_keywords': job_keywords,
                 'missing_skills': missing_skills
             })
+        
+    @app.route('/api/job_titles', methods=['GET'])
+    def get_job_titles():
+        try:
+            with app.app_context():
+                db_session = next(get_db())
+                job_titles = db_session.query(Questions.job_title).filter(Questions.question_type == "role specific questions").distinct().all()
+                job_titles = [jt[0] for jt in job_titles if jt[0] is not None]
+                return jsonify({'job_titles': job_titles})
+        except Exception as e:
+            logging.error(f"Failed to fetch job titles: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+

@@ -157,8 +157,8 @@ class Questions(Base):
     is_resume_specific = Column(Boolean, nullable=False)
     is_question_ai_generated = Column(Boolean, nullable=False)
     question_type = Column(String(50), nullable=False)
-    question = Column(String(200), nullable=False)
-    description = Column(String(200), nullable=True)
+    question = Column(String(1000), nullable=False)
+    description = Column(String(1000), nullable=True)
     job_title = Column(String(50), nullable=True)
     user_id = Column(Integer, nullable=True)
 
