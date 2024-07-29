@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const interviewTypeDropdown = document.getElementById('interview-type-dropdown');
     const secondaryDropdownContainer = document.getElementById('secondary-dropdown-container');
     const jobRoleDropdown = document.getElementById('job-role-dropdown');
+    const newJobTitleContainer = document.getElementById('new-job-title-container');
+    const newJobTitleInput = document.getElementById('new-job-title');
+    const submitNewJobTitleButton = document.getElementById('submit-new-job-title');
     const interviewDetailsContent = document.getElementById('interview-details-content');
     const statusMessage = document.getElementById('status-message');
 
@@ -122,14 +125,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (selectedValue === 'job_role_round') {
             fetchJobTitles().then(jobTitles => {
+                jobTitles.sort((a, b) => a.localeCompare(b)); // Sort job titles alphabetically
                 jobRoleDropdown.innerHTML = '<option value="">Click here</option>';
                 jobTitles.forEach(jobTitle => {
                     jobRoleDropdown.innerHTML += `<option value="${jobTitle}">${jobTitle}</option>`;
                 });
+                jobRoleDropdown.innerHTML += '<option value="add_new_role">Add New Role</option>';
                 secondaryDropdownContainer.style.display = 'block';
             });
         } else {
             secondaryDropdownContainer.style.display = 'none';
+            newJobTitleContainer.style.display = 'none';
             switch (selectedValue) {
                 case 'first_round':
                     interviewDetails = `
@@ -272,10 +278,106 @@ document.addEventListener('DOMContentLoaded', function () {
     // Secondary dropdown change event
     jobRoleDropdown.addEventListener('change', function () {
         const selectedJobTitle = jobRoleDropdown.value;
-        if (selectedJobTitle) {
-            loadJobRoleInterviewDetails(selectedJobTitle);
+        if (selectedJobTitle === 'add_new_role') {
+            newJobTitleContainer.style.display = 'block';
+        } else {
+            newJobTitleContainer.style.display = 'none';
+            if (selectedJobTitle) {
+                loadJobRoleInterviewDetails(selectedJobTitle);
+            }
         }
     });
+
+    // Submit new job title event
+    submitNewJobTitleButton.addEventListener('click', function () {
+        const newJobTitle = newJobTitleInput.value.trim();
+        if (newJobTitle) {
+            checkAndAddNewJobTitle(newJobTitle.toLowerCase());
+        }
+    });
+
+    // Check and add new job title
+    function checkAndAddNewJobTitle(jobTitle) {
+        fetch('/api/check_job_title_exists', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ job_title: jobTitle })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.exists) {
+                statusMessage.innerHTML = `${jobTitle} already exists within my database. Please search for and select it from the “Select Job Role” dropdown.`;
+                statusMessage.style.display = 'block';
+            } else {
+                statusMessage.innerHTML = `I’m processing your request to add ${jobTitle} to my repository. Please hold tight and I will let you know when the job is complete.`;
+                statusMessage.style.display = 'block';
+                addNewJobTitle(jobTitle);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking job title:', error);
+            statusMessage.innerHTML = 'An error occurred while checking the job title. Please try again.';
+            statusMessage.style.display = 'block';
+        });
+    }
+    
+
+    // Add new job title
+    function addNewJobTitle(jobTitle) {
+        fetch('/api/add_new_job_title', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ job_title: jobTitle })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                statusMessage.innerHTML = `${jobTitle} successfully added to my repository. Please feel free to select and conduct this interview round.`;
+                statusMessage.style.display = 'block';
+                updateJobRoleDropdown();
+            } else {
+                throw new Error(data.error || 'An error occurred while adding the job title.');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding job title:', error);
+            statusMessage.innerHTML = `An error occurred while adding the job title: ${error.message}`;
+            statusMessage.style.display = 'block';
+        });
+    }
+    
+    // Update job role dropdown
+    function updateJobRoleDropdown() {
+        fetchJobTitles().then(jobTitles => {
+            jobTitles.sort((a, b) => a.localeCompare(b)); // Sort job titles alphabetically
+            jobRoleDropdown.innerHTML = '<option value="">Click here</option>';
+            jobTitles.forEach(jobTitle => {
+                jobRoleDropdown.innerHTML += `<option value="${jobTitle}">${jobTitle}</option>`;
+            });
+            jobRoleDropdown.innerHTML += '<option value="add_new_role">Add New Role</option>';
+        });
+    }
+
+    // Display status message
+    function displayStatusMessage(message, type) {
+        statusMessage.innerHTML = message;
+        statusMessage.style.display = 'block';
+        statusMessage.style.backgroundColor = type === 'error' ? 'red' : type === 'success' ? 'green' : 'burntorange';
+    }
 
     function loadJobRoleInterviewDetails(jobTitle) {
         const details = `

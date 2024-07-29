@@ -1,68 +1,69 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Interview History</title>
-    <link rel="stylesheet" href="../static/css/styles.css">
+   <meta charset="utf-8">
+   <title>Interview History</title>
+   <link rel="stylesheet" href="../static/css/styles.css">
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-S00G0YVEWV');
-    </script>
+
+   <!-- Google tag (gtag.js) -->
+   <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
+   <script>
+       window.dataLayer = window.dataLayer || [];
+       function gtag(){dataLayer.push(arguments);}
+       gtag('js', new Date());
+       gtag('config', 'G-S00G0YVEWV');
+   </script>
 </head>
 <body>
 <div id="sidebar">
-    <div id="logo-container">
-        <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot">
-        <h1>Beans Bot</h1>
-    </div>
-    <nav>
-        <ul>
-            <li><a href="javascript:void(0)" id="home-link">Home</a></li>
-            <li><a href="javascript:void(0)" id="edit-resume-link">Edit Resume</a></li>
-            <li><a href="javascript:void(0)" id="edit-job-listing-link">Edit Job Listing</a></li>
-            <li><a href="#">Profile</a></li>
-            <li><a href="#">Plans</a></li>
-            <li><a href="javascript:void(0)" id="interview-history-link">Interview History</a></li>
-            <li><a href="javascript:void(0)" id="question-data-link">Question Data</a></li>
-        </ul>
-    </nav>
+   <div id="logo-container">
+       <img src="https://interview-bot-public-images.s3.amazonaws.com/beans_bot_light_bg_500.png" alt="Beans Bot">
+       <h1>Beans Bot</h1>
+   </div>
+   <nav>
+       <ul>
+           <li><a href="javascript:void(0)" id="home-link">Home</a></li>
+           <li><a href="javascript:void(0)" id="edit-resume-link">Edit Resume</a></li>
+           <li><a href="javascript:void(0)" id="edit-job-listing-link">Edit Job Listing</a></li>
+           <li><a href="#">Profile</a></li>
+           <li><a href="#">Plans</a></li>
+           <li><a href="javascript:void(0)" id="interview-history-link">Interview History</a></li>
+           <li><a href="javascript:void(0)" id="question-data-link">Question Data</a></li>
+       </ul>
+   </nav>
 </div>
 <div id="main-content">
-    <header>
-        <h1>Interview History</h1>
-        <div id="version">Version 2.0 - New feature releases will be explained here briefly upon page loading</div>
-        <div class="hamburger-menu">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </div>
-    </header>
-    <div id="session-selector">
-        <label for="session-select">Select Session:</label>
-        <select id="session-select">
-            <option value="">Select Session</option>
-        </select>
-    </div>
-    <div id="interview-history-content">
-        <div id="session-summary">
-            <h2>Session Summary:</h2>
-            <p><strong>Top Score:</strong> <span id="top-score"></span></p>
-            <p><strong>Lowest Score:</strong> <span id="lowest-score"></span></p>
-            <p><strong>Average Score:</strong> <span id="average-score"></span></p>
-            <h3>Beans Bot Summary on Next Steps:</h3>
-            <p id="next-steps-summary"></p>
-        </div>
-        <div id="session-transcript">
-            <h2>Session Transcript:</h2>
-            <!-- Transcript content will be dynamically inserted here -->
-        </div>
-    </div>
-    <div id="status-message" style="display: none;"></div>
+   <header>
+       <h1>Interview History</h1>
+       <div id="version">Version 2.0 - New feature releases will be explained here briefly upon page loading</div>
+       <div class="hamburger-menu">
+           <div class="bar"></div>
+           <div class="bar"></div>
+           <div class="bar"></div>
+       </div>
+   </header>
+   <div id="session-selector">
+       <label for="session-select">Select Session:</label>
+       <select id="session-select">
+           <option value="">Select Session</option>
+       </select>
+   </div>
+   <div id="interview-history-content">
+       <div id="session-summary">
+           <h2>Session Summary:</h2>
+           <p><strong>Top Score:</strong> <span id="top-score"></span></p>
+           <p><strong>Lowest Score:</strong> <span id="lowest-score"></span></p>
+           <p><strong>Average Score:</strong> <span id="average-score"></span></p>
+           <h3>Beans Bot Summary on Next Steps:</h3>
+           <p id="next-steps-summary"></p>
+       </div>
+       <div id="session-transcript">
+           <h2>Session Transcript:</h2>
+           <!-- Transcript content will be dynamically inserted here -->
+       </div>
+   </div>
+   <div id="status-message" style="display: none;"></div>
 </div>
 <script src="../static/js/scripts.js"></script>
 <script src="../static/js/interview_history.js"></script>

@@ -5,11 +5,12 @@ import glob
 from sqlalchemy.orm import sessionmaker
 from flask import Flask, current_app
 from flask_session import Session
-from app.models import JobDescriptions, InterviewHistory, Resumes, Users
+from app.models import JobDescriptions, InterviewHistory, Resumes, Users, Questions
 from app.database import get_db
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage
+from openai import OpenAI
 import requests
 import fitz  # PyMuPDF for PDF processing
 import docx
@@ -22,6 +23,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# OpenAI API client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Initialize the OpenAI chat model
 openai_api_key = os.getenv("OPENAI_API_KEY")
 model = ChatOpenAI(api_key=openai_api_key)
@@ -495,3 +498,63 @@ def store_job_description_data(response_json, user_id):
         except Exception as e:
             logging.error(f"Error storing job description: {str(e)}")
             db_session.rollback()
+
+def generate_questions(job_title):
+    prompt = f"""
+    You are a world class job interview coach. Your job is to provide 30 of the most common questions that are asked of a {job_title}. Each question needs to be unique and different. As you return new questions make them more specific and challenging to answer. Your response needs to be formatted in JSON with {job_title} being the key and each of the 30 questions a unique value. I’m going to tell you my job title now.
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    logging.debug("Full response object: %s", response)
+    logging.debug("Response choices: %s", response.choices)
+
+    # Extract response content
+    response_content = response.choices[0].message.content.strip()
+
+    logging.debug("Response content: %s", response_content)
+
+    try:
+        response_json = json.loads(response_content)
+    except json.JSONDecodeError:
+        logging.error(f"JSON format not returned for {job_title}")
+        return None
+
+    if not isinstance(response_json, dict) or job_title not in response_json:
+        logging.error(f"Invalid JSON format returned for {job_title}")
+        return None
+
+    return response_json
+
+def process_new_job_title(job_title, db_session):
+    questions_data = generate_questions(job_title)
+    if not questions_data:
+        logging.error(f"Failed to generate questions for {job_title}")
+        return {'success': False, 'error': 'Failed to generate questions'}
+
+    job_questions = questions_data[job_title]
+    try:
+        for question in job_questions:
+            new_question = Questions(
+                job_title=job_title,
+                question=question,
+                question_type="role specific questions",
+                is_user_submitted=True,  # Ensure this is set to True
+                is_role_specific=True,   # Set to True for role specific questions
+                is_resume_specific=False,  # Set to False as they are not resume-specific
+                is_question_ai_generated=False,  # Set to False as these are user submitted
+            )
+            db_session.add(new_question)
+        db_session.commit()
+        return {'success': True}
+    except Exception as e:
+        logging.error(f"Failed to save questions for {job_title}: {str(e)}")
+        return {'success': False, 'error': str(e)}
+
+
+        

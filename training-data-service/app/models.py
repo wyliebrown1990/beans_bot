@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, ARRAY
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, ARRAY, Interval
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -40,11 +40,13 @@ class InterviewHistory(Base):
     answer = Column(Text, nullable=True)
     feedback = Column(String(1000), nullable=True)
     score = Column(Integer, nullable=True)
-    skip_next_time = Column(Boolean, nullable=False, default=False)
     session_score_average = Column(Integer, nullable=True)
     session_top_score = Column(String(100), nullable=True)
     session_low_score = Column(String(100), nullable=True)
     session_summary_next_steps = Column(Text, nullable=True)
+    interview_end_trigger = Column(String(50), nullable=True)  # New column
+    timer = Column(Interval, nullable=True)  # New column
+    interview_round = Column(String(50), nullable=True)  # New column
 
     user = relationship("Users", back_populates="interview_history")
     question_rel = relationship("Questions", back_populates="interview_history")

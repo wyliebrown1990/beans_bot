@@ -4,8 +4,8 @@ import logging
 from flask import render_template, request, redirect, url_for, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from app.database import get_db
-from app.models import JobDescriptions, Users, Questions, Resumes
-from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status, extract_text_from_file, get_resume_analysis, convert_to_date_format
+from app.models import JobDescriptions, Users, Questions, Resumes, InterviewHistory
+from app.utils import process_file, process_text, cleanup_uploads_folder, update_process_status, extract_text_from_file, get_resume_analysis, convert_to_date_format, process_new_job_title
 from sqlalchemy import func
 import fitz  # PyMuPDF for PDF processing
 import docx
@@ -588,15 +588,18 @@ def setup_routes(app, db_session):
                     user_id=user_id, session_id=session_id
                 ).first()
 
+
                 transcript = db_session.query(
                     InterviewHistory.question,
                     InterviewHistory.answer,
                     InterviewHistory.feedback,
                     InterviewHistory.score,
+                    InterviewHistory.timer,  # Include the timer column
                     InterviewHistory.created_at
                 ).filter_by(user_id=user_id, session_id=session_id).order_by(
                     InterviewHistory.created_at, InterviewHistory.id
                 ).all()
+
 
                 return jsonify({
                     'summary': {
@@ -610,7 +613,8 @@ def setup_routes(app, db_session):
                             'question': item.question,
                             'answer': item.answer,
                             'feedback': item.feedback,
-                            'score': item.score
+                            'score': item.score,
+                            'timer': str(item.timer)  # Add the timer to the response
                         } for item in transcript
                     ]
                 })
@@ -685,4 +689,47 @@ def setup_routes(app, db_session):
         except Exception as e:
             logging.error(f"Failed to fetch job titles: {str(e)}")
             return jsonify({'error': str(e)}), 500
+        
+    @app.route('/api/check_job_title_exists', methods=['POST'])
+    def check_job_title_exists():
+        try:
+            data = request.json
+            job_title = data.get('job_title').lower()
+            logging.debug(f"Checking existence of job title: {job_title}")
+
+            with app.app_context():
+                db_session = next(get_db())
+                exists = db_session.query(Questions).filter(func.lower(Questions.job_title) == job_title).first()
+
+            if exists:
+                logging.debug(f"Job title {job_title} exists.")
+                return jsonify({'exists': True})
+            else:
+                logging.debug(f"Job title {job_title} does not exist.")
+                return jsonify({'exists': False})
+        except Exception as e:
+            logging.error(f"Error checking job title: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+
+
+    @app.route('/api/add_new_job_title', methods=['POST'])
+    def add_new_job_title():
+        data = request.json
+        job_title = data.get('job_title').lower()
+
+        def process_job_title(app, job_title):
+            with app.app_context():
+                db_session = next(get_db())
+                result = process_new_job_title(job_title, db_session)
+                if result['success']:
+                    logging.debug(f"Job title {job_title} added successfully.")
+                else:
+                    logging.error(f"Error adding job title {job_title}: {result['error']}")
+
+        threading.Thread(target=process_job_title, args=(current_app._get_current_object(), job_title)).start()
+        return jsonify({'message': 'Processing started'}), 202
+
+
+
 
