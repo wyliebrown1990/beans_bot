@@ -22,7 +22,7 @@ from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs, ApiError
 
 # Import models from app package
-from app.models import JobDescriptionAnalysis, User, InterviewHistory, Questions
+from app.models import JobDescriptions, Users, InterviewHistory, Questions, Resumes
 from app.database import db_session
 
 load_dotenv()
@@ -61,7 +61,7 @@ def capitalize_sentences(text):
         
 def store_question(question, user_id, session_id, is_initial=False):
    user = db_session.query(User).filter_by(id=user_id).first()
-   job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+   job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
    if not user or not job_description:
        raise ValueError("User or job description not found")
@@ -150,7 +150,7 @@ def get_intro_score(user_id, session_id):
         print("Starting get_intro_score function...")
 
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -237,7 +237,7 @@ def store_last_score(score, session_id):
 def get_score(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -299,7 +299,7 @@ def get_intro_question_feedback(user_id, session_id):
     try:
         global most_recent_answer
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -353,7 +353,7 @@ def get_intro_question_feedback(user_id, session_id):
 def get_resume_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -417,7 +417,7 @@ def get_resume_question_1_feedback(user_id, session_id):
 def get_resume_question_2_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -480,7 +480,7 @@ def get_resume_question_2_feedback(user_id, session_id):
 def get_resume_question_3_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -543,7 +543,7 @@ def get_resume_question_3_feedback(user_id, session_id):
 def get_resume_question_4_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -605,7 +605,7 @@ def get_resume_question_4_feedback(user_id, session_id):
 def get_behavioral_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -676,7 +676,7 @@ def get_behavioral_question_1_feedback(user_id, session_id):
 def get_behavioral_question_2_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -747,7 +747,7 @@ def get_behavioral_question_2_feedback(user_id, session_id):
 def get_situational_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -818,7 +818,7 @@ def get_situational_question_1_feedback(user_id, session_id):
 def get_personality_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -889,7 +889,7 @@ def get_personality_question_1_feedback(user_id, session_id):
 def get_motivational_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -960,7 +960,7 @@ def get_motivational_question_1_feedback(user_id, session_id):
 def get_competency_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1031,7 +1031,7 @@ def get_competency_question_1_feedback(user_id, session_id):
 def get_ethical_question_1_feedback(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1104,7 +1104,7 @@ def get_last_question_feedback(user_id, session_id):
         print("Starting get_last_question_feedback function...")
 
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1164,7 +1164,7 @@ def get_last_question_feedback(user_id, session_id):
 def generate_final_message(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1212,7 +1212,7 @@ def intro_question(user_id, session_id):
    # Function to generate the introductory question based on the user's data
    try:
        user = db_session.query(User).filter_by(id=user_id).first()
-       job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+       job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
 
        if user and job_description:
@@ -1235,7 +1235,7 @@ def intro_question(user_id, session_id):
 def get_resume_question_1(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1270,7 +1270,7 @@ def get_resume_question_1(user_id, session_id):
 def get_resume_question_2(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")
@@ -1309,7 +1309,7 @@ def get_resume_question_3(user_id, session_id):
             raise ValueError("User not found")
         
         # Fetch job description information
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         if not job_description:
             raise ValueError("Job description not found")
 
@@ -1360,7 +1360,7 @@ def get_resume_question_4(user_id, session_id):
             raise ValueError("User not found")
         
         # Fetch job description information
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
         if not job_description:
             raise ValueError("Job description not found")
 
@@ -1617,7 +1617,7 @@ def get_ethical_question_1(user_id, session_id):
 def get_last_question(user_id, session_id):
     try:
         user = db_session.query(User).filter_by(id=user_id).first()
-        job_description = db_session.query(JobDescriptionAnalysis).filter_by(user_id=user_id).first()
+        job_description = db_session.query(JobDescriptions).filter_by(user_id=user_id).first()
 
         if not user or not job_description:
             raise ValueError("User or job description not found")

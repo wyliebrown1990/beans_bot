@@ -6,7 +6,7 @@ import io
 import random
 import csv
 from openai import OpenAI
-from ..models import JobDescriptionAnalysis, User, InterviewHistory, Questions
+from ..models import JobDescriptions, Users, InterviewHistory, Questions, Resumes
 from app.utils import (
     generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
     get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback,
