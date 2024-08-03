@@ -35,18 +35,18 @@ class InterviewHistory(Base):
     job_level = Column(String(50), nullable=True)
     company_name = Column(String(100), nullable=True)
     company_industry = Column(String(100), nullable=True)
-    question = Column(String(200), nullable=False)
-    question_id = Column(Integer, ForeignKey('questions.id'), nullable=False)
+    question = Column(String(2000), nullable=False)
+    question_id = Column(Integer, ForeignKey('questions.id'), nullable=True)  # Allow NULL values
     answer = Column(Text, nullable=True)
-    feedback = Column(String(1000), nullable=True)
+    feedback = Column(Text, nullable=True)
     score = Column(Integer, nullable=True)
     session_score_average = Column(Integer, nullable=True)
     session_top_score = Column(String(100), nullable=True)
     session_low_score = Column(String(100), nullable=True)
     session_summary_next_steps = Column(Text, nullable=True)
-    interview_end_trigger = Column(String(50), nullable=True)  # New column
-    timer = Column(Interval, nullable=True)  # New column
-    interview_round = Column(String(50), nullable=True)  # New column
+    interview_end_trigger = Column(String(50), nullable=True)
+    timer = Column(Interval, nullable=True)
+    interview_round = Column(String(50), nullable=True)
 
     user = relationship("Users", back_populates="interview_history")
     question_rel = relationship("Questions", back_populates="interview_history")

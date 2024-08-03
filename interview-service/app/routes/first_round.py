@@ -1,4 +1,3 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for, send_from_directory, Response
 from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 import os
@@ -6,18 +5,13 @@ import io
 import random
 import csv
 from openai import OpenAI
-from ..models import JobDescriptions, Users, InterviewHistory, Questions, Resumes
-from app.utils import (
-    generate_session_id, intro_question, store_user_answer, get_intro_question_feedback,
-    get_resume_question_1_feedback, get_resume_question_2_feedback, get_resume_question_3_feedback,
-    get_resume_question_4_feedback, get_behavioral_question_1_feedback, get_behavioral_question_2_feedback,
-    get_situational_question_1_feedback, get_personality_question_1_feedback, get_motivational_question_1_feedback,
-    get_competency_question_1_feedback, get_ethical_question_1_feedback, get_last_question_feedback, get_personality_question_1, get_behavioral_question_1, get_behavioral_question_2,
-    get_situational_question_1, get_resume_question_1, get_resume_question_2, get_resume_question_3, get_resume_question_4,
-    get_motivational_question_1, get_ethical_question_1, get_last_question, store_question, get_intro_score, get_score, fill_in_skipped_answers, generate_final_message, text_to_speech_file, fetch_interview_data
-)
-from app.database import db_session  # Import db_session from the database module
-
+from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for, send_from_directory, Response
+from app.utils.first_round_utils import *
+from app.utils.interview_history_utils import record_interview_history
+from app.utils.unique_session_utils import ensure_unique_session_id
+from app.models import JobDescriptions
+from app.database import db_session
+from sqlalchemy.exc import IntegrityError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,281 +19,250 @@ logger.debug("Creating first_round blueprint")
 
 first_round_bp = Blueprint('first_round', __name__)
 
-# Initialize the OpenAI client
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 @first_round_bp.route('/')
-def first_round():
-    try:
-        logger.debug("first_round route called")
-        username = request.args.get('username')
-        user_id = request.args.get('user_id')
-        interview_round = request.args.get('interview_round')
-        job_title = request.args.get('job_title')
-        company_name = request.args.get('company_name')
-        industry = request.args.get('industry')
+def first_round_view():
+    username = request.args.get('username')
+    user_id = request.args.get('user_id')
+    interview_round = request.args.get('interview_round')
+    job_title = request.args.get('job_title')
+    company_name = request.args.get('company_name')
+    company_industry = request.args.get('company_industry')
+    session_id = request.args.get('session_id', None)
 
-        session.pop('last_question', None)
+    if not session_id:
+        session_id = ensure_unique_session_id(user_id)
+        return redirect(url_for('first_round.first_round_view', username=username, user_id=user_id, interview_round=interview_round, job_title=job_title, company_name=company_name, company_industry=company_industry, session_id=session_id))
 
-        session_id = request.args.get('session_id')
-        if not session_id:
-            session_id = generate_session_id()
-            return redirect(url_for('first_round.first_round', username=username, user_id=user_id, interview_round=interview_round, job_title=job_title, company_name=company_name, industry=industry, session_id=session_id))
+    initial_question = get_first_question(username, user_id)
 
-        initial_question = intro_question(user_id, session_id)
+    # Set the initial question time in the session
+    session['question_time'] = '30:00'  # Assuming the timer starts at 30 minutes
 
-        return render_template('first_round.html', username=username, initial_question=initial_question, session_id=session_id)
-    except Exception as e:
-        current_app.logger.error(f"Error in first_round route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+    return render_template('first_round.html', username=username, user_id=user_id, interview_round=interview_round, job_title=job_title, company_name=company_name, company_industry=company_industry, session_id=session_id, initial_question=initial_question)
 
 @first_round_bp.route('/submit_answer', methods=['POST'])
 def submit_answer():
-    try:
-        answer = request.form.get('answer_1')
-        user_id = request.form.get('user_id')
-        session_id = request.form.get('session_id')
-        generate_audio = request.form.get('generate_audio') == 'true'
-        voice_id = request.form.get('voice')
+    session_id = request.form.get('session_id')
+    user_id = request.form.get('user_id')
+    username = get_user_by_id(user_id).username
+    question = request.form.get('question')
+    answer = request.form.get('answer_1')
+    feedback = request.form.get('feedback', None)
+    score = request.form.get('score', None)
+    interview_round = request.form.get('interview_round')
+    question_id = request.form.get('question_id', None)
 
-        print(f"Submitting answer: {answer} for user_id: {user_id}, session_id: {session_id}")
+    job_details = fetch_interview_data(user_id)
 
-        store_user_answer(answer, user_id, session_id)
+    # Retrieve the stored question time
+    question_time = session.get('question_time')
+    current_time = request.form.get('current_time')
 
-        # Determine the current cycle and set the conditions for transitioning to the next questions
-        current_cycle = db_session.query(InterviewHistory).filter_by(user_id=user_id, session_id=session_id).count()
-        print(f"Current cycle: {current_cycle}")
+    # Debugging statements
+    print(f"Question Time: {question_time}")
+    print(f"Current Time: {current_time}")
 
-        if 'last_question' in session:
-            print("Handling last question feedback")
-            response = get_last_question_feedback(user_id, session_id)
-            if 'error' in response:
-                print(f"Error in last question feedback: {response['error']}")
-                return jsonify(response)
-            # Generate the final message
-            final_message = generate_final_message(user_id, session_id)
-            print(f"Generated final message: {final_message}")
-            response['final_message'] = final_message
+    if question_time and current_time:
+        question_time_minutes, question_time_seconds = map(int, question_time.split(':'))
+        current_time_minutes, current_time_seconds = map(int, current_time.split(':'))
 
-            current_app.logger.debug(f"Server response: {response}")
+        # Convert times to total seconds
+        question_total_seconds = question_time_minutes * 60 + question_time_seconds
+        current_total_seconds = current_time_minutes * 60 + current_time_seconds
 
-            return jsonify(response)
+        # Calculate the timer value
+        timer_seconds = question_total_seconds - current_total_seconds
+        timer_hours = timer_seconds // 3600
+        timer_seconds %= 3600
+        timer_minutes = timer_seconds // 60
+        timer_seconds %= 60
 
-        if current_cycle == 1:
-            response = get_intro_question_feedback(user_id, session_id)
-        elif current_cycle == 2:
-            response = get_resume_question_1_feedback(user_id, session_id)
-        elif current_cycle == 3:
-            response = get_resume_question_2_feedback(user_id, session_id)
-        elif current_cycle == 4:
-            response = get_resume_question_3_feedback(user_id, session_id)
-        elif current_cycle == 5:
-            response = get_resume_question_4_feedback(user_id, session_id)
-        elif current_cycle == 6:
-            response = get_behavioral_question_1_feedback(user_id, session_id)
-        elif current_cycle == 7:
-            response = get_behavioral_question_2_feedback(user_id, session_id)
-        elif current_cycle == 8:
-            response = get_situational_question_1_feedback(user_id, session_id)
-        elif current_cycle == 9:
-            response = get_personality_question_1_feedback(user_id, session_id)
-        elif current_cycle == 10:
-            response = get_motivational_question_1_feedback(user_id, session_id)
-        elif current_cycle == 11:
-            response = get_competency_question_1_feedback(user_id, session_id)
-        elif current_cycle == 12:
-            response = get_ethical_question_1_feedback(user_id, session_id)
+        timer = f"{timer_hours:02}:{timer_minutes:02}:{timer_seconds:02}"
+    else:
+        timer = "00:00:00"
+
+    # More debugging statements
+    print(f"Calculated Timer: {timer}")
+
+    if answer == 'skipped':
+        feedback = 'skipped'
+        score = None
+    else:
+        question_num = request.form.get('question_num', 1)
+        if question_num == 'last':
+            feedback_function = get_last_feedback
+            score_function = get_last_score
         else:
-            response = get_intro_question_feedback(user_id, session_id)  # Default case or handle other conditions
+            question_num = int(question_num)
+            feedback_function = globals()[f"get_{num_to_ordinal(question_num)}_feedback"]
+            score_function = globals()[f"get_{num_to_ordinal(question_num)}_score"]
 
-        # Set the session flag to indicate the last question was asked
-        if current_cycle >= 12:
-            session['last_question'] = True
+        # Dynamically determine the arguments for the feedback function
+        feedback_func_code = feedback_function.__code__
+        feedback_func_varnames = feedback_func_code.co_varnames[:feedback_func_code.co_argcount]
 
-        print(f"Response: {response}")
+        # Prepare arguments based on function requirements
+        feedback_args = []
+        for varname in feedback_func_varnames:
+            if varname == 'answer':
+                feedback_args.append(answer)
+            elif varname == 'user_id':
+                feedback_args.append(user_id)
+            elif varname == 'question_id':
+                feedback_args.append(question_id)
 
-        next_question = response.get('next_question_response', 'No next question found')
-        response_message = response.get('response_message', '')
+        feedback = feedback_function(*feedback_args) if feedback is None else feedback
 
-        # Convert text to speech for the next question response only if the box is checked
-        next_question_audio_path = None
-        if generate_audio and next_question:
-            print("Generating audio for the next question...")
-            next_question_audio_path = text_to_speech_file(next_question, voice_id)
-            if next_question_audio_path:
-                print(f"Generated audio file path: {next_question_audio_path}")
-                next_question_audio_url = url_for('first_round.uploaded_file', filename=os.path.basename(next_question_audio_path))
-                response['next_question_audio'] = next_question_audio_url
-            else:
-                print("Failed to generate audio file.")
-                response['next_question_audio'] = None
+        # Dynamically determine the arguments for the score function
+        score_func_code = score_function.__code__
+        score_func_varnames = score_func_code.co_varnames[:score_func_code.co_argcount]
 
-        response['session_id'] = session_id
-        response['next_question'] = next_question
-        response['response_message'] = response_message
+        # Prepare arguments based on function requirements
+        score_args = []
+        for varname in score_func_varnames:
+            if varname == 'answer':
+                score_args.append(answer)
+            elif varname == 'user_id':
+                score_args.append(user_id)
 
-        print(f"Next question: {next_question}")
-        print(f"Next question audio: {response['next_question_audio']}")
+        score = score_function(*score_args) if score is None else score
 
-        current_app.logger.debug(f"Server response: {response}")
-
-        return jsonify(response)
-    except Exception as e:
-        current_app.logger.error(f"Error in submit_answer route: {e}")
-        print(f"Error in submit_answer route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
-
-@first_round_bp.route('/audio_files/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(os.path.join(current_app.root_path, 'audio_files'), filename)
-
-@first_round_bp.route('/get_last_question', methods=['GET'])
-def get_last_question_route():
     try:
-        user_id = request.args.get('user_id')
-        session_id = request.args.get('session_id')
-        if not user_id or not session_id:
-            raise ValueError("user_id or session_id missing from request")
-        print(f"Getting last question for user_id: {user_id}, session_id: {session_id}")
-        question = get_last_question(user_id, session_id)
-        session['last_question'] = True  # Set the session flag
-        print(f"Generated last question: {question}")
-        return jsonify({"next_question_response": question})
-    except Exception as e:
-        current_app.logger.error(f"Error in get_last_question route: {e}")
-        print(f"Error in get_last_question route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+        record_interview_history(session_id, user_id, question, answer, score, feedback, timer, interview_round, job_details.job_title, job_details.job_level, job_details.company_name, job_details.company_industry, question_id or None)
+    except IntegrityError as e:
+        current_app.logger.error(f"Error recording interview history: {e}")
+        return jsonify({'error': 'Failed to record interview history'}), 500
 
-@first_round_bp.route('/wrap_up_early', methods=['POST'])
-def wrap_up_early():
+    # Update the most recent question and answer
+    set_most_recent_question_answer(question, answer)
+
+    if question_num == 'last':
+        return jsonify({'message': 'Interview complete', 'summary': get_summary_message()}), 200
+
+    next_question_num = int(request.form.get('question_num', 1)) + 1
+    next_question_function = globals().get(f"get_{num_to_ordinal(next_question_num)}_question", None)
+    if next_question_function:
+        # Dynamically determine the arguments for the next question function
+        func_code = next_question_function.__code__
+        func_varnames = func_code.co_varnames[:func_code.co_argcount]
+
+        # Prepare arguments based on function requirements
+        next_question_args = []
+        for varname in func_varnames:
+            if varname == 'username':
+                next_question_args.append(username)
+            elif varname == 'user_id':
+                next_question_args.append(user_id)
+
+        next_question_data = next_question_function(*next_question_args)
+        if isinstance(next_question_data, tuple):
+            next_question, question_id = next_question_data
+        else:
+            next_question = next_question_data
+            question_id = None
+
+        # Store the current interview timer for the next question
+        session['question_time'] = current_time
+    else:
+        return jsonify({'message': 'Interview complete', 'summary': get_summary_message()}), 200
+
+    return jsonify({'question': next_question, 'question_num': next_question_num, 'question_id': question_id})
+
+
+@first_round_bp.route('/skip_question', methods=['POST'])
+def skip_question():
+    session_id = request.form.get('session_id')
+    user_id = request.form.get('user_id')
+    question = request.form.get('question')
+    interview_round = request.form.get('interview_round')
+    question_id = request.form.get('question_id', None)
+
+    job_details = fetch_interview_data(user_id)
+
+    # Retrieve the stored question time
+    question_time = session.get('question_time')
+    current_time = request.form.get('current_time')
+
+    # Debugging statements
+    print(f"Question Time: {question_time}")
+    print(f"Current Time: {current_time}")
+
+    if question_time and current_time:
+        question_time_minutes, question_time_seconds = map(int, question_time.split(':'))
+        current_time_minutes, current_time_seconds = map(int, current_time.split(':'))
+
+        # Convert times to total seconds
+        question_total_seconds = question_time_minutes * 60 + question_time_seconds
+        current_total_seconds = current_time_minutes * 60 + current_time_seconds
+
+        # Calculate the timer value
+        timer_seconds = question_total_seconds - current_total_seconds
+        timer_hours = timer_seconds // 3600
+        timer_seconds %= 3600
+        timer_minutes = timer_seconds // 60
+        timer_seconds %= 60
+
+        timer = f"{timer_hours:02}:{timer_minutes:02}:{timer_seconds:02}"
+    else:
+        timer = "00:00:00"
+
+    # More debugging statements
+    print(f"Calculated Timer: {timer}")
+
+    feedback = 'skipped'
+    answer = 'skipped'
+    score = None
+
     try:
-        user_id = request.form.get('user_id')
-        session_id = request.form.get('session_id')
+        # Set question_id to None if it's an empty string
+        if not question_id:
+            question_id = None
 
-        print(f"Wrap up early triggered for user_id: {user_id}, session_id: {session_id}")
+        record_interview_history(session_id, user_id, question, answer, score, feedback, timer, interview_round, job_details.job_title, job_details.job_level, job_details.company_name, job_details.company_industry, question_id)
+    except IntegrityError as e:
+        current_app.logger.error(f"Error recording skipped question in interview history: {e}")
+        return jsonify({'error': 'Failed to record skipped question'}), 500
 
-        # Fill in skipped answers and generate the last question
-        fill_in_skipped_answers(session_id)
-        last_question = get_last_question(user_id, session_id)
-        session['last_question'] = True
+    next_question_num = int(request.form.get('question_num', 1)) + 1
+    next_question_function = globals().get(f"get_{num_to_ordinal(next_question_num)}_question", None)
+    if next_question_function:
+        next_question = next_question_function(get_user_by_id(user_id).username)
+        # Store the current interview timer for the next question
+        session['question_time'] = current_time
+    else:
+        return jsonify({'message': 'Interview complete'}), 200
 
-        print(f"Last question generated: {last_question}")
+    return jsonify({'question': next_question, 'question_num': next_question_num})
 
-        return jsonify({"next_question_response": last_question})
-    except Exception as e:
-        current_app.logger.error(f"Error in wrap_up_early route: {e}")
-        print(f"Error in wrap_up_early route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+@first_round_bp.route('/end_interview', methods=['POST'])
+def end_interview():
+    session_id = request.form.get('session_id')
+    user_id = request.form.get('user_id')
+    question = request.form.get('question')
+    interview_round = request.form.get('interview_round')
+    question_id = request.form.get('question_id', None)
 
-@first_round_bp.route('/send_final_message', methods=['GET'])
-def send_final_message():
+    job_details = fetch_interview_data(user_id)
+
+    feedback = 'skipped'
+    answer = 'skipped'
+    score = None
+
     try:
-        user_id = request.args.get('user_id')
-        session_id = request.args.get('session_id')
+        # Set question_id to None if it's an empty string
+        if not question_id:
+            question_id = None
 
-        if not user_id or not session_id:
-            raise ValueError("user_id or session_id missing from request")
+        record_interview_history(session_id, user_id, question, answer, score, feedback, "00:00:00", interview_round, job_details.job_title, job_details.job_level, job_details.company_name, job_details.company_industry, question_id)
+    except IntegrityError as e:
+        current_app.logger.error(f"Error recording skipped question in interview history: {e}")
+        return jsonify({'error': 'Failed to record skipped question'}), 500
 
-        response_message = generate_final_message(user_id, session_id)
-        print(f"Final message generated: {response_message}")
+    # Serve the last question
+    next_question = get_last_question(get_user_by_id(user_id).username)
+    return jsonify({'question': next_question, 'question_num': 'last'})
 
-        return jsonify({"final_message": response_message})
-    except Exception as e:
-        current_app.logger.error(f"Error in send_final_message route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500
+def num_to_ordinal(num):
+    ordinals = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "last"]
+    return ordinals[num - 1]
 
-@first_round_bp.route('/transcribe_audio', methods=['POST'])
-def transcribe_audio():
-    file_path = None
-    wav_path = None  # Initialize wav_path here
-    text = None  # Initialize text here
-    try:
-        print("Received audio file for transcription...")
-        if 'audio' not in request.files:
-            print("No audio file uploaded.")
-            return jsonify({'error': 'No audio file uploaded'}), 400
-
-        audio_file = request.files['audio']
-        filename = secure_filename(audio_file.filename)
-        file_path = os.path.join('/tmp', filename)
-        print(f"Saving audio file to {file_path}...")
-        audio_file.save(file_path)
-
-        # Convert audio file to WAV format using pydub
-        audio = AudioSegment.from_file(file_path)
-        wav_path = os.path.join('/tmp', 'audio.wav')
-        audio.export(wav_path, format='wav')
-        print(f"Audio file converted to WAV format at {wav_path}")
-
-        # Transcribe audio using OpenAI API
-        print("Starting transcription with OpenAI Whisper API...")
-        with open(wav_path, "rb") as audio_file:
-            response = openai_client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-                response_format="text"
-            )
-            print(f"Transcription API response: {response}")
-
-            # Check the structure of the response to handle it properly
-            if isinstance(response, dict) and "text" in response:
-                text = response["text"]
-                print(f"Transcription result: {text}")
-            elif isinstance(response, str):
-                text = response
-                print(f"Transcription result: {text}")
-            else:
-                raise ValueError("Unexpected response format from transcription API")
-    except Exception as e:
-        print(f"Error during transcription: {e}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        print("Removing temporary audio files...")
-        if file_path and os.path.exists(file_path):
-            os.remove(file_path)
-        if wav_path and os.path.exists(wav_path):
-            os.remove(wav_path)
-
-        return jsonify({'transcription': text})
-
-@first_round_bp.route('/clear_session', methods=['POST'])
-def clear_session():
-    try:
-        print("Clearing session for user...")
-        session.clear()
-        print("Session cleared successfully.")
-        return jsonify({"message": "Session cleared successfully"}), 200
-    except Exception as e:
-        print(f"Error clearing session: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@first_round_bp.route('/download_transcript', methods=['GET'])
-def download_transcript():
-    try:
-        session_id = request.args.get('session_id')
-        if not session_id:
-            return jsonify({"error": "session_id is required"}), 400
-
-        # Fetch interview data
-        interview_data = fetch_interview_data(db_session, session_id)
-        if not interview_data:
-            current_app.logger.error("No interview data found for the given session_id.")
-            return jsonify({"error": "No interview data found for the given session_id."}), 404
-
-        # Generate CSV
-        def generate_csv():
-            data = io.StringIO()
-            writer = csv.writer(data)
-            writer.writerow(["Question", "Answer", "Created At"])  # Write CSV header
-            for record in interview_data:
-                writer.writerow([record.question, record.answer, record.created_at])  # Use 'created_at' attribute
-            yield data.getvalue()
-            data.seek(0)
-            data.truncate(0)
-
-        response = Response(generate_csv(), mimetype='text/csv')
-        response.headers.set("Content-Disposition", "attachment", filename=f"interview_transcript_{session_id}.csv")
-        return response
-    except Exception as e:
-        current_app.logger.error(f"Error in download_transcript route: {e}")
-        return jsonify({"error": "An error occurred while processing your request. Please try again later."}), 500

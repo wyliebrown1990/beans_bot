@@ -36,9 +36,9 @@ class InterviewHistory(Base):
     company_name = Column(String(100), nullable=True)
     company_industry = Column(String(100), nullable=True)
     question = Column(String(200), nullable=False)
-    question_id = Column(Integer, ForeignKey('questions.id'), nullable=False)
+    question_id = Column(Integer, ForeignKey('questions.id'), nullable=True)  # Allow NULL values
     answer = Column(Text, nullable=True)
-    feedback = Column(String(1000), nullable=True)
+    feedback = Column(Text, nullable=True)
     score = Column(Integer, nullable=True)
     session_score_average = Column(Integer, nullable=True)
     session_top_score = Column(String(100), nullable=True)

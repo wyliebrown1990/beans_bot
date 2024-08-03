@@ -8,15 +8,15 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S00G0YVEWV"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
 
-  gtag('config', 'G-S00G0YVEWV');
-</script>
+        gtag('config', 'G-S00G0YVEWV');
+    </script>
 
 </head>
 <body>
@@ -25,11 +25,11 @@
         <div id="timer-container">
             <div id="interview-timer-container">
                 <h5>Time Left in Interview</h5>
-                <div id="interview-timer">2700</div>
+                <div id="interview-timer">30:00</div> <!-- Start at 30 minutes -->
             </div>
             <div id="answer-timer-container">
                 <h5>Countdown to Recommended Answer Submission</h5>
-                <div id="answer-timer">90</div>
+                <div id="answer-timer">1:30</div> <!-- Start at 1 minute 30 seconds -->
             </div>
             <div class="button-container">
                 <button id="home-button">Home <i class="fa fa-home" aria-hidden="true"></i></button>
@@ -77,17 +77,22 @@
         <div class="status-container">
             <div id="status-message" class="status-message"></div>
         </div>
-        <form id="response-form" method="POST" action="{{ url_for('first_round.submit_answer') }}">
+        <form id="response-form" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <input type="hidden" name="interview_round" value="{{ interview_round }}">
             <input type="hidden" name="session_id" value="{{ session_id }}">
+            <input type="hidden" name="question" value="{{ initial_question }}">
+            <input type="hidden" name="question_id" value="">
+            <input type="hidden" name="timer" id="timer" value="">
+            <input type="hidden" name="question_num" value="1">
             <label for="answer_1">Your Response:</label>
             <textarea id="answer_1" name="answer_1" rows="5" required></textarea>
             <div class="submit-button-container">
                 <button type="submit" class="form-button" data-tooltip="Click to submit your answers">&#9654;</button>
                 <button type="button" id="record-answer" class="form-button" data-tooltip="Click to record your answer">🎙</button>
                 <button type="button" id="generate_audio" class="form-button" data-tooltip="Click to have the next question read back to you">💬</button>
+                <button type="button" id="skip-question" class="form-button" data-tooltip="Click to skip this question">Skip</button>
             </div>
             <div id="voice-selection" style="display:none;">
                 <label for="voice">Choose Voice:</label>
@@ -105,34 +110,16 @@
 </div>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
-    const transcribeAudioUrl = "{{ url_for('first_round.transcribe_audio') }}";
-    const startInterviewUrl = "{{ url_for('first_round.submit_answer') }}";
-    const downloadTranscriptUrl = "{{ url_for('first_round.submit_answer') }}";
-    const clearSessionUrl = "{{ url_for('first_round.submit_answer') }}";
-    const getLastAnswerUrl = "{{ url_for('first_round.submit_answer') }}";
-    const wrapUpInterviewUrl = "{{ url_for('first_round.submit_answer') }}";
-    const getLastQuestionUrl = "{{ url_for('first_round.get_last_question_route') }}";
-
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get('username');
-    const userId = urlParams.get('user_id');
-    const interviewRound = urlParams.get('interview_round');
-    const sessionId = urlParams.get('session_id') || '{{ session_id }}';
-
-    // Set hidden input values
-    document.querySelector('input[name="username"]').value = username;
-    document.querySelector('input[name="user_id"]').value = userId;
-    document.querySelector('input[name="interview_round"]').value = interviewRound;
-    document.querySelector('input[name="session_id"]').value = sessionId;
-
-    // Update the header with the username
-    document.querySelector('h1').textContent = `First Round Interview for ${username}`;
-
-    // Add event listener for Home button
-    document.getElementById('home-button').addEventListener('click', function() {
-        window.location.href = `http://localhost:5011/?username=${username}&user_id=${userId}`;
-    });
+    const Flask = {
+        url_for: function(endpoint) {
+            const url = {
+                'first_round.submit_answer': '{{ url_for("first_round.submit_answer") }}',
+                'first_round.skip_question': '{{ url_for("first_round.skip_question") }}',
+                'first_round.end_interview': '{{ url_for("first_round.end_interview") }}'
+            };
+            return url[endpoint];
+        }
+    };
 </script>
 </body>
 </html>
