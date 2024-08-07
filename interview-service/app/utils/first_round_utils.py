@@ -772,32 +772,275 @@ def get_seventh_feedback(answer, user_id, question_id):
     return feedback_text
 
 
-def get_eighth_question(username):
-    return "How do you stay updated with industry trends?"
+def get_eighth_question():
+    print("Fetching a motivational question from the database")
+    question_data = db_session.query(Questions).filter_by(question_type='motivational questions').order_by(func.random()).first()
+    
+    if not question_data:
+        raise ValueError("No motivational questions found in the database.")
+    
+    question = question_data.question
+    question_id = question_data.id
+    
+    print(f"Fetched question: {question} with ID: {question_id}")
+    return question, question_id
 
-def get_eighth_feedback(answer):
-    return "Great approach"
+def get_eighth_score(answer, user_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
 
-def get_eighth_score(answer):
-    return 9
+    most_recent_question, _ = get_most_recent_question_answer()
 
-def get_ninth_question(username):
-    return "Can you describe a time when you had to learn something quickly?"
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are a career coach conducting a mock job interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me this question: {most_recent_question} "
+                   "Your job is to give me an honest and critical score that ranges between 1-10. You are scoring me based on how accurate my answer was, how concise it was and how well I used realistic examples to illustrate my relevant experience. "
+                   "If my answer is less than 100 characters then you should always give a 1 as the score. "
+                   "Don't return any text in your response. Only return a single integer for the score ranging between 1-10 where 10 is the best. For example your response should be: 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
-def get_ninth_feedback(answer):
-    return "Well handled"
+    score_chain = score_prompt | model
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=answer)]})
 
-def get_ninth_score(answer):
-    return 8
+    # Print the raw response from the chat model
+    print(f"Score response from chat model: {score_response}")
 
-def get_tenth_question(username):
-    return "How do you handle conflicts at work?"
+    # Extract and clean the score from the response
+    score_text = score_response.content.strip() if score_response.content else None
+    print(f"Extracted score text: {score_text}")
 
-def get_tenth_feedback(answer):
-    return "Good conflict resolution"
+    # Use regex to find the first integer in the response
+    score_match = re.search(r'\b\d+\b', score_text)
+    if score_match:
+        score = int(score_match.group())
+        print(f"Extracted score: {score}")
+    else:
+        print("No integer found in score response, setting score to None")
+        score = None
 
-def get_tenth_score(answer):
-    return 9
+    return score
+
+def get_eighth_feedback(answer, user_id, question_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    # Fetch the description from the questions table using question_id
+    question_data = db_session.query(Questions).filter_by(id=question_id).first()
+    description = question_data.description if question_data else "No specific description available."
+
+    feedback_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. "
+                   f"I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me the question: '{most_recent_question}'. "
+                   "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                   f"Specifically, {description} "
+                   "Did my answer meet that specific description? "
+                   "Did I answer the question in a reasonable amount of time that lasted no more than 2 minutes? "
+                   "Finally, please give me a recommendation on how I could have presented my experience better."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = feedback_prompt | model
+
+    feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Feedback response from chat model: {feedback_response}")
+
+    # Extract and clean the feedback from the response
+    feedback_text = feedback_response.content.strip() if feedback_response.content else "No feedback received"
+    print(f"Extracted feedback text: {feedback_text}")
+
+    return feedback_text
+
+def get_ninth_question():
+    print("Fetching a competency based question from the database")
+    question_data = db_session.query(Questions).filter_by(question_type='competency based questions').order_by(func.random()).first()
+    
+    if not question_data:
+        raise ValueError("No competency based questions found in the database.")
+    
+    question = question_data.question
+    question_id = question_data.id
+    
+    print(f"Fetched question: {question} with ID: {question_id}")
+    return question, question_id
+
+def get_ninth_score(answer, user_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are a career coach conducting a mock job interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me this question: {most_recent_question} "
+                   "Your job is to give me an honest and critical score that ranges between 1-10. You are scoring me based on how accurate my answer was, how concise it was and how well I used realistic examples to illustrate my relevant experience. "
+                   "If my answer is less than 100 characters then you should always give a 1 as the score. "
+                   "Don't return any text in your response. Only return a single integer for the score ranging between 1-10 where 10 is the best. For example your response should be: 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Score response from chat model: {score_response}")
+
+    # Extract and clean the score from the response
+    score_text = score_response.content.strip() if score_response.content else None
+    print(f"Extracted score text: {score_text}")
+
+    # Use regex to find the first integer in the response
+    score_match = re.search(r'\b\d+\b', score_text)
+    if score_match:
+        score = int(score_match.group())
+        print(f"Extracted score: {score}")
+    else:
+        print("No integer found in score response, setting score to None")
+        score = None
+
+    return score
+
+def get_ninth_feedback(answer, user_id, question_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    # Fetch the description from the questions table using question_id
+    question_data = db_session.query(Questions).filter_by(id=question_id).first()
+    description = question_data.description if question_data else "No specific description available."
+
+    feedback_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. "
+                   f"I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me the question: '{most_recent_question}'. "
+                   "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                   f"Specifically, {description} "
+                   "Did my answer meet that specific description? "
+                   "Did I answer the question in a reasonable amount of time that lasted no more than 2 minutes? "
+                   "Finally, please give me a recommendation on how I could have presented my experience better."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = feedback_prompt | model
+
+    feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Feedback response from chat model: {feedback_response}")
+
+    # Extract and clean the feedback from the response
+    feedback_text = feedback_response.content.strip() if feedback_response.content else "No feedback received"
+    print(f"Extracted feedback text: {feedback_text}")
+
+    return feedback_text
+
+def get_tenth_question():
+    print("Fetching an ethical question from the database")
+    question_data = db_session.query(Questions).filter_by(question_type='ethical questions').order_by(func.random()).first()
+    
+    if not question_data:
+        raise ValueError("No ethical questions found in the database.")
+    
+    question = question_data.question
+    question_id = question_data.id
+    
+    print(f"Fetched question: {question} with ID: {question_id}")
+    return question, question_id
+
+def get_tenth_score(answer, user_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are a career coach conducting a mock job interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me this question: {most_recent_question} "
+                   "Your job is to give me an honest and critical score that ranges between 1-10. You are scoring me based on how accurate my answer was, how concise it was and how well I used realistic examples to illustrate my relevant experience. "
+                   "If my answer is less than 100 characters then you should always give a 1 as the score. "
+                   "Don't return any text in your response. Only return a single integer for the score ranging between 1-10 where 10 is the best. For example your response should be: 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Score response from chat model: {score_response}")
+
+    # Extract and clean the score from the response
+    score_text = score_response.content.strip() if score_response.content else None
+    print(f"Extracted score text: {score_text}")
+
+    # Use regex to find the first integer in the response
+    score_match = re.search(r'\b\d+\b', score_text)
+    if score_match:
+        score = int(score_match.group())
+        print(f"Extracted score: {score}")
+    else:
+        print("No integer found in score response, setting score to None")
+        score = None
+
+    return score
+
+def get_tenth_feedback(answer, user_id, question_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    # Fetch the description from the questions table using question_id
+    question_data = db_session.query(Questions).filter_by(id=question_id).first()
+    description = question_data.description if question_data else "No specific description available."
+
+    feedback_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. "
+                   f"I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me the question: '{most_recent_question}'. "
+                   "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                   f"Specifically, {description} "
+                   "Did my answer meet that specific description? "
+                   "Did I answer the question in a reasonable amount of time that lasted no more than 2 minutes? "
+                   "Finally, please give me a recommendation on how I could have presented my experience better."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = feedback_prompt | model
+
+    feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Feedback response from chat model: {feedback_response}")
+
+    # Extract and clean the feedback from the response
+    feedback_text = feedback_response.content.strip() if feedback_response.content else "No feedback received"
+    print(f"Extracted feedback text: {feedback_text}")
+
+    return feedback_text
 
 def get_last_question(username):
     return (f"Thanks {username}. It looks like we need to start wrapping up this call. "
@@ -805,11 +1048,78 @@ def get_last_question(username):
             f"do you have any questions for me? I’d be happy to answer what I can about the company, "
             f"the role, or anything else that comes to mind. Please ask me all of the questions that you have in your response to this.")
 
-def get_last_score(answer):
-    return 7
+def get_last_score(answer, user_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
 
-def get_last_feedback(answer):
-    return "That was a great question."
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    score_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are a career coach conducting a mock job interview with me. I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me this question: {most_recent_question} "
+                   "Your job is to give me an honest and critical score that ranges between 1-10. You are scoring me based on how accurate my answer was, how concise it was and how well I used realistic examples to illustrate my relevant experience. "
+                   "If my answer is less than 100 characters then you should always give a 1 as the score. "
+                   "Don't return any text in your response. Only return a single integer for the score ranging between 1-10 where 10 is the best. For example your response should be: 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    score_chain = score_prompt | model
+    score_response = score_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Score response from chat model: {score_response}")
+
+    # Extract and clean the score from the response
+    score_text = score_response.content.strip() if score_response.content else None
+    print(f"Extracted score text: {score_text}")
+
+    # Use regex to find the first integer in the response
+    score_match = re.search(r'\b\d+\b', score_text)
+    if score_match:
+        score = int(score_match.group())
+        print(f"Extracted score: {score}")
+    else:
+        print("No integer found in score response, setting score to None")
+        score = None
+
+    return score
+
+def get_last_feedback(answer, user_id):
+    job_details = fetch_interview_data(user_id)
+    job_title = job_details.job_title
+    company_name = job_details.company_name
+    company_industry = job_details.company_industry
+
+    most_recent_question, _ = get_most_recent_question_answer()
+
+    feedback_prompt = ChatPromptTemplate.from_messages([
+        ("system", f"You are helping me land a new job by conducting realistic interviews with me. "
+                   f"I’m interviewing to be a {job_title} at {company_name} company in the {company_industry} industry. "
+                   f"You just asked me the question: '{most_recent_question}'."
+                   "I am going to answer you and I want you to give me a very critical critique of how well I answered the question. "
+                   f"Specifically, did I demonstrate enthusiasm for the role?"
+                   "Did I show critical thinking and insight in my questions?"
+                   "Did I demonstrate that I had prepared for this interview?"
+                   "Finally, please give me a recommendation on how I could have presented my experience better."),
+        ("user", answer),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+
+    analysis_chain = feedback_prompt | model
+
+    feedback_response = analysis_chain.invoke({"messages": [HumanMessage(content=answer)]})
+
+    # Print the raw response from the chat model
+    print(f"Feedback response from chat model: {feedback_response}")
+
+    # Extract and clean the feedback from the response
+    feedback_text = feedback_response.content.strip() if feedback_response.content else "No feedback received"
+    print(f"Extracted feedback text: {feedback_text}")
+
+    return feedback_text
 
 def get_summary_message():
     return "Great job!"
